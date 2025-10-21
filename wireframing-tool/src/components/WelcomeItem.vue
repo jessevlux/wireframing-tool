@@ -1,86 +1,19 @@
 <template>
-  <div class="item">
-    <i>
+  <div
+    class="relative flex gap-5 rounded-2xl border border-slate-200/60 bg-white/80 p-6 shadow-sm shadow-slate-200/40 backdrop-blur-md transition hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-100/60"
+  >
+    <div
+      class="flex h-12 w-12 items-center justify-center rounded-xl border border-emerald-200/60 bg-emerald-50 text-emerald-600"
+    >
       <slot name="icon"></slot>
-    </i>
-    <div class="details">
-      <h3>
+    </div>
+    <div class="space-y-2">
+      <h3 class="text-lg font-semibold text-slate-900">
         <slot name="heading"></slot>
       </h3>
-      <slot></slot>
+      <div class="space-y-1 text-sm leading-relaxed text-slate-600">
+        <slot></slot>
+      </div>
     </div>
   </div>
 </template>
-
-<style scoped>
-.item {
-  margin-top: 2rem;
-  display: flex;
-  position: relative;
-}
-
-.details {
-  flex: 1;
-  margin-left: 1rem;
-}
-
-i {
-  display: flex;
-  place-items: center;
-  place-content: center;
-  width: 32px;
-  height: 32px;
-  color: var(--color-text);
-}
-
-h3 {
-  font-size: 1.2rem;
-  font-weight: 500;
-  margin-bottom: 0.4rem;
-  color: var(--color-heading);
-}
-
-@media (min-width: 1024px) {
-  .item {
-    margin-top: 0;
-    padding: 0.4rem 0 1rem calc(var(--section-gap) / 2);
-  }
-
-  i {
-    top: calc(50% - 25px);
-    left: -26px;
-    position: absolute;
-    border: 1px solid var(--color-border);
-    background: var(--color-background);
-    border-radius: 8px;
-    width: 50px;
-    height: 50px;
-  }
-
-  .item:before {
-    content: ' ';
-    border-left: 1px solid var(--color-border);
-    position: absolute;
-    left: 0;
-    bottom: calc(50% + 25px);
-    height: calc(50% - 25px);
-  }
-
-  .item:after {
-    content: ' ';
-    border-left: 1px solid var(--color-border);
-    position: absolute;
-    left: 0;
-    top: calc(50% + 25px);
-    height: calc(50% - 25px);
-  }
-
-  .item:first-of-type:before {
-    display: none;
-  }
-
-  .item:last-of-type:after {
-    display: none;
-  }
-}
-</style>

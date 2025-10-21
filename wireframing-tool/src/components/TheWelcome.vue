@@ -10,85 +10,107 @@ const openReadmeInEditor = () => fetch('/__open-in-editor?file=README.md')
 </script>
 
 <template>
-  <WelcomeItem>
-    <template #icon>
-      <DocumentationIcon />
-    </template>
-    <template #heading>Documentati0n</template>
+  <div class="grid gap-6 lg:grid-cols-2">
+    <WelcomeItem>
+      <template #icon>
+        <DocumentationIcon />
+      </template>
+      <template #heading>Documentation</template>
 
-    Vue’s
-    <a href="https://vuejs.org/" target="_blank" rel="noopener">official documentation</a>
-    provides you with all information you need to get started.
-  </WelcomeItem>
+      Vue’s
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://vuejs.org/" target="_blank" rel="noopener"
+        >official documentation</a
+      >
+      covers everything you need to kick things off.
+    </WelcomeItem>
 
-  <WelcomeItem>
-    <template #icon>
-      <ToolingIcon />
-    </template>
-    <template #heading>Tooling</template>
+    <WelcomeItem>
+      <template #icon>
+        <ToolingIcon />
+      </template>
+      <template #heading>Tooling</template>
 
-    This project is served and bundled with
-    <a href="https://vite.dev/guide/features.html" target="_blank" rel="noopener">Vite</a>. The
-    recommended IDE setup is
-    <a href="https://code.visualstudio.com/" target="_blank" rel="noopener">VSCode</a>
-    +
-    <a href="https://github.com/vuejs/language-tools" target="_blank" rel="noopener">Vue - Official</a>. If
-    you need to test your components and web pages, check out
-    <a href="https://vitest.dev/" target="_blank" rel="noopener">Vitest</a>
-    and
-    <a href="https://www.cypress.io/" target="_blank" rel="noopener">Cypress</a>
-    /
-    <a href="https://playwright.dev/" target="_blank" rel="noopener">Playwright</a>.
+      This project is built and bundled with
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://vite.dev/guide/features.html" target="_blank" rel="noopener"
+        >Vite</a
+      >.
+      Use
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://code.visualstudio.com/" target="_blank" rel="noopener"
+        >VS Code</a
+      >
+      with the
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://github.com/vuejs/language-tools" target="_blank" rel="noopener"
+        >Vue - Official</a
+      >
+      extension for the best DX. Need tests? Try
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://vitest.dev/" target="_blank" rel="noopener"
+        >Vitest</a
+      >
+      with
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://www.cypress.io/" target="_blank" rel="noopener"
+        >Cypress</a
+      >
+      or
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://playwright.dev/" target="_blank" rel="noopener"
+        >Playwright</a
+      >.
 
-    <br />
+      <div>
+        More tips live in
+        <a class="font-medium text-emerald-600 hover:text-emerald-700" href="javascript:void(0)" @click="openReadmeInEditor">
+          <code>README.md</code>
+        </a>
+        .
+      </div>
+    </WelcomeItem>
 
-    More instructions are available in
-    <a href="javascript:void(0)" @click="openReadmeInEditor"><code>README.md</code></a
-    >.
-  </WelcomeItem>
+    <WelcomeItem>
+      <template #icon>
+        <EcosystemIcon />
+      </template>
+      <template #heading>Ecosystem</template>
 
-  <WelcomeItem>
-    <template #icon>
-      <EcosystemIcon />
-    </template>
-    <template #heading>Ecosystem</template>
+      Reach for the official Vue ecosystem:
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://pinia.vuejs.org/" target="_blank" rel="noopener">Pinia</a>,
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://router.vuejs.org/" target="_blank" rel="noopener">Vue Router</a>,
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://test-utils.vuejs.org/" target="_blank" rel="noopener">Vue Test Utils</a>,
+      and
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://github.com/vuejs/devtools" target="_blank" rel="noopener">Vue Dev Tools</a>.
+      For even more gems, explore
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">Awesome Vue</a
+      >.
+    </WelcomeItem>
 
-    Get official tools and libraries for your project:
-    <a href="https://pinia.vuejs.org/" target="_blank" rel="noopener">Pinia</a>,
-    <a href="https://router.vuejs.org/" target="_blank" rel="noopener">Vue Router</a>,
-    <a href="https://test-utils.vuejs.org/" target="_blank" rel="noopener">Vue Test Utils</a>, and
-    <a href="https://github.com/vuejs/devtools" target="_blank" rel="noopener">Vue Dev Tools</a>. If
-    you need more resources, we suggest paying
-    <a href="https://github.com/vuejs/awesome-vue" target="_blank" rel="noopener">Awesome Vue</a>
-    a visit.
-  </WelcomeItem>
+    <WelcomeItem>
+      <template #icon>
+        <CommunityIcon />
+      </template>
+      <template #heading>Community</template>
 
-  <WelcomeItem>
-    <template #icon>
-      <CommunityIcon />
-    </template>
-    <template #heading>Community</template>
+      Stuck on something? Drop into
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://chat.vuejs.org" target="_blank" rel="noopener">Vue Land</a>,
+      ask on
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://stackoverflow.com/questions/tagged/vue.js" target="_blank" rel="noopener"
+        >StackOverflow</a
+      >,
+      or follow
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://bsky.app/profile/vuejs.org" target="_blank" rel="noopener">@vuejs.org</a>
+      and
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://x.com/vuejs" target="_blank" rel="noopener">@vuejs</a>
+      for news.
+    </WelcomeItem>
 
-    Got stuck? Ask your question on
-    <a href="https://chat.vuejs.org" target="_blank" rel="noopener">Vue Land</a>
-    (our official Discord server), or
-    <a href="https://stackoverflow.com/questions/tagged/vue.js" target="_blank" rel="noopener"
-      >StackOverflow</a
-    >. You should also follow the official
-    <a href="https://bsky.app/profile/vuejs.org" target="_blank" rel="noopener">@vuejs.org</a>
-    Bluesky account or the
-    <a href="https://x.com/vuejs" target="_blank" rel="noopener">@vuejs</a>
-    X account for latest news in the Vue world.
-  </WelcomeItem>
+    <WelcomeItem class="lg:col-span-2">
+      <template #icon>
+        <SupportIcon />
+      </template>
+      <template #heading>Support Vue</template>
 
-  <WelcomeItem>
-    <template #icon>
-      <SupportIcon />
-    </template>
-    <template #heading>Support Vue</template>
-
-    As an independent project, Vue relies on community backing for its sustainability. You can help
-    us by
-    <a href="https://vuejs.org/sponsor/" target="_blank" rel="noopener">becoming a sponsor</a>.
-  </WelcomeItem>
+      Vue thrives thanks to community backing. Consider
+      <a class="font-medium text-emerald-600 hover:text-emerald-700" href="https://vuejs.org/sponsor/" target="_blank" rel="noopener"
+        >becoming a sponsor</a
+      >
+      to keep the project healthy.
+    </WelcomeItem>
+  </div>
 </template>
