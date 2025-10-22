@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Search, FileText, Moon, Sun } from 'lucide-vue-next'
 import ProjectCard from '../components/ProjectCard.vue'
+import { supabase } from '../lib/supabase.js'
 
 const router = useRouter()
 
@@ -12,83 +13,114 @@ const searchQuery = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 
-// Load projects from localStorage on mount
-onMounted(() => {
+// Load projects from Supabase on mount
+onMounted(async () => {
+  try {
+    // Try to load from Supabase
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Supabase error:', error)
+      // Fallback to localStorage if Supabase fails
+      loadFromLocalStorage()
+    } else {
+      projects.value = data || []
+      // Als geen projecten in Supabase, laad demo data
+      if (projects.value.length === 0) {
+        loadDemoData()
+      }
+    }
+  } catch (err) {
+    console.error('Error connecting to Supabase:', err)
+    // Fallback to localStorage
+    loadFromLocalStorage()
+  }
+})
+
+// Helper: Load from localStorage
+const loadFromLocalStorage = () => {
   const saved = localStorage.getItem('wireframe_projects')
   if (saved) {
     projects.value = JSON.parse(saved)
   } else {
-    // Add demo/fake data if no projects exist
-    projects.value = [
-      {
-        id: 1,
-        name: 'Wireframes AUGA',
-        company: 'AUGA',
-        description: 'Main website redesign',
-        pages: [
-          { id: 'p1', name: 'Homepage', blocks: [] },
-          { id: 'p2', name: 'About', blocks: [] },
-          { id: 'p3', name: 'Products', blocks: [] },
-          { id: 'p4', name: 'Contact', blocks: [] },
-          { id: 'p5', name: 'Services', blocks: [] },
-        ],
-        date: '16-10-2025',
-        status: 'In Progress',
-        language: 'English',
-      },
-      {
-        id: 2,
-        name: 'Project naam',
-        company: 'Beschrijving',
-        description: 'E-commerce platform',
-        pages: [
-          { id: 'p1', name: 'Homepage', blocks: [] },
-          { id: 'p2', name: 'Shop', blocks: [] },
-          { id: 'p3', name: 'Cart', blocks: [] },
-          { id: 'p4', name: 'Checkout', blocks: [] },
-          { id: 'p5', name: 'Account', blocks: [] },
-        ],
-        date: '4-10-2025',
-        status: 'Draft',
-        language: 'Nederlands',
-      },
-      {
-        id: 3,
-        name: 'Project naam',
-        company: 'Beschrijving',
-        description: 'Corporate website',
-        pages: [
-          { id: 'p1', name: 'Homepage', blocks: [] },
-          { id: 'p2', name: 'About', blocks: [] },
-          { id: 'p3', name: 'Services', blocks: [] },
-          { id: 'p4', name: 'Team', blocks: [] },
-          { id: 'p5', name: 'Contact', blocks: [] },
-        ],
-        date: '12-9-2025',
-        status: 'Draft',
-        language: 'English',
-      },
-      {
-        id: 4,
-        name: 'Project naam',
-        company: 'Beschrijving',
-        description: 'Portfolio website',
-        pages: [
-          { id: 'p1', name: 'Homepage', blocks: [] },
-          { id: 'p2', name: 'Portfolio', blocks: [] },
-          { id: 'p3', name: 'About', blocks: [] },
-          { id: 'p4', name: 'Blog', blocks: [] },
-          { id: 'p5', name: 'Contact', blocks: [] },
-        ],
-        date: '5-9-2025',
-        status: 'Draft',
-        language: 'Nederlands',
-      },
-    ]
-    // Save demo data to localStorage
-    localStorage.setItem('wireframe_projects', JSON.stringify(projects.value))
+    loadDemoData()
   }
-})
+}
+
+// Helper: Load demo data
+const loadDemoData = () => {
+  projects.value = [
+    {
+      id: 1,
+      name: 'Wireframes AUGA',
+      company: 'AUGA',
+      description: 'Main website redesign',
+      pages: [
+        { id: 'p1', name: 'Homepage', blocks: [] },
+        { id: 'p2', name: 'About', blocks: [] },
+        { id: 'p3', name: 'Products', blocks: [] },
+        { id: 'p4', name: 'Contact', blocks: [] },
+        { id: 'p5', name: 'Services', blocks: [] },
+      ],
+      date: '16-10-2025',
+      status: 'In Progress',
+      language: 'English',
+    },
+    {
+      id: 2,
+      name: 'Project naam',
+      company: 'Beschrijving',
+      description: 'E-commerce platform',
+      pages: [
+        { id: 'p1', name: 'Homepage', blocks: [] },
+        { id: 'p2', name: 'Shop', blocks: [] },
+        { id: 'p3', name: 'Cart', blocks: [] },
+        { id: 'p4', name: 'Checkout', blocks: [] },
+        { id: 'p5', name: 'Account', blocks: [] },
+      ],
+      date: '4-10-2025',
+      status: 'Draft',
+      language: 'Nederlands',
+    },
+    {
+      id: 3,
+      name: 'Project naam',
+      company: 'Beschrijving',
+      description: 'Corporate website',
+      pages: [
+        { id: 'p1', name: 'Homepage', blocks: [] },
+        { id: 'p2', name: 'About', blocks: [] },
+        { id: 'p3', name: 'Services', blocks: [] },
+        { id: 'p4', name: 'Team', blocks: [] },
+        { id: 'p5', name: 'Contact', blocks: [] },
+      ],
+      date: '12-9-2025',
+      status: 'Draft',
+      language: 'English',
+    },
+    {
+      id: 4,
+      name: 'Project naam',
+      company: 'Beschrijving',
+      description: 'Portfolio website',
+      pages: [
+        { id: 'p1', name: 'Homepage', blocks: [] },
+        { id: 'p2', name: 'Portfolio', blocks: [] },
+        { id: 'p3', name: 'About', blocks: [] },
+        { id: 'p4', name: 'Blog', blocks: [] },
+        { id: 'p5', name: 'Contact', blocks: [] },
+      ],
+      date: '5-9-2025',
+      status: 'Draft',
+      language: 'Nederlands',
+    },
+  ]
+  // Save demo data to localStorage as backup
+  localStorage.setItem('wireframe_projects', JSON.stringify(projects.value))
+}
 
 // Computed properties
 const filteredProjects = computed(() => {
@@ -129,12 +161,30 @@ const openProject = (project) => {
   // router.push(`/editor/${project.id}`)
 }
 
-const deleteProject = (projectId, e) => {
-  if (window.confirm('Delete this project?')) {
-    const updated = projects.value.filter((p) => p.id !== projectId)
-    localStorage.setItem('wireframe_projects', JSON.stringify(updated))
-    projects.value = updated
-    showNotification('Project deleted')
+const deleteProject = async (projectId, e) => {
+  if (window.confirm('Weet je zeker dat je dit project wilt verwijderen?')) {
+    try {
+      // Try to delete from Supabase
+      const { error } = await supabase.from('projects').delete().eq('id', projectId)
+
+      if (error) {
+        console.error('Supabase delete error:', error)
+        // Fallback to localStorage
+        const updated = projects.value.filter((p) => p.id !== projectId)
+        localStorage.setItem('wireframe_projects', JSON.stringify(updated))
+        projects.value = updated
+      } else {
+        // Successfully deleted from Supabase
+        projects.value = projects.value.filter((p) => p.id !== projectId)
+        // Also update localStorage backup
+        localStorage.setItem('wireframe_projects', JSON.stringify(projects.value))
+      }
+
+      showNotification('Project verwijderd')
+    } catch (err) {
+      console.error('Error deleting project:', err)
+      showNotification('Fout bij verwijderen')
+    }
   }
 }
 </script>
