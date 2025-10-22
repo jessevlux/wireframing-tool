@@ -13,8 +13,8 @@ const searchQuery = ref('')
 const showToast = ref(false)
 const toastMessage = ref('')
 
-// Load projects from Supabase on mount
-onMounted(async () => {
+// Load projects from Supabase
+const loadProjects = async () => {
   try {
     // Try to load from Supabase
     const { data, error } = await supabase
@@ -38,6 +38,18 @@ onMounted(async () => {
     // Fallback to localStorage
     loadFromLocalStorage()
   }
+}
+
+// Load on mount and when page becomes visible
+onMounted(() => {
+  loadProjects()
+  
+  // Reload when user comes back to this page
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      loadProjects()
+    }
+  })
 })
 
 // Helper: Load from localStorage
