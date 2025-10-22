@@ -166,9 +166,8 @@ const deleteProject = (projectId, e) => {
             <h1
               class="text-3xl font-bold bg-linear-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent"
             >
-              AI Wireframe Studio
+              Codigital Wireframe Studio
             </h1>
-            <p :class="`mt-1 ${text2}`">Generate intelligent sitemaps</p>
           </div>
           <div class="flex items-center gap-4">
             <button @click="toggleDarkMode" :class="`p-3 rounded-xl ${hover}`">
