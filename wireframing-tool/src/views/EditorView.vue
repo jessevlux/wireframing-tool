@@ -1,20 +1,9 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import {
-  ChevronRight,
-  Plus,
-  Undo2,
-  Redo2,
-  Download,
-  Save,
-  GripVertical,
-  Edit2,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-} from 'lucide-vue-next'
+import { ChevronRight, Plus, Undo2, Redo2, Download, Save, Edit2 } from 'lucide-vue-next'
 import { supabase } from '../lib/supabase.js'
+import BlockItem from '../components/BlockItem.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -312,59 +301,19 @@ const exportJSON = () => {
           </div>
 
           <div class="space-y-4">
-            <div
+            <BlockItem
               v-for="(block, index) in blocks"
               :key="block.id"
-              @click="selectBlock(block)"
-              :class="[
-                'border-2 rounded-xl p-6 cursor-pointer transition-all group',
-                selectedBlock?.id === block.id
-                  ? 'border-violet-500 bg-violet-500/5'
-                  : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
-              ]"
-            >
-              <div class="flex items-start gap-4">
-                <div class="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 cursor-grab">
-                  <GripVertical class="w-5 h-5 text-zinc-400" />
-                </div>
-                <div class="flex-1">
-                  <div class="flex items-center justify-between mb-2">
-                    <h3 class="font-semibold">{{ block.type }}</h3>
-                    <div
-                      class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <button
-                        @click.stop="moveBlock(block.id, 'up')"
-                        :disabled="index === 0"
-                        :class="[
-                          'p-2 rounded-lg hover:bg-zinc-800',
-                          index === 0 ? 'opacity-40 cursor-not-allowed' : '',
-                        ]"
-                      >
-                        <ChevronUp class="w-4 h-4" />
-                      </button>
-                      <button
-                        @click.stop="moveBlock(block.id, 'down')"
-                        :disabled="index === blocks.length - 1"
-                        :class="[
-                          'p-2 rounded-lg hover:bg-zinc-800',
-                          index === blocks.length - 1 ? 'opacity-40 cursor-not-allowed' : '',
-                        ]"
-                      >
-                        <ChevronDown class="w-4 h-4" />
-                      </button>
-                      <button
-                        @click.stop="deleteBlock(block.id)"
-                        class="p-2 rounded-lg hover:bg-zinc-800"
-                      >
-                        <Trash2 class="w-4 h-4 text-red-400" />
-                      </button>
-                    </div>
-                  </div>
-                  <p class="text-sm text-zinc-400">{{ block.content }}</p>
-                </div>
-              </div>
-            </div>
+              :block="block"
+              :index="index"
+              :is-selected="selectedBlock?.id === block.id"
+              :is-first="index === 0"
+              :is-last="index === blocks.length - 1"
+              @select="selectBlock"
+              @move-up="moveBlock(block.id, 'up')"
+              @move-down="moveBlock(block.id, 'down')"
+              @delete="deleteBlock(block.id)"
+            />
           </div>
         </div>
       </div>
