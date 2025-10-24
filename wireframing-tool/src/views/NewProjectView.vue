@@ -3,6 +3,9 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { X, Zap, Upload, Trash2 } from 'lucide-vue-next'
 import { supabase } from '../lib/supabase.js'
+import { projectService } from '../services/projectService.js'
+import { wireframeService } from '../services/wireframeService.js'
+import { generateBlocks, generatePages } from '../services/templateService.js'
 
 const router = useRouter()
 
@@ -68,59 +71,6 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-// Generate blocks for different page types
-const generateBlocks = (pageType) => {
-  const templates = {
-    Homepage: [
-      { type: 'Hero Section', content: 'Hoofdbanner met titel en CTA' },
-      { type: 'Feature Grid', content: '3 kolommen met belangrijkste features' },
-      { type: 'Testimonials', content: 'Klantreviews en ratings' },
-    ],
-    About: [
-      { type: 'Header', content: 'Bedrijfsintroductie' },
-      { type: 'Story Section', content: 'Ons verhaal en missie' },
-    ],
-    Products: [
-      { type: 'Header', content: 'Product catalogus titel' },
-      { type: 'Product Grid', content: 'Product kaarten met afbeeldingen' },
-    ],
-    Contact: [
-      { type: 'Header', content: 'Neem contact op' },
-      { type: 'Contact Form', content: 'Naam, email, bericht velden' },
-    ],
-  }
-
-  const template = templates[pageType] || [
-    { type: 'Header', content: 'Pagina header' },
-    { type: 'Content Section', content: 'Hoofd content gebied' },
-  ]
-
-  return template.map((block, i) => ({
-    id: `block-${Date.now()}-${i}`,
-    ...block,
-    props: { height: 'medium', alignment: 'left' },
-  }))
-}
-
-// Generate pages based on number
-const generatePages = (numPages) => {
-  const types = [
-    'Homepage',
-    'About',
-    'Products',
-    'Services',
-    'Contact',
-    'Blog',
-    'Portfolio',
-    'Team',
-  ]
-  return Array.from({ length: Math.min(numPages, 10) }, (_, i) => ({
-    id: `page-${Date.now()}-${i}`,
-    name: types[i] || `Pagina ${i + 1}`,
-    blocks: generateBlocks(types[i] || 'Generic'),
-  }))
-}
-
 // Create project and save to Supabase
 const createProject = async () => {
   if (!formData.value.projectName.trim()) {
@@ -130,40 +80,40 @@ const createProject = async () => {
 
   isCreating.value = true
 
-  const newProject = {
-    id: Date.now(),
-    name: formData.value.projectName,
-    company: formData.value.companyName,
-    description: formData.value.description,
-    pages: generatePages(formData.value.numPages),
-    date: new Date().toLocaleDateString('nl-NL'),
-    status: 'Draft',
-    language: formData.value.language,
-    // BELANGRIJK: files worden NIET opgeslagen in database
-    // Ze blijven alleen lokaal in uploadedFiles voor AI processing
-  }
-
   try {
-    // Save to Supabase
-    const { error } = await supabase.from('projects').insert([newProject])
+    // 1. Roep Edge Function aan om wireframe te genereren
+    console.log('Genereren wireframe via Edge Function...')
+    const wireframeResult = await wireframeService.generateWireframe({
+      projectName: formData.value.projectName,
+      companyName: formData.value.companyName,
+      description: formData.value.description,
+      numPages: formData.value.numPages,
+      language: formData.value.language,
+    })
 
-    if (error) {
-      console.error('Supabase error:', error)
-      // Fallback: save to localStorage
-      const saved = localStorage.getItem('wireframe_projects')
-      const projects = saved ? JSON.parse(saved) : []
-      projects.push(newProject)
-      localStorage.setItem('wireframe_projects', JSON.stringify(projects))
-      alert('Project aangemaakt (lokaal opgeslagen)')
-    } else {
-      alert('Project succesvol aangemaakt!')
+    // 2. Converteer naar project pages formaat
+    const pages = wireframeService.convertToProjectPages(wireframeResult.wireframeJson)
+
+    // 3. Maak project aan in database
+    const newProject = {
+      name: formData.value.projectName,
+      company: formData.value.companyName,
+      description: formData.value.description,
+      pages: pages,
+      date: new Date().toLocaleDateString('nl-NL'),
+      status: 'Draft',
+      language: formData.value.language,
     }
 
-    // Navigate back to dashboard
-    router.push('/')
-  } catch (err) {
-    console.error('Error creating project:', err)
-    alert('Fout bij aanmaken project')
+    const savedProject = await projectService.createProject(newProject)
+
+    console.log('Project succesvol aangemaakt:', savedProject)
+
+    // 4. Open het project in de editor
+    router.push(`/editor/${savedProject.id}`)
+  } catch (error) {
+    console.error('Error creating project:', error)
+    alert(`Fout bij aanmaken project: ${error.message}`)
   } finally {
     isCreating.value = false
   }

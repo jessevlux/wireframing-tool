@@ -79,9 +79,17 @@ const addBlock = () => {
 
   const newBlock = {
     id: `block-${Date.now()}`,
-    type: 'Nieuw Blok',
-    content: 'Blok inhoud',
-    props: {},
+    component: 'Hero',
+    props: {
+      'Has Title': true,
+      'Hero Title': 'Nieuwe sectie',
+      'Has Description': true,
+      Description: 'Beschrijving van deze sectie',
+      'Has Usps': false,
+      'Has Button Primary': false,
+      'Has Button Secondary': false,
+    },
+    children: [],
   }
 
   // Add to page
@@ -128,13 +136,26 @@ const updateBlock = (field, value) => {
 
   const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
   if (block) {
-    if (field === 'type' || field === 'content') {
+    if (field === 'type' || field === 'content' || field === 'component') {
       block[field] = value
     } else {
       // Custom property
       if (!block.props) block.props = {}
       block.props[field] = value
     }
+    // Update selected block reference
+    selectedBlock.value = { ...block }
+    saveProject()
+  }
+}
+
+// Update een property binnen block.props (voor schema-conforme blocks)
+const updateBlockProp = (propKey, value) => {
+  if (!selectedBlock.value) return
+
+  const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
+  if (block && block.props) {
+    block.props[propKey] = value
     // Update selected block reference
     selectedBlock.value = { ...block }
     saveProject()
@@ -323,7 +344,9 @@ const exportJSON = () => {
         <div class="p-6">
           <div v-if="selectedBlock">
             <div class="flex items-center justify-between mb-6">
-              <h3 class="font-semibold">Properties {{ selectedBlock.type }}</h3>
+              <h3 class="font-semibold">
+                Properties: {{ selectedBlock.component || selectedBlock.type }}
+              </h3>
               <button @click="selectedBlock = null" class="text-zinc-500 hover:text-zinc-300">
                 <Edit2 class="w-5 h-5" />
               </button>
@@ -331,21 +354,11 @@ const exportJSON = () => {
 
             <div class="space-y-4">
               <div>
-                <label class="block text-sm font-medium mb-2">Block Type</label>
+                <label class="block text-sm font-medium mb-2">Component</label>
                 <input
-                  :value="selectedBlock.type"
-                  @input="updateBlock('type', $event.target.value)"
-                  class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none"
-                />
-              </div>
-
-              <div>
-                <label class="block text-sm font-medium mb-2">Content</label>
-                <textarea
-                  :value="selectedBlock.content"
-                  @input="updateBlock('content', $event.target.value)"
-                  rows="3"
-                  class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none resize-none"
+                  :value="selectedBlock.component || selectedBlock.type"
+                  disabled
+                  class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-400 cursor-not-allowed"
                 />
               </div>
 
@@ -353,16 +366,55 @@ const exportJSON = () => {
                 v-if="selectedBlock.props && Object.keys(selectedBlock.props).length > 0"
                 class="border-t border-zinc-800 pt-4"
               >
-                <h4 class="text-sm font-medium mb-4">Custom Properties</h4>
+                <h4 class="text-sm font-medium mb-4">Properties</h4>
                 <div v-for="(value, key) in selectedBlock.props" :key="key" class="mb-4">
-                  <label class="block text-xs font-medium mb-1 text-zinc-400 capitalize">
+                  <label class="block text-xs font-medium mb-2 text-zinc-300">
                     {{ key }}
                   </label>
+
+                  <!-- Boolean property: checkbox -->
+                  <div v-if="typeof value === 'boolean'" class="flex items-center">
+                    <input
+                      type="checkbox"
+                      :checked="value"
+                      @input="updateBlockProp(key, $event.target.checked)"
+                      class="w-4 h-4 bg-zinc-950 border-zinc-700 rounded text-violet-600 focus:ring-2 focus:ring-violet-500"
+                    />
+                    <span class="ml-2 text-sm text-zinc-400">
+                      {{ value ? 'Ja' : 'Nee' }}
+                    </span>
+                  </div>
+
+                  <!-- String property: text input -->
                   <input
+                    v-else
                     :value="value"
-                    @input="updateBlock(key, $event.target.value)"
+                    @input="updateBlockProp(key, $event.target.value)"
                     class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none"
                   />
+                </div>
+              </div>
+
+              <div
+                v-if="selectedBlock.children && selectedBlock.children.length > 0"
+                class="border-t border-zinc-800 pt-4"
+              >
+                <h4 class="text-sm font-medium mb-4">
+                  Children ({{ selectedBlock.children.length }})
+                </h4>
+                <div class="space-y-2">
+                  <div
+                    v-for="(child, idx) in selectedBlock.children"
+                    :key="idx"
+                    class="p-3 bg-zinc-950 rounded-lg border border-zinc-800"
+                  >
+                    <div class="text-xs font-medium text-violet-400">
+                      {{ child.component }}
+                    </div>
+                    <div v-if="child.index !== undefined" class="text-xs text-zinc-500 mt-1">
+                      Index: {{ child.index }}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
