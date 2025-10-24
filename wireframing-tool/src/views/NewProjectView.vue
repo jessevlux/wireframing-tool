@@ -198,7 +198,7 @@ const createProject = async () => {
               v-model="formData.projectName"
               type="text"
               placeholder="E-commerce Platform"
-              class="w-full px-4 py-3 bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+              class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
             />
           </div>
 
@@ -209,7 +209,7 @@ const createProject = async () => {
               v-model="formData.companyName"
               type="text"
               placeholder="TechShop BV"
-              class="w-full px-4 py-3 bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+              class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
             />
           </div>
 
@@ -220,7 +220,7 @@ const createProject = async () => {
               v-model="formData.description"
               rows="4"
               placeholder="Beschrijf je project..."
-              class="w-full px-4 py-3 bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none resize-none"
+              class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none resize-none"
             />
           </div>
 
@@ -234,7 +234,7 @@ const createProject = async () => {
                 type="number"
                 min="1"
                 max="10"
-                class="w-full px-4 py-3 bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+                class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
               />
             </div>
 
@@ -243,7 +243,7 @@ const createProject = async () => {
               <label class="block text-sm font-medium mb-2">Taal</label>
               <select
                 v-model="formData.language"
-                class="w-full px-4 py-3 bg-zinc-950 text-zinc-100 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+                class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
               >
                 <option>Nederlands</option>
                 <option>English</option>

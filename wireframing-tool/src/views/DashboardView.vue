@@ -28,10 +28,6 @@ const loadProjects = async () => {
       loadFromLocalStorage()
     } else {
       projects.value = data || []
-      // Als geen projecten in Supabase, laad demo data
-      if (projects.value.length === 0) {
-        loadDemoData()
-      }
     }
   } catch (err) {
     console.error('Error connecting to Supabase:', err)
@@ -43,7 +39,7 @@ const loadProjects = async () => {
 // Load on mount and when page becomes visible
 onMounted(() => {
   loadProjects()
-  
+
   // Reload when user comes back to this page
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
@@ -57,81 +53,8 @@ const loadFromLocalStorage = () => {
   const saved = localStorage.getItem('wireframe_projects')
   if (saved) {
     projects.value = JSON.parse(saved)
-  } else {
-    loadDemoData()
   }
-}
-
-// Helper: Load demo data
-const loadDemoData = () => {
-  projects.value = [
-    {
-      id: 1,
-      name: 'Wireframes AUGA',
-      company: 'AUGA',
-      description: 'Main website redesign',
-      pages: [
-        { id: 'p1', name: 'Homepage', blocks: [] },
-        { id: 'p2', name: 'About', blocks: [] },
-        { id: 'p3', name: 'Products', blocks: [] },
-        { id: 'p4', name: 'Contact', blocks: [] },
-        { id: 'p5', name: 'Services', blocks: [] },
-      ],
-      date: '16-10-2025',
-      status: 'In Progress',
-      language: 'English',
-    },
-    {
-      id: 2,
-      name: 'Project naam',
-      company: 'Beschrijving',
-      description: 'E-commerce platform',
-      pages: [
-        { id: 'p1', name: 'Homepage', blocks: [] },
-        { id: 'p2', name: 'Shop', blocks: [] },
-        { id: 'p3', name: 'Cart', blocks: [] },
-        { id: 'p4', name: 'Checkout', blocks: [] },
-        { id: 'p5', name: 'Account', blocks: [] },
-      ],
-      date: '4-10-2025',
-      status: 'Draft',
-      language: 'Nederlands',
-    },
-    {
-      id: 3,
-      name: 'Project naam',
-      company: 'Beschrijving',
-      description: 'Corporate website',
-      pages: [
-        { id: 'p1', name: 'Homepage', blocks: [] },
-        { id: 'p2', name: 'About', blocks: [] },
-        { id: 'p3', name: 'Services', blocks: [] },
-        { id: 'p4', name: 'Team', blocks: [] },
-        { id: 'p5', name: 'Contact', blocks: [] },
-      ],
-      date: '12-9-2025',
-      status: 'Draft',
-      language: 'English',
-    },
-    {
-      id: 4,
-      name: 'Project naam',
-      company: 'Beschrijving',
-      description: 'Portfolio website',
-      pages: [
-        { id: 'p1', name: 'Homepage', blocks: [] },
-        { id: 'p2', name: 'Portfolio', blocks: [] },
-        { id: 'p3', name: 'About', blocks: [] },
-        { id: 'p4', name: 'Blog', blocks: [] },
-        { id: 'p5', name: 'Contact', blocks: [] },
-      ],
-      date: '5-9-2025',
-      status: 'Draft',
-      language: 'Nederlands',
-    },
-  ]
-  // Save demo data to localStorage as backup
-  localStorage.setItem('wireframe_projects', JSON.stringify(projects.value))
+  // Als geen projects: laat empty state zien
 }
 
 // Computed properties
