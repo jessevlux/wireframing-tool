@@ -25,6 +25,35 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete'])
+
+// Helper om een korte beschrijving te maken van de block
+const getBlockDescription = () => {
+  const block = props.block
+  if (!block.props) return 'Geen eigenschappen'
+
+  // Probeer een relevante prop te vinden voor beschrijving
+  const relevantProps = [
+    'Title',
+    'Hero Title',
+    'Description',
+    'Text primary button',
+    'Text Secondary Button',
+    'Title of text Block',
+  ]
+
+  for (const prop of relevantProps) {
+    if (block.props[prop]) {
+      return block.props[prop]
+    }
+  }
+
+  // Toon aantal children als fallback
+  if (block.children && block.children.length > 0) {
+    return `${block.children.length} child component${block.children.length > 1 ? 's' : ''}`
+  }
+
+  return 'Configureer eigenschappen →'
+}
 </script>
 
 <template>
@@ -37,13 +66,13 @@ const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete'])
         : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
     ]"
   >
-    <div class="flex items-start gap-4">
-      <div class="p-2 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab">
+    <div class="flex items-center gap-4">
+      <div class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab">
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">
-        <div class="flex items-center justify-between mb-2">
-          <h3 class="font-semibold">{{ block.type }}</h3>
+        <div class="flex items-center justify-between mb-1">
+          <h3 class="font-semibold">{{ block.component || block.type }}</h3>
           <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               @click.stop="emit('moveUp')"
@@ -70,7 +99,7 @@ const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete'])
             </button>
           </div>
         </div>
-        <p class="text-sm text-zinc-400">{{ block.content }}</p>
+        <p class="text-sm text-zinc-400">{{ block.content || getBlockDescription() }}</p>
       </div>
     </div>
   </div>
