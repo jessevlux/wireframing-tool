@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase.js'
-
+//oude dummy data
 /**
+ *
  * Wireframe Service
  * Roept de Supabase Edge Function aan voor wireframe generatie
  */

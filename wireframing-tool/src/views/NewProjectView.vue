@@ -2,10 +2,8 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { X, Zap, Upload, Trash2 } from 'lucide-vue-next'
-import { supabase } from '../lib/supabase.js'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
-import { generateBlocks, generatePages } from '../services/templateService.js'
 
 const router = useRouter()
 
@@ -103,6 +101,7 @@ const createProject = async () => {
       date: new Date().toLocaleDateString('nl-NL'),
       status: 'Draft',
       language: formData.value.language,
+      created_at: new Date().toISOString(),
     }
 
     const savedProject = await projectService.createProject(newProject)
@@ -123,7 +122,7 @@ const createProject = async () => {
 <template>
   <div class="min-h-screen bg-zinc-950 text-zinc-100">
     <!-- Header -->
-    <div class="bg-zinc-900 border-b border-zinc-800">
+    <div class="bg-zinc-900 border-b justify-between border-zinc-800">
       <div class="max-w-4xl mx-auto px-8 py-6">
         <button
           @click="goBack"
@@ -133,7 +132,6 @@ const createProject = async () => {
           Terug naar Dashboard
         </button>
         <h1 class="text-3xl font-bold">Nieuw Project Aanmaken</h1>
-        <p class="mt-2 text-zinc-400">Geef context voor je sitemap</p>
       </div>
     </div>
 
@@ -224,7 +222,7 @@ const createProject = async () => {
               <label for="file-upload" class="cursor-pointer">
                 <Upload class="w-12 h-12 mx-auto mb-4 text-zinc-400" />
                 <p class="text-zinc-300 mb-2">Voeg bestanden toe of sleep ze hierheen</p>
-                <p class="text-sm text-zinc-500">Afbeeldingen, PDF's en documenten</p>
+                <p class="text-sm text-zinc-500">Alleen PDF</p>
               </label>
             </div>
 

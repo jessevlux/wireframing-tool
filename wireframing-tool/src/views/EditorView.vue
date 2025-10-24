@@ -1,8 +1,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ChevronRight, Plus, Undo2, Redo2, Download, Save, Edit2 } from 'lucide-vue-next'
-import { supabase } from '../lib/supabase.js'
+import { ChevronRight, Plus, Download, Save, Edit2 } from 'lucide-vue-next'
+import { projectService } from '../services/projectService.js'
 import BlockItem from '../components/BlockItem.vue'
 
 const router = useRouter()
@@ -19,22 +19,14 @@ onMounted(async () => {
   const projectId = parseInt(route.params.id)
 
   try {
-    // Try to load from Supabase
-    const { data, error } = await supabase.from('projects').select('*').eq('id', projectId).single()
-
-    if (error) {
-      console.error('Supabase error:', error)
-      // Fallback to localStorage
-      loadFromLocalStorage(projectId)
-    } else {
-      project.value = data
-      // Select first page by default
-      if (project.value?.pages?.length > 0) {
-        selectedPageId.value = project.value.pages[0].id
-      }
+    project.value = await projectService.getProject(projectId)
+    // Select first page by default
+    if (project.value?.pages?.length > 0) {
+      selectedPageId.value = project.value.pages[0].id
     }
   } catch (err) {
     console.error('Error loading project:', err)
+    // Fallback to localStorage
     loadFromLocalStorage(projectId)
   }
 })
@@ -131,24 +123,6 @@ const moveBlock = (blockId, direction) => {
   }
 }
 
-const updateBlock = (field, value) => {
-  if (!selectedBlock.value) return
-
-  const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
-  if (block) {
-    if (field === 'type' || field === 'content' || field === 'component') {
-      block[field] = value
-    } else {
-      // Custom property
-      if (!block.props) block.props = {}
-      block.props[field] = value
-    }
-    // Update selected block reference
-    selectedBlock.value = { ...block }
-    saveProject()
-  }
-}
-
 // Update een property binnen block.props (voor schema-conforme blocks)
 const updateBlockProp = (propKey, value) => {
   if (!selectedBlock.value) return
@@ -168,18 +142,13 @@ const saveProject = async () => {
   isSaving.value = true
 
   try {
-    const { error } = await supabase
-      .from('projects')
-      .update({ pages: project.value.pages, updated_at: new Date().toISOString() })
-      .eq('id', project.value.id)
-
-    if (error) {
-      console.error('Supabase save error:', error)
-      // Fallback to localStorage
-      saveToLocalStorage()
-    }
+    await projectService.updateProject(project.value.id, {
+      pages: project.value.pages,
+      updated_at: new Date().toISOString(),
+    })
   } catch (err) {
-    console.error('Error saving:', err)
+    console.error('Error saving project:', err)
+    // Fallback to localStorage
     saveToLocalStorage()
   } finally {
     setTimeout(() => {

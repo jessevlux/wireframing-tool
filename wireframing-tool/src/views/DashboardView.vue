@@ -3,7 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Plus, Search, FileText, Moon, Sun } from 'lucide-vue-next'
 import ProjectCard from '../components/ProjectCard.vue'
-import { supabase } from '../lib/supabase.js'
+import { projectService } from '../services/projectService.js'
 
 const router = useRouter()
 
@@ -16,22 +16,10 @@ const toastMessage = ref('')
 // Load projects from Supabase
 const loadProjects = async () => {
   try {
-    // Try to load from Supabase
-    const { data, error } = await supabase
-      .from('projects')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      console.error('Supabase error:', error)
-      // Fallback to localStorage if Supabase fails
-      loadFromLocalStorage()
-    } else {
-      projects.value = data || []
-    }
+    projects.value = await projectService.getAllProjects()
   } catch (err) {
-    console.error('Error connecting to Supabase:', err)
-    // Fallback to localStorage
+    console.error('Error loading projects:', err)
+    // Fallback to localStorage if service fails
     loadFromLocalStorage()
   }
 }
@@ -94,24 +82,14 @@ const openProject = (project) => {
   router.push(`/editor/${project.id}`)
 }
 
-const deleteProject = async (projectId, e) => {
+const deleteProject = async (projectId) => {
   if (window.confirm('Weet je zeker dat je dit project wilt verwijderen?')) {
     try {
-      // Try to delete from Supabase
-      const { error } = await supabase.from('projects').delete().eq('id', projectId)
-
-      if (error) {
-        console.error('Supabase delete error:', error)
-        // Fallback to localStorage
-        const updated = projects.value.filter((p) => p.id !== projectId)
-        localStorage.setItem('wireframe_projects', JSON.stringify(updated))
-        projects.value = updated
-      } else {
-        // Successfully deleted from Supabase
-        projects.value = projects.value.filter((p) => p.id !== projectId)
-        // Also update localStorage backup
-        localStorage.setItem('wireframe_projects', JSON.stringify(projects.value))
-      }
+      await projectService.deleteProject(projectId)
+      // Successfully deleted - update UI
+      projects.value = projects.value.filter((p) => p.id !== projectId)
+      // Also update localStorage backup
+      localStorage.setItem('wireframe_projects', JSON.stringify(projects.value))
 
       showNotification('Project verwijderd')
     } catch (err) {
