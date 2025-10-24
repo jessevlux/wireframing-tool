@@ -91,9 +91,7 @@ const goToNewProject = () => {
 }
 
 const openProject = (project) => {
-  // TODO: Navigate to editor view
-  console.log('Opening project:', project)
-  // router.push(`/editor/${project.id}`)
+  router.push(`/editor/${project.id}`)
 }
 
 const deleteProject = async (projectId, e) => {
@@ -164,7 +162,7 @@ const deleteProject = async (projectId, e) => {
               class="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl font-medium shadow-lg"
             >
               <Plus class="w-5 h-5" />
-              New Project
+              Nieuw Project
             </button>
           </div>
         </div>
