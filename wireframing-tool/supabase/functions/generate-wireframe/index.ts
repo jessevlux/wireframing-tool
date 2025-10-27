@@ -66,6 +66,7 @@ serve(async (req) => {
       const dummyWireframe = [
         {
           page: 'Homepage (Dummy)',
+          rationale: `Deze homepage is zorgvuldig opgebouwd met een duidelijke hiërarchie:\n\n1. **Hero sectie**: Directe aandachtstrekker met de belangrijkste boodschap en call-to-action. Dit is vaak het eerste wat bezoekers zien.\n\n2. **Grid sectie**: Visueel overzicht van diensten met kaarten die meer informatie bieden. Dit helpt bezoekers snel te scannen wat het bedrijf aanbiedt.\n\n3. **Call to Action**: Strategisch geplaatste oproep tot actie om bezoekers te motiveren contact op te nemen.\n\n4. **Footer**: Laatste opportuniteit om navigatie, contactgegevens en extra informatie aan te bieden.`,
           blocks: [
             {
               component: 'Hero',
@@ -201,6 +202,7 @@ serve(async (req) => {
         },
         {
           page: 'Contact',
+          rationale: `De contactpagina is gestructureerd voor maximale duidelijkheid:\n\n1. **Hero met titel**: Directe verkenning dat dit de contactpagina is, met een vriendelijke beschrijving.\n\n2. **Kolommen layout**: Verdeelt informatie visueel in beelden en content, zodat bezoekers zowel visuele als tekstuele informatie krijgen.\n\n3. **Footer**: Consistente navigatie en extra contactmogelijkheden.`,
           blocks: [
             {
               component: 'Hero',

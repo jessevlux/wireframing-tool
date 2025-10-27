@@ -71,6 +71,7 @@ export const wireframeService = {
     return wireframeJson.map((page, index) => ({
       id: `page-${Date.now()}-${index}`,
       name: page.page,
+      rationale: page.rationale || '', // AI rationale wordt opgeslagen
       blocks: page.blocks.map((block, blockIndex) => ({
         id: `block-${Date.now()}-${blockIndex}`,
         ...block,
