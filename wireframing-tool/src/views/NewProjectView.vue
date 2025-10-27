@@ -69,6 +69,27 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
+// Convert files to base64 for API transmission (not for storage)
+const convertFilesToBase64 = async (files) => {
+  const filePromises = files.map((file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => {
+        resolve({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          data: reader.result.split(',')[1], // Remove data:mime;base64, prefix
+        })
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  })
+
+  return await Promise.all(filePromises)
+}
+
 // Create project and save to Supabase
 const createProject = async () => {
   if (!formData.value.projectName.trim()) {
@@ -79,7 +100,15 @@ const createProject = async () => {
   isCreating.value = true
 
   try {
-    // 1. Roep Edge Function aan om wireframe te genereren
+    // 1. Convert uploaded files to base64 (for AI context only, not for storage)
+    let filesBase64 = []
+    if (uploadedFiles.value.length > 0) {
+      console.log('Converting files to base64 for AI context...')
+      filesBase64 = await convertFilesToBase64(uploadedFiles.value)
+      console.log(`${filesBase64.length} file(s) prepared for AI`)
+    }
+
+    // 2. Roep Edge Function aan om wireframe te genereren
     console.log('Genereren wireframe via Edge Function...')
     const wireframeResult = await wireframeService.generateWireframe({
       projectName: formData.value.projectName,
@@ -87,12 +116,13 @@ const createProject = async () => {
       description: formData.value.description,
       numPages: formData.value.numPages,
       language: formData.value.language,
+      files: filesBase64, // Files for AI context only (not stored in DB)
     })
 
-    // 2. Converteer naar project pages formaat
+    // 3. Converteer naar project pages formaat
     const pages = wireframeService.convertToProjectPages(wireframeResult.wireframeJson)
 
-    // 3. Maak project aan in database
+    // 4. Maak project aan in database (WITHOUT files)
     const newProject = {
       name: formData.value.projectName,
       company: formData.value.companyName,
@@ -108,7 +138,7 @@ const createProject = async () => {
 
     console.log('Project succesvol aangemaakt:', savedProject)
 
-    // 4. Open het project in de editor
+    // 5. Open het project in de editor
     router.push(`/editor/${savedProject.id}`)
   } catch (error) {
     console.error('Error creating project:', error)

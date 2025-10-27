@@ -10,12 +10,20 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface ProjectFile {
+  name: string
+  type: string
+  size: number
+  data: string // base64 encoded
+}
+
 interface ProjectRequest {
   projectName: string
   companyName?: string
   description?: string
   numPages: number
   language: string
+  files?: ProjectFile[] // Optional uploaded files for AI context only
   additionalContext?: string
 }
 
@@ -33,6 +41,7 @@ serve(async (req) => {
       description,
       numPages,
       language,
+      files,
       additionalContext,
     }: ProjectRequest = await req.json()
 
@@ -315,7 +324,7 @@ ${SPEC}
 
 Volg deze instructies EXACT op. Genereer altijd valide JSON volgens het schema.`
 
-    const userPrompt = `Genereer een wireframe sitemap voor het volgende project:
+    const userPromptText = `Genereer een wireframe sitemap voor het volgende project:
 
 **Projectnaam:** ${projectName}
 ${companyName ? `**Bedrijfsnaam:** ${companyName}` : ''}
@@ -323,12 +332,50 @@ ${description ? `**Beschrijving:** ${description}` : ''}
 **Aantal pagina's:** ${numPages}
 **Taal:** ${language}
 ${additionalContext ? `**Extra context:** ${additionalContext}` : ''}
+${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.length} (zie bijgevoegde documenten voor extra context)` : ''}
 
 Volg de werkwijze uit de instructies:
 1. Eerst een tekstuele sitemap met uitleg (Stap 2)
 2. Daarna de volledige JSON output (Stap 3)
 
 Begin nu met de sitemapfase.`
+
+    // Build message content with files (if any)
+    const messageContent: any[] = []
+
+    // Add uploaded files first (PDFs/documents for AI context)
+    if (files && files.length > 0) {
+      console.log(`Adding ${files.length} file(s) to AI context...`)
+      for (const file of files) {
+        if (file.type === 'application/pdf') {
+          messageContent.push({
+            type: 'document',
+            source: {
+              type: 'base64',
+              media_type: 'application/pdf',
+              data: file.data,
+            },
+          })
+          console.log(`- Added PDF: ${file.name} (${Math.round(file.size / 1024)}KB)`)
+        } else if (file.type.startsWith('image/')) {
+          messageContent.push({
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: file.type,
+              data: file.data,
+            },
+          })
+          console.log(`- Added Image: ${file.name} (${Math.round(file.size / 1024)}KB)`)
+        }
+      }
+    }
+
+    // Add text prompt
+    messageContent.push({
+      type: 'text',
+      text: userPromptText,
+    })
 
     console.log('Calling Anthropic API...')
 
@@ -341,7 +388,7 @@ Begin nu met de sitemapfase.`
       messages: [
         {
           role: 'user',
-          content: userPrompt,
+          content: messageContent,
         },
       ],
     })

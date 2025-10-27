@@ -14,13 +14,15 @@ export const wireframeService = {
    * @param {string} projectData.description - Project beschrijving (optioneel)
    * @param {number} projectData.numPages - Aantal pagina's
    * @param {string} projectData.language - Taal (Nederlands/English)
+   * @param {Array} projectData.files - Base64 encoded files voor AI context (niet opgeslagen in DB)
    * @param {string} projectData.additionalContext - Extra context (optioneel)
    * @returns {Promise<Object>} Wireframe data
    */
   async generateWireframe(projectData) {
     try {
+      // Files zijn alleen voor AI context, niet voor database storage
       const { data, error } = await supabase.functions.invoke('generate-wireframe', {
-        body: projectData,
+        body: projectData, // Bevat ook files array indien aanwezig
       })
 
       if (error) {
