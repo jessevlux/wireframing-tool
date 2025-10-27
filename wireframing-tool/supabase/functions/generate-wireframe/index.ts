@@ -56,7 +56,7 @@ serve(async (req) => {
 
       const dummyWireframe = [
         {
-          page: 'Homepage',
+          page: 'Homepage (Dummy)',
           blocks: [
             {
               component: 'Hero',
@@ -299,7 +299,8 @@ serve(async (req) => {
     })
 
     // Build the prompt for Claude
-    const systemPrompt = `Je bent een expert UX/UI designer en wireframe architect. Je taak is om wireframes te genereren in JSON formaat volgens het opgegeven schema.
+    const systemPrompt = `Je bent een expert UX/UI designer en wireframe architect.
+    Je taak is om wireframes te genereren in JSON formaat volgens het opgegeven schema.
 
 # Context Bestanden
 
