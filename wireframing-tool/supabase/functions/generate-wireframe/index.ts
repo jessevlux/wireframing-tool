@@ -1,15 +1,140 @@
 // @ts-nocheck
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.24.3'
+import Ajv from 'https://esm.sh/ajv@8.12.0'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Import context files
 import { COMPONENTS_SCHEMA, INSTRUCTIONS, SPEC } from './context.ts'
 // Import dummy data
 import dummyDataTemplate from './dummyData.json' with { type: 'json' }
+// Import schema for validation
+import componentsSchemaJson from '../../../AI/components.schema.json' with { type: 'json' }
+
+// Rate limiting: simple in-memory store (per Edge Function instance)
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+// Rate limit configuration
+const RATE_LIMIT = {
+  maxRequests: 10, // max requests per window
+  windowMs: 60 * 1000, // 1 minute
+}
+
+// Check rate limit
+function checkRateLimit(identifier: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now()
+  const record = rateLimitMap.get(identifier)
+
+  // Clean up expired records periodically
+  if (rateLimitMap.size > 1000) {
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (value.resetTime < now) {
+        rateLimitMap.delete(key)
+      }
+    }
+  }
+
+  if (!record || record.resetTime < now) {
+    // New window
+    rateLimitMap.set(identifier, {
+      count: 1,
+      resetTime: now + RATE_LIMIT.windowMs,
+    })
+    return { allowed: true }
+  }
+
+  if (record.count >= RATE_LIMIT.maxRequests) {
+    // Rate limit exceeded
+    const retryAfter = Math.ceil((record.resetTime - now) / 1000)
+    return { allowed: false, retryAfter }
+  }
+
+  // Increment count
+  record.count++
+  return { allowed: true }
+}
+
+// Tool definition for Claude
+const wireframeTools = [
+  {
+    name: 'emit_wireframe',
+    description:
+      'Emit the complete wireframe JSON for all pages. Use this tool to provide the final structured wireframe data after your textual explanation.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        wireframe: {
+          type: 'array',
+          description: 'Array of page objects, each with page name, rationale, and blocks',
+          items: {
+            type: 'object',
+            properties: {
+              page: {
+                type: 'string',
+                description: 'Name of the page',
+              },
+              rationale: {
+                type: 'string',
+                description: 'Explanation of why this page is structured this way (2-4 sentences)',
+              },
+              blocks: {
+                type: 'array',
+                description: 'Array of component blocks for this page',
+              },
+            },
+            required: ['page', 'rationale', 'blocks'],
+          },
+        },
+      },
+      required: ['wireframe'],
+    },
+  },
+]
+
+// Auto-repair function: attempt to fix validation errors
+async function attemptAutoRepair(
+  anthropic: any,
+  invalidJson: any,
+  errors: any[],
+  systemPrompt: string,
+): Promise<any> {
+  const repairPrompt = `The wireframe JSON you generated has validation errors. Please fix them and return ONLY the corrected JSON using the emit_wireframe tool.
+
+**Validation Errors:**
+${JSON.stringify(errors, null, 2)}
+
+**Current JSON:**
+${JSON.stringify(invalidJson, null, 2)}
+
+Fix these errors and emit the corrected wireframe using the emit_wireframe tool.`
+
+  const repairMessage = await anthropic.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 16000,
+    temperature: 0.1,
+    system: systemPrompt,
+    tools: wireframeTools,
+    messages: [
+      {
+        role: 'user',
+        content: repairPrompt,
+      },
+    ],
+  })
+
+  // Extract repaired JSON from tool call
+  for (const content of repairMessage.content) {
+    if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
+      return content.input.wireframe
+    }
+  }
+
+  throw new Error('Auto-repair did not return a valid wireframe')
 }
 
 interface ProjectFile {
@@ -58,12 +183,36 @@ serve(async (req) => {
       )
     }
 
+    // Rate limiting check
+    const clientIp = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
+    const rateLimitId = `${clientIp}-${projectName}`
+    const rateLimit = checkRateLimit(rateLimitId)
+
+    if (!rateLimit.allowed) {
+      console.warn('Rate limit exceeded for:', rateLimitId)
+      return new Response(
+        JSON.stringify({
+          error: 'Rate limit exceeded',
+          message: `Too many requests. Please try again in ${rateLimit.retryAfter} seconds.`,
+          retryAfter: rateLimit.retryAfter,
+        }),
+        {
+          status: 429,
+          headers: {
+            ...corsHeaders,
+            'Content-Type': 'application/json',
+            'Retry-After': String(rateLimit.retryAfter),
+          },
+        },
+      )
+    }
+
     // Check if Anthropic API key is configured
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
 
     // If no API key, return dummy data for testing
     if (!anthropicApiKey) {
-      console.log('No ANTHROPIC_API_KEY found - returning dummy data')
+      console.log('No ANTHROPIC_API_KEY - returning dummy data')
 
       // Load dummy data and replace placeholders
       const dummyWireframe = JSON.parse(JSON.stringify(dummyDataTemplate))
@@ -131,7 +280,7 @@ ${SPEC}
 
 Volg deze instructies EXACT op. Genereer altijd valide JSON volgens het schema.`
 
-    const userPromptText = `Genereer een wireframe sitemap voor het volgende project:
+    const userPromptText = `Genereer een wireframe voor het volgende project:
 
 **Projectnaam:** ${projectName}
 ${companyName ? `**Bedrijfsnaam:** ${companyName}` : ''}
@@ -141,18 +290,17 @@ ${description ? `**Beschrijving:** ${description}` : ''}
 ${additionalContext ? `**Extra context:** ${additionalContext}` : ''}
 ${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.length} (zie bijgevoegde documenten voor extra context)` : ''}
 
-Volg de werkwijze uit de instructies:
-1. Eerst een tekstuele sitemap met uitleg (Stap 2)
-2. Daarna de volledige JSON output (Stap 3)
+Volg de instructies exact:
+1. Geef EERST een tekstuele sitemap uitleg met de structuur en motivatie
+2. Sluit DAARNA af door de tool 'emit_wireframe' aan te roepen met de volledige wireframe JSON
 
-Begin nu met de sitemapfase.`
+BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code block). Begin nu!`
 
     // Build message content with files (if any)
     const messageContent: any[] = []
 
     // Add uploaded files first (PDFs/documents for AI context)
     if (files && files.length > 0) {
-      console.log(`Adding ${files.length} file(s) to AI context...`)
       for (const file of files) {
         if (file.type === 'application/pdf') {
           messageContent.push({
@@ -163,7 +311,6 @@ Begin nu met de sitemapfase.`
               data: file.data,
             },
           })
-          console.log(`- Added PDF: ${file.name} (${Math.round(file.size / 1024)}KB)`)
         } else if (file.type.startsWith('image/')) {
           messageContent.push({
             type: 'image',
@@ -173,7 +320,6 @@ Begin nu met de sitemapfase.`
               data: file.data,
             },
           })
-          console.log(`- Added Image: ${file.name} (${Math.round(file.size / 1024)}KB)`)
         }
       }
     }
@@ -186,12 +332,13 @@ Begin nu met de sitemapfase.`
 
     console.log('Calling Anthropic API...')
 
-    // Call Anthropic API
+    // Call Anthropic API with tools
     const message = await anthropic.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 16000,
-      temperature: 0.7,
+      temperature: 0.2,
       system: systemPrompt,
+      tools: wireframeTools,
       messages: [
         {
           role: 'user',
@@ -200,31 +347,150 @@ Begin nu met de sitemapfase.`
       ],
     })
 
-    // Log de volledige message van Claude
-    console.log('Anthropic API response received')
-    console.log('=== FULL CLAUDE MESSAGE ===')
-    console.log(JSON.stringify(message, null, 2))
-    console.log('=== END CLAUDE MESSAGE ===')
+    // Save full communication to Supabase Storage for inspection
+    let logFilePath: string | null = null
+    try {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')
+      const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-    // Extract the response text
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : ''
+      if (supabaseUrl && supabaseServiceRoleKey) {
+        const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+        const bucket = 'ai-logs'
 
-    // Try to extract JSON from the response
+        // Try to create bucket (ignore error if exists)
+        try {
+          await supabase.storage.createBucket(bucket, { public: false })
+        } catch (_) {
+          // Bucket probably already exists
+        }
+
+        const safeProject = projectName.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+        const fileName = `full-log/${timestamp}_${safeProject}.json`
+
+        // Create comprehensive log object
+        const fullLog = {
+          timestamp: new Date().toISOString(),
+          project: {
+            name: projectName,
+            company: companyName,
+            description,
+            numPages,
+            language,
+            additionalContext,
+          },
+          request: {
+            systemPrompt,
+            userPrompt: userPromptText,
+            model: 'claude-sonnet-4-5-20250929',
+            temperature: 0.2,
+            maxTokens: 16000,
+            tools: wireframeTools,
+            hasAttachments: files && files.length > 0,
+            attachmentCount: files?.length || 0,
+          },
+          response: {
+            full: message,
+            contentBlocks: message.content.map((block: any) => ({
+              type: block.type,
+              ...(block.type === 'text'
+                ? { text: block.text, length: block.text.length }
+                : block.type === 'tool_use'
+                  ? { tool: block.name, hasData: !!block.input }
+                  : {}),
+            })),
+          },
+          metadata: {
+            id: message.id,
+            model: message.model,
+            usage: message.usage,
+            stopReason: message.stop_reason,
+          },
+        }
+
+        const fileBody = new Blob([JSON.stringify(fullLog, null, 2)], {
+          type: 'application/json',
+        })
+
+        const { error: uploadError } = await supabase.storage
+          .from(bucket)
+          .upload(fileName, fileBody, { upsert: true, contentType: 'application/json' })
+
+        if (uploadError) {
+          console.error('Failed to save log file:', uploadError)
+        } else {
+          logFilePath = `${bucket}/${fileName}`
+          console.log('Log saved to Storage:', fileName)
+        }
+      }
+    } catch (e) {
+      console.error('Error saving log file:', e)
+    }
+
+    console.log('Response received')
+
+    // Extract wireframe JSON and sitemap proposal
     let wireframeJson = null
-    let sitemapProposal = responseText
+    let sitemapProposal = ''
+    let responseText = ''
 
-    // Look for JSON in the response (usually in code blocks)
-    const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
-    if (jsonMatch) {
-      try {
-        wireframeJson = JSON.parse(jsonMatch[1])
-        // Extract sitemap proposal (text before JSON)
-        const jsonStart = responseText.indexOf('```json')
-        sitemapProposal = responseText.substring(0, jsonStart).trim()
-      } catch (e) {
-        console.error('Failed to parse JSON from response:', e)
+    // Parse response: prioritize tool_use, fallback to text + code block
+    for (const content of message.content) {
+      if (content.type === 'text') {
+        responseText += content.text
+      } else if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
+        wireframeJson = content.input.wireframe
       }
     }
+
+    // Fallback: if no tool_use, try to extract JSON from text
+    if (!wireframeJson && responseText) {
+      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
+      if (jsonMatch) {
+        try {
+          wireframeJson = JSON.parse(jsonMatch[1])
+        } catch (e) {
+          console.error('Failed to parse JSON from response:', e)
+        }
+      }
+    }
+
+    // Extract sitemap proposal
+    if (responseText) {
+      const jsonStart = responseText.indexOf('```json')
+      sitemapProposal =
+        jsonStart > 0 ? responseText.substring(0, jsonStart).trim() : responseText.trim()
+    }
+
+    // Validate wireframe JSON with schema
+    if (wireframeJson) {
+      const ajv = new Ajv({ allErrors: true })
+      const validate = ajv.compile(componentsSchemaJson)
+      const valid = validate(wireframeJson)
+
+      if (!valid) {
+        console.warn('Validation failed, attempting auto-repair...')
+        console.error('Errors:', JSON.stringify(validate.errors, null, 2))
+
+        try {
+          wireframeJson = await attemptAutoRepair(
+            anthropic,
+            wireframeJson,
+            validate.errors,
+            systemPrompt,
+          )
+          console.log('Auto-repair successful')
+        } catch (repairError) {
+          console.error('Auto-repair failed:', repairError)
+        }
+      }
+    } else {
+      console.error('No wireframe JSON in response')
+    }
+
+    console.log(
+      `Complete: ${wireframeJson?.length || 0} pages, ${message.usage.input_tokens}/${message.usage.output_tokens} tokens`,
+    )
 
     // Return response
     return new Response(
@@ -233,6 +499,7 @@ Begin nu met de sitemapfase.`
         sitemapProposal,
         wireframeJson,
         fullResponse: responseText,
+        logFilePath, // Path to detailed log file in storage
         usage: {
           inputTokens: message.usage.input_tokens,
           outputTokens: message.usage.output_tokens,

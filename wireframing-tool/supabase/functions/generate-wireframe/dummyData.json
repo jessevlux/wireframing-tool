@@ -1,19 +1,19 @@
 [
   {
-    "page": "Homepage (Dummy)",
-    "rationale": "Deze homepage is zorgvuldig opgebouwd met een duidelijke hiërarchie:\n\n1. **Hero sectie**: Directe aandachtstrekker met de belangrijkste boodschap en call-to-action. Dit is vaak het eerste wat bezoekers zien.\n\n2. **Grid sectie**: Visueel overzicht van diensten met kaarten die meer informatie bieden. Dit helpt bezoekers snel te scannen wat het bedrijf aanbiedt.\n\n3. **Call to Action**: Strategisch geplaatste oproep tot actie om bezoekers te motiveren contact op te nemen.\n\n4. **Footer**: Laatste opportuniteit om navigatie, contactgegevens en extra informatie aan te bieden.",
+    "page": "Homepage (DUMMY)",
+    "rationale": "De homepage fungeert als segmentatie-hub met een sterke hero die AUGA's kernboodschap presenteert, gevolgd door drie duidelijk gescheiden segment-kaarten met USPs. Dit ondersteunt de customer journey door bezoekers direct naar hun relevante markt te leiden en conversie-intent op te bouwen.",
     "blocks": [
       {
         "component": "Hero",
         "props": {
           "Has Title": true,
-          "Hero Title": "{{projectName}}",
+          "Hero Title": "Pompen voor elke markt",
           "Has Description": true,
-          "Description": "{{description}}",
+          "Description": "AUGA levert innovatieve pompoplossingen voor vijvers, tuinen en industrie. Kies uw segment en ontdek de perfecte oplossing.",
           "Has Usps": true,
-          "Usp 1": "Hoogste kwaliteit",
-          "Usp 2": "Snelle service",
-          "Usp 3": "Tevreden klanten",
+          "Usp 1": "Meer dan 20 jaar expertise",
+          "Usp 2": "Duurzame en efficiënte oplossingen",
+          "Usp 3": "Persoonlijk advies en support",
           "Has Button Primary": true,
           "Has Button Secondary": false
         },
@@ -22,7 +22,7 @@
             "component": "Button Primary",
             "props": {
               "Property 1": "Default",
-              "Text primary button": "Meer informatie"
+              "Text primary button": "Ontdek uw segment"
             }
           }
         ]
@@ -31,15 +31,15 @@
         "component": "Grid",
         "props": {
           "Property 1": "Default",
-          "Title": "Onze diensten"
+          "Title": "Onze drie marktsegmenten"
         },
         "children": [
           {
             "component": "Inner Grid Card",
             "index": 0,
             "props": {
-              "Title": "Dienst 1",
-              "Description": "Uitstekende kwaliteit en service",
+              "Title": "Blauwe Markt",
+              "Description": "Vijvers, waterfeatures en decoratieve wateroplossingen voor particulieren en professionals.",
               "Has button": true
             },
             "children": [
@@ -47,7 +47,7 @@
                 "component": "Button Primary",
                 "props": {
                   "Property 1": "Default",
-                  "Text primary button": "Lees meer"
+                  "Text primary button": "Naar blauwe markt"
                 }
               }
             ]
@@ -56,8 +56,8 @@
             "component": "Inner Grid Card",
             "index": 1,
             "props": {
-              "Title": "Dienst 2",
-              "Description": "Professionele aanpak",
+              "Title": "Groene Markt",
+              "Description": "Tuinpompen, irrigatiesystemen en landschapsarchitectuur-oplossingen.",
               "Has button": true
             },
             "children": [
@@ -65,7 +65,7 @@
                 "component": "Button Primary",
                 "props": {
                   "Property 1": "Default",
-                  "Text primary button": "Lees meer"
+                  "Text primary button": "Naar groene markt"
                 }
               }
             ]
@@ -74,8 +74,8 @@
             "component": "Inner Grid Card",
             "index": 2,
             "props": {
-              "Title": "Dienst 3",
-              "Description": "Tevreden klanten",
+              "Title": "Grijze Markt",
+              "Description": "Industriële pompen en technische oplossingen voor professionele toepassingen.",
               "Has button": true
             },
             "children": [
@@ -83,7 +83,761 @@
                 "component": "Button Primary",
                 "props": {
                   "Property 1": "Default",
-                  "Text primary button": "Lees meer"
+                  "Text primary button": "Naar grijze markt"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "MediaGroot",
+        "props": {}
+      },
+      {
+        "component": "CalltoAction",
+        "props": {
+          "Has Title": true,
+          "Title": "Klaar voor uw volgende stap?",
+          "Has Description": true,
+          "Description": "Neem contact met ons op voor persoonlijk advies en een op maat gemaakte offerte.",
+          "Has Usps": false,
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Meer informatie"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Footer",
+        "props": {
+          "Has Column 1": true,
+          "Header 1": "Over AUGA",
+          "Link1A": "Over ons",
+          "Link1B": "Onze missie",
+          "Link1C": "Duurzaamheid",
+          "Link1D": "Carrières",
+          "Link1E": "Pers",
+          "Link1F": "",
+          "Link1G": "",
+          "Has Column 2": true,
+          "Header 2": "Producten",
+          "Link2A": "Blauwe markt",
+          "Link2B": "Groene markt",
+          "Link2C": "Grijze markt",
+          "Link2D": "Configurator",
+          "Link2E": "Downloads",
+          "Link2F": "",
+          "Link2G": "",
+          "Has Column 3": true,
+          "Header 3": "Support",
+          "Link3A": "Contact",
+          "Link3B": "FAQ",
+          "Link3C": "Handleidingen",
+          "Link3D": "Garantie",
+          "Link3E": "Onderhoud",
+          "Link3F": "",
+          "Link3G": "",
+          "Has Column 4": true,
+          "Header 4": "Juridisch",
+          "Link4A": "Privacy policy",
+          "Link4B": "Algemene voorwaarden",
+          "Link4C": "Cookies",
+          "Link4D": "Disclaimer",
+          "Link4E": "",
+          "Link4F": "",
+          "Link4G": "",
+          "Has Nieuwsbrief": true
+        }
+      }
+    ]
+  },
+  {
+    "page": "Blauwe Markt",
+    "rationale": "Deze segment-pagina is geoptimaliseerd voor vijver- en waterfeature-klanten met een duidelijke product-hiërarchie, case studies, en een segment-specifiek offerteformulier. De structuur volgt de landing page-formule: problem-solution-social proof-CTA, ondersteund door kolommen-layout voor flexibiliteit.",
+    "blocks": [
+      {
+        "component": "Hero",
+        "props": {
+          "Has Title": true,
+          "Hero Title": "Vijvers & Waterfeatures",
+          "Has Description": true,
+          "Description": "Creëer de perfecte wateromgeving met AUGA's betrouwbare en duurzame pompoplossingen.",
+          "Has Usps": true,
+          "Usp 1": "Stille en energiezuinige pompen",
+          "Usp 2": "Geschikt voor alle vijvergroottes",
+          "Usp 3": "Eenvoudige installatie en onderhoud",
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Brochure downloaden"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Kolommen",
+        "props": {
+          "Property 1": "Default"
+        },
+        "children": [
+          {
+            "component": "Media",
+            "props": {
+              "Property 1": "Default"
+            }
+          },
+          {
+            "component": "Content Kolommen Block",
+            "props": {
+              "Has Accordion": true,
+              "Has Text": true
+            },
+            "children": [
+              {
+                "component": "Text Element",
+                "props": {
+                  "Has Primary Button": false,
+                  "Has Second Button": false,
+                  "Has List": true,
+                  "Has description": true,
+                  "Title of text Block": "Waarom kiezen voor AUGA?",
+                  "Description": "Onze vijverpompen zijn speciaal ontworpen voor langdurige prestaties en minimaal energieverbruik.",
+                  "Usp Text 1": "Gepatenteerde technologie voor optimale wateromloop",
+                  "Usp text 2": "Milieuvriendelijk en kosteneffectief",
+                  "Usp Text 3": "Uitstekende klantenservice en garantie"
+                },
+                "children": []
+              },
+              {
+                "component": "Accordion list",
+                "props": {
+                  "Has Title": true,
+                  "Title": "Veelgestelde vragen",
+                  "Text": "Welke pompgrootte heb ik nodig?",
+                  "Text 2": "Hoe onderhoud ik mijn pomp?",
+                  "Text 3": "Wat is de levensduur van een AUGA-pomp?",
+                  "Text 4": "Biedt AUGA installatie-ondersteuning?"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Projects",
+        "props": {
+          "Title": "Succesvolle projecten",
+          "Example category": "Vijver",
+          "Example header": "Privé vijver Amsterdam",
+          "Example description": "Een prachtige 5000L vijver met waterval en fontein.",
+          "Has example project": true,
+          "Has description": true,
+          "Description": "Bekijk hoe AUGA-pompen in echte projecten worden toegepast."
+        },
+        "children": [
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Vijver",
+              "Project header": "Privé vijver Amsterdam",
+              "Description": "5000L vijver met waterval en fontein"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Waterfeature",
+              "Project header": "Bedrijfstuin Rotterdam",
+              "Description": "Decoratieve waterfeature voor kantoor"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Vijver",
+              "Project header": "Koivijver Utrecht",
+              "Description": "Professionele koivijver met filtersysteem"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Waterfeature",
+              "Project header": "Demonstratievijver",
+              "Description": "Showroom vijver voor klantendemonstraties"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Vijver",
+              "Project header": "Landgoed Friesland",
+              "Description": "Grote vijver met natuurlijke wateromloop"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Waterfeature",
+              "Project header": "Hotel Limburg",
+              "Description": "Luxe waterfeature in hoteluin"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Vijver",
+              "Project header": "Particuliere tuin Brabant",
+              "Description": "Kleine vijver met fontein"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Waterfeature",
+              "Project header": "Gemeentelijk park",
+              "Description": "Openbare waterfeature in stadspark"
+            }
+          }
+        ]
+      },
+      {
+        "component": "CalltoAction",
+        "props": {
+          "Has Title": true,
+          "Title": "Klaar om uw vijver te realiseren?",
+          "Has Description": true,
+          "Description": "Onze experts helpen u graag met het kiezen van de juiste pomp en installatie.",
+          "Has Usps": false,
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Bel ons: 06 10 80 63 77"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Footer",
+        "props": {
+          "Has Column 1": true,
+          "Header 1": "Over AUGA",
+          "Link1A": "Over ons",
+          "Link1B": "Onze missie",
+          "Link1C": "Duurzaamheid",
+          "Link1D": "Carrières",
+          "Link1E": "Pers",
+          "Link1F": "",
+          "Link1G": "",
+          "Has Column 2": true,
+          "Header 2": "Producten",
+          "Link2A": "Blauwe markt",
+          "Link2B": "Groene markt",
+          "Link2C": "Grijze markt",
+          "Link2D": "Configurator",
+          "Link2E": "Downloads",
+          "Link2F": "",
+          "Link2G": "",
+          "Has Column 3": true,
+          "Header 3": "Support",
+          "Link3A": "Contact",
+          "Link3B": "FAQ",
+          "Link3C": "Handleidingen",
+          "Link3D": "Garantie",
+          "Link3E": "Onderhoud",
+          "Link3F": "",
+          "Link3G": "",
+          "Has Column 4": true,
+          "Header 4": "Juridisch",
+          "Link4A": "Privacy policy",
+          "Link4B": "Algemene voorwaarden",
+          "Link4C": "Cookies",
+          "Link4D": "Disclaimer",
+          "Link4E": "",
+          "Link4F": "",
+          "Link4G": "",
+          "Has Nieuwsbrief": true
+        }
+      }
+    ]
+  },
+  {
+    "page": "Groene Markt",
+    "rationale": "Deze segment-pagina richt zich op tuinprofessionals en landschapsarchitecten met focus op irrigatiesystemen en integratieoplossingen. De layout combineert product-informatie met praktische use-cases en een professioneel offerteformulier.",
+    "blocks": [
+      {
+        "component": "Hero",
+        "props": {
+          "Has Title": true,
+          "Hero Title": "Tuinpompen & Irrigatie",
+          "Has Description": true,
+          "Description": "Professionele pompoplossingen voor tuinontwerp, irrigatie en landschapsarchitectuur.",
+          "Has Usps": true,
+          "Usp 1": "Betrouwbare prestaties in alle weersomstandigheden",
+          "Usp 2": "Geïntegreerde irrigatieoplossingen",
+          "Usp 3": "Technische ondersteuning voor professionals",
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Technische specs"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Kolommen",
+        "props": {
+          "Property 1": "Variant2"
+        },
+        "children": [
+          {
+            "component": "Content Kolommen Block",
+            "props": {
+              "Has Accordion": true,
+              "Has Text": true
+            },
+            "children": [
+              {
+                "component": "Text Element",
+                "props": {
+                  "Has Primary Button": false,
+                  "Has Second Button": false,
+                  "Has List": true,
+                  "Has description": true,
+                  "Title of text Block": "Oplossingen voor tuinprofessionals",
+                  "Description": "Van kleine tuinen tot grote landschapsprojecten, AUGA heeft de juiste pomp.",
+                  "Usp Text 1": "Modulaire systemen voor flexibel ontwerp",
+                  "Usp text 2": "Energiezuinige en duurzame technologie",
+                  "Usp Text 3": "Eenvoudige integratie met bestaande systemen"
+                },
+                "children": []
+              },
+              {
+                "component": "Accordion list",
+                "props": {
+                  "Has Title": true,
+                  "Title": "Technische ondersteuning",
+                  "Text": "Hoe kies ik de juiste pompgrootte?",
+                  "Text 2": "Welke materialen zijn beschikbaar?",
+                  "Text 3": "Hoe integreer ik met automatisering?",
+                  "Text 4": "Wat zijn de onderhoudsintervallen?"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Media",
+            "props": {
+              "Property 1": "Variant2"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Grid",
+        "props": {
+          "Property 1": "Variant2",
+          "Title": "Productcategorieën"
+        },
+        "children": [
+          {
+            "component": "Inner Grid Card",
+            "index": 0,
+            "props": {
+              "Title": "Tuinpompen",
+              "Description": "Betrouwbare pompen voor watervoorziening en decoratieve elementen.",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Bekijk producten"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 1,
+            "props": {
+              "Title": "Irrigatiesystemen",
+              "Description": "Geautomatiseerde irrigatieoplossingen voor efficiënt waterbeheer.",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Bekijk producten"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 2,
+            "props": {
+              "Title": "Accessoires",
+              "Description": "Filters, regelaars en andere componenten voor complete systemen.",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Bekijk producten"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Projects",
+        "props": {
+          "Title": "Referentieprojecten",
+          "Example category": "Landschapsarchitectuur",
+          "Example header": "Tuinontwerp Amsterdam",
+          "Example description": "Professioneel tuinontwerp met geïntegreerd irrigatiesysteem.",
+          "Has example project": true,
+          "Has description": true,
+          "Description": "Bekijk hoe AUGA-pompen in professionele tuinprojecten worden ingezet."
+        },
+        "children": [
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Landschapsarchitectuur",
+              "Project header": "Tuinontwerp Amsterdam",
+              "Description": "Professioneel tuinontwerp met irrigatie"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Bedrijfstuin",
+              "Project header": "Kantooruin Rotterdam",
+              "Description": "Groene werkplek met automatische irrigatie"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Openbare ruimte",
+              "Project header": "Stadspark Utrecht",
+              "Description": "Groot irrigatieproject voor openbare groenvoorziening"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Particuliere tuin",
+              "Project header": "Privétuin Groningen",
+              "Description": "Luxe tuinontwerp met waterfeatures"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Sportfaciliteit",
+              "Project header": "Golfbaan Friesland",
+              "Description": "Professioneel irrigatiesysteem voor golfbaan"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Horecaomgeving",
+              "Project header": "Terras Limburg",
+              "Description": "Tuinontwerp voor restaurant met waterfeature"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Schooltuin",
+              "Project header": "Educatieve tuin Brabant",
+              "Description": "Onderwijsproject met duurzame irrigatie"
+            }
+          },
+          {
+            "component": "Project Card",
+            "props": {
+              "Category": "Tuincentrum",
+              "Project header": "Tuincentrum Noord",
+              "Description": "Demonstratietuinen met AUGA-systemen"
+            }
+          }
+        ]
+      },
+      {
+        "component": "CalltoAction",
+        "props": {
+          "Has Title": true,
+          "Title": "Professioneel advies nodig?",
+          "Has Description": true,
+          "Description": "Onze technische experts ondersteunen u bij het ontwerp en de implementatie van uw project.",
+          "Has Usps": false,
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Technisch overleg"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Footer",
+        "props": {
+          "Has Column 1": true,
+          "Header 1": "Over AUGA",
+          "Link1A": "Over ons",
+          "Link1B": "Onze missie",
+          "Link1C": "Duurzaamheid",
+          "Link1D": "Carrières",
+          "Link1E": "Pers",
+          "Link1F": "",
+          "Link1G": "",
+          "Has Column 2": true,
+          "Header 2": "Producten",
+          "Link2A": "Blauwe markt",
+          "Link2B": "Groene markt",
+          "Link2C": "Grijze markt",
+          "Link2D": "Configurator",
+          "Link2E": "Downloads",
+          "Link2F": "",
+          "Link2G": "",
+          "Has Column 3": true,
+          "Header 3": "Support",
+          "Link3A": "Contact",
+          "Link3B": "FAQ",
+          "Link3C": "Handleidingen",
+          "Link3D": "Garantie",
+          "Link3E": "Onderhoud",
+          "Link3F": "",
+          "Link3G": "",
+          "Has Column 4": true,
+          "Header 4": "Juridisch",
+          "Link4A": "Privacy policy",
+          "Link4B": "Algemene voorwaarden",
+          "Link4C": "Cookies",
+          "Link4D": "Disclaimer",
+          "Link4E": "",
+          "Link4F": "",
+          "Link4G": "",
+          "Has Nieuwsbrief": true
+        }
+      }
+    ]
+  },
+  {
+    "page": "Grijze Markt",
+    "rationale": "Deze B2B-segment pagina richt zich op industriële klanten en engineers met focus op technische specificaties, configuratoren, en professionele documentatie. De layout benadrukt efficiency, ROI, en technische ondersteuning met een zakelijke tone-of-voice.",
+    "blocks": [
+      {
+        "component": "Hero",
+        "props": {
+          "Has Title": true,
+          "Hero Title": "Industriële Pompoplossingen",
+          "Has Description": true,
+          "Description": "Betrouwbare, schaalbare en kosteneffectieve pompoplossingen voor industriële toepassingen.",
+          "Has Usps": true,
+          "Usp 1": "Geverifieerde prestaties en betrouwbaarheid",
+          "Usp 2": "Configureerbare systemen voor specifieke behoeften",
+          "Usp 3": "24/7 technische ondersteuning",
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Configurator starten"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Kolommen",
+        "props": {
+          "Property 1": "Default"
+        },
+        "children": [
+          {
+            "component": "Media",
+            "props": {
+              "Property 1": "Default"
+            }
+          },
+          {
+            "component": "Content Kolommen Block",
+            "props": {
+              "Has Accordion": true,
+              "Has Text": true
+            },
+            "children": [
+              {
+                "component": "Text Element",
+                "props": {
+                  "Has Primary Button": false,
+                  "Has Second Button": false,
+                  "Has List": true,
+                  "Has description": true,
+                  "Title of text Block": "Waarom AUGA voor industrie?",
+                  "Description": "Onze industriële pompen zijn ontworpen voor maximale uptime en minimale TCO.",
+                  "Usp Text 1": "Geverifieerde ISO-certificering en compliance",
+                  "Usp text 2": "Predictive maintenance en monitoring",
+                  "Usp Text 3": "Snelle delivery en lokale support"
+                },
+                "children": []
+              },
+              {
+                "component": "Accordion list",
+                "props": {
+                  "Has Title": true,
+                  "Title": "Technische vragen",
+                  "Text": "Welke materialen zijn beschikbaar?",
+                  "Text 2": "Hoe configureer ik een systeem?",
+                  "Text 3": "Wat zijn de certificeringen?",
+                  "Text 4": "Hoe zit het met onderhoud en service?"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Grid",
+        "props": {
+          "Property 1": "Variant3",
+          "Title": "Industriële productlijn"
+        },
+        "children": [
+          {
+            "component": "Inner Grid Card",
+            "index": 0,
+            "props": {
+              "Title": "Standaard pompen",
+              "Description": "Betrouwbare pompen voor standaard industriële toepassingen.",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Specs downloaden"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 1,
+            "props": {
+              "Title": "Aangepaste oplossingen",
+              "Description": "Maatwerk pompoplossingen voor specifieke industriële processen.",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Specs downloaden"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 2,
+            "props": {
+              "Title": "Onderdelen & service",
+              "Description": "Vervangingsonderdelen en professionele servicecontracten.",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Specs downloaden"
                 }
               }
             ]
@@ -94,9 +848,232 @@
         "component": "CalltoAction",
         "props": {
           "Has Title": true,
-          "Title": "Klaar om te starten?",
+          "Title": "Klaar voor een technisch overleg?",
           "Has Description": true,
-          "Description": "Neem vandaag nog contact met ons op",
+          "Description": "Onze engineers helpen u graag met het ontwerp van uw industriële pompoplossing.",
+          "Has Usps": false,
+          "Has Button Primary": true,
+          "Has Button Secondary": true
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Offerte aanvragen"
+            }
+          },
+          {
+            "component": "Button Secondary",
+            "props": {
+              "Property 1": "Default",
+              "Text Secondary Button": "Technisch overleg"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Footer",
+        "props": {
+          "Has Column 1": true,
+          "Header 1": "Over AUGA",
+          "Link1A": "Over ons",
+          "Link1B": "Onze missie",
+          "Link1C": "Duurzaamheid",
+          "Link1D": "Carrières",
+          "Link1E": "Pers",
+          "Link1F": "",
+          "Link1G": "",
+          "Has Column 2": true,
+          "Header 2": "Producten",
+          "Link2A": "Blauwe markt",
+          "Link2B": "Groene markt",
+          "Link2C": "Grijze markt",
+          "Link2D": "Configurator",
+          "Link2E": "Downloads",
+          "Link2F": "",
+          "Link2G": "",
+          "Has Column 3": true,
+          "Header 3": "Support",
+          "Link3A": "Contact",
+          "Link3B": "FAQ",
+          "Link3C": "Handleidingen",
+          "Link3D": "Garantie",
+          "Link3E": "Onderhoud",
+          "Link3F": "",
+          "Link3G": "",
+          "Has Column 4": true,
+          "Header 4": "Juridisch",
+          "Link4A": "Privacy policy",
+          "Link4B": "Algemene voorwaarden",
+          "Link4C": "Cookies",
+          "Link4D": "Disclaimer",
+          "Link4E": "",
+          "Link4F": "",
+          "Link4G": "",
+          "Has Nieuwsbrief": true
+        }
+      }
+    ]
+  },
+  {
+    "page": "Contact & Offerte",
+    "rationale": "Deze centrale contactpagina ondersteunt lead-capture met segment-specifieke formulieren, verkooppunten, en downloadbare content. De pagina combineert tekstuele informatie met interactieve elementen (formulieren, accordions) om conversie te maximaliseren en gebruikersvragen te beantwoorden.",
+    "blocks": [
+      {
+        "component": "Hero",
+        "props": {
+          "Has Title": true,
+          "Hero Title": "Contact & Offerte",
+          "Has Description": true,
+          "Description": "Neem contact met ons op voor persoonlijk advies, technische ondersteuning of een offerte.",
+          "Has Usps": true,
+          "Usp 1": "Snelle respons op werkdagen",
+          "Usp 2": "Deskundige adviseurs beschikbaar",
+          "Usp 3": "Gratis offerte en adviesgesprek",
+          "Has Button Primary": false,
+          "Has Button Secondary": false
+        },
+        "children": []
+      },
+      {
+        "component": "Kolommen",
+        "props": {
+          "Property 1": "Default"
+        },
+        "children": [
+          {
+            "component": "Content Kolommen Block",
+            "props": {
+              "Has Accordion": false,
+              "Has Text": true
+            },
+            "children": [
+              {
+                "component": "Text Element",
+                "props": {
+                  "Has Primary Button": true,
+                  "Has Second Button": false,
+                  "Has List": true,
+                  "Has description": true,
+                  "Title of text Block": "Contactgegevens",
+                  "Description": "Bereik ons via telefoon, e-mail of het contactformulier.",
+                  "Usp Text 1": "Telefoon: 06 10 80 63 77",
+                  "Usp text 2": "E-mail: info@auga.nl",
+                  "Usp Text 3": "Kantoor: 's-Hertogenbosch"
+                },
+                "children": [
+                  {
+                    "component": "Button Primary",
+                    "props": {
+                      "Property 1": "Default",
+                      "Text primary button": "Bel ons nu"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "component": "Media",
+            "props": {
+              "Property 1": "Default"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Grid",
+        "props": {
+          "Property 1": "Default",
+          "Title": "Verkooppunten"
+        },
+        "children": [
+          {
+            "component": "Inner Grid Card",
+            "index": 0,
+            "props": {
+              "Title": "Hoofdkantoor",
+              "Description": "AUGA B.V., 's-Hertogenbosch. Bezoek ons voor een persoonlijk overleg.",
+              "Has button": false
+            },
+            "children": []
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 1,
+            "props": {
+              "Title": "Distributeur Noord",
+              "Description": "Erkende distributeur voor Noord-Nederland met volledige productlijn.",
+              "Has button": false
+            },
+            "children": []
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 2,
+            "props": {
+              "Title": "Distributeur Zuid",
+              "Description": "Erkende distributeur voor Zuid-Nederland met technische ondersteuning.",
+              "Has button": false
+            },
+            "children": []
+          }
+        ]
+      },
+      {
+        "component": "Kolommen",
+        "props": {
+          "Property 1": "Variant2"
+        },
+        "children": [
+          {
+            "component": "Content Kolommen Block",
+            "props": {
+              "Has Accordion": true,
+              "Has Text": true
+            },
+            "children": [
+              {
+                "component": "Text Element",
+                "props": {
+                  "Has Primary Button": false,
+                  "Has Second Button": false,
+                  "Has List": false,
+                  "Has description": true,
+                  "Title of text Block": "Veelgestelde vragen",
+                  "Description": "Vind antwoorden op veelgestelde vragen over onze producten en services."
+                },
+                "children": []
+              },
+              {
+                "component": "Accordion list",
+                "props": {
+                  "Has Title": true,
+                  "Title": "FAQ",
+                  "Text": "Hoe lang duurt het om een offerte te ontvangen?",
+                  "Text 2": "Biedt AUGA installatie-ondersteuning?",
+                  "Text 3": "Wat zijn de betalingscondities?",
+                  "Text 4": "Hoe zit het met garantie en onderhoud?"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Media",
+            "props": {
+              "Property 1": "Variant2"
+            }
+          }
+        ]
+      },
+      {
+        "component": "CalltoAction",
+        "props": {
+          "Has Title": true,
+          "Title": "Offerte aanvragen",
+          "Has Description": true,
+          "Description": "Vul het formulier in en ontvang binnen 24 uur een persoonlijke offerte.",
           "Has Usps": false,
           "Has Button Primary": true,
           "Has Button Secondary": false
@@ -106,7 +1083,7 @@
             "component": "Button Primary",
             "props": {
               "Property 1": "Default",
-              "Text primary button": "Contact opnemen"
+              "Text primary button": "Naar offerteformulier"
             }
           }
         ]
@@ -115,21 +1092,41 @@
         "component": "Footer",
         "props": {
           "Has Column 1": true,
-          "Header 1": "Over ons",
-          "Link1A": "Wie zijn wij",
-          "Link1B": "Ons team",
-          "Link1C": "Carrière",
+          "Header 1": "Over AUGA",
+          "Link1A": "Over ons",
+          "Link1B": "Onze missie",
+          "Link1C": "Duurzaamheid",
+          "Link1D": "Carrières",
+          "Link1E": "Pers",
+          "Link1F": "",
+          "Link1G": "",
           "Has Column 2": true,
-          "Header 2": "Diensten",
-          "Link2A": "Dienst 1",
-          "Link2B": "Dienst 2",
-          "Link2C": "Dienst 3",
+          "Header 2": "Producten",
+          "Link2A": "Blauwe markt",
+          "Link2B": "Groene markt",
+          "Link2C": "Grijze markt",
+          "Link2D": "Configurator",
+          "Link2E": "Downloads",
+          "Link2F": "",
+          "Link2G": "",
           "Has Column 3": true,
-          "Header 3": "Contact",
-          "Link3A": "Email ons",
-          "Link3B": "Bel ons",
-          "Link3C": "Locatie",
-          "Has Column 4": false,
+          "Header 3": "Support",
+          "Link3A": "Contact",
+          "Link3B": "FAQ",
+          "Link3C": "Handleidingen",
+          "Link3D": "Garantie",
+          "Link3E": "Onderhoud",
+          "Link3F": "",
+          "Link3G": "",
+          "Has Column 4": true,
+          "Header 4": "Juridisch",
+          "Link4A": "Privacy policy",
+          "Link4B": "Algemene voorwaarden",
+          "Link4C": "Cookies",
+          "Link4D": "Disclaimer",
+          "Link4E": "",
+          "Link4F": "",
+          "Link4G": "",
           "Has Nieuwsbrief": true
         }
       }
@@ -137,7 +1134,7 @@
   },
   {
     "page": "Contact",
-    "rationale": "De contactpagina is gestructureerd voor maximale duidelijkheid:\n\n1. **Hero met titel**: Directe verkenning dat dit de contactpagina is, met een vriendelijke beschrijving.\n\n2. **Kolommen layout**: Verdeelt informatie visueel in beelden en content, zodat bezoekers zowel visuele als tekstuele informatie krijgen.\n\n3. **Footer**: Consistente navigatie en extra contactmogelijkheden.",
+    "rationale": "Deze centrale contactpagina ondersteunt lead-capture met segment-specifieke formulieren, verkooppunten, en downloadbare content. De pagina combineert tekstuele informatie met interactieve elementen (formulieren, accordions) om conversie te maximaliseren en gebruikersvragen te beantwoorden.",
     "blocks": [
       {
         "component": "Hero",

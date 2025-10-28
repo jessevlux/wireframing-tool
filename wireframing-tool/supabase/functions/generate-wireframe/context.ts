@@ -7,9 +7,13 @@ export const COMPONENTS_SCHEMA = JSON.stringify(
     type: 'array',
     items: {
       type: 'object',
-      required: ['page', 'blocks'],
+      required: ['page', 'rationale', 'blocks'],
       properties: {
         page: { type: 'string' },
+        rationale: {
+          type: 'string',
+          description: 'Uitleg over waarom deze pagina zo is opgebouwd (2-4 zinnen)',
+        },
         blocks: {
           type: 'array',
           items: { $ref: '#/definitions/TopLevelComponent' },
@@ -517,53 +521,69 @@ export const COMPONENTS_SCHEMA = JSON.stringify(
 
 export const INSTRUCTIONS = `# instructions
 
-**Doel**  
+**Doel**
 Genereer wireframes in JSON volgens het \`components.schema.json\`.
 
-- Output is altijd **JSON** (geen tekst eromheen in de JSON-fase).
-- Top-level structuur = array van pagina-objecten met \`page\` en \`blocks\`.
+- Top-level structuur = array van pagina-objecten met \`page\`, \`rationale\` en \`blocks\`.
+- Output bevat ZOWEL tekstuele uitleg ALS de volledige JSON in één response.
 
 ---
 
-## Werkwijze (intern, niet tonen)
+## Werkwijze
 
 ### Stap 1. Begrijp de opdracht
 
 - Analyseer doel van de site.
 - Analyseer doelgroep en overtuigingsfactoren.
-- Als context ontbreekt: stel follow-up vragen totdat je ~99% zeker bent.
 
-### Stap 2. Sitemapfase
+### Stap 2. Sitemap uitleg (tekstueel)
 
-- Maak altijd eerst een **sitemapvoorstel in tekst** waarin je de pagina's beschrijft met blokken.
 - Standaard: Home + Contact, meestal ook Over ons en/of Oplossingen / Diensten (niet altijd verplicht).
 - Voeg extra pagina's toe (Projecten / Producten, Nieuws) als dit logisch is.
 - Een **one-pager** alleen als er weinig content is (en leg kort uit waarom).
 - **Footer** is altijd verplicht als laatste blok.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven **NIET** meegenomen te worden in de sitemap en JSON.
 
-#### Optionele modellen (aanvullend)
+Geef een **tekstueel overzicht** met:
+- Welke pagina's je aanmaakt en waarom
+- Hoe de homepage is opgebouwd volgens de landing page formule
+- Hoe de structuur conversie en gebruikservaring ondersteunt
 
-Maak optioneel gebruik van marketing- en gedragspsychologie modellen om pagina's en secties te versterken.
+Gebruik optioneel marketing- en gedragspsychologie modellen om de keuzes te motiveren.
 
-### Stap 3. JSON-fase
+### Stap 3. JSON output (direct aansluitend)
 
-- Genereer **altijd de volledige sitemap in JSON**, na akkoord op de sitemapfase.
-- Alle pagina's die in de sitemapfase zijn beschreven moeten in dezelfde JSON-output staan.
-- Lever alles in **één complete output** aan.
+Direct na de tekstuele uitleg, genereer de **volledige JSON** in één code block.
+
+- Alle pagina's die in de tekstuele uitleg zijn beschreven moeten in dezelfde JSON staan
+- Elke pagina heeft een \`rationale\` field met uitleg over de opbouw van die specifieke pagina
+- Lever alles in **één complete response** aan
 
 ---
 
-## Outputregels
+## Output Format
 
-- **Sitemapfase**:
-  - Tekstueel overzicht van alle pagina's en secties.
-  - Geef expliciet aan dat de homepage is opgebouwd volgens de landing page formule.
-  - Motiveer hoe de structuur de conversie en gebruikservaring ondersteunt.
-- **JSON-fase**:
-  - Altijd één enkele JSON-array die de volledige site bevat.
-  - Nooit knippen, opdelen of vervolgvraag stellen.
-  - Geen extra tekst of uitleg buiten de JSON.`
+Je response moet EXACT deze structuur hebben:
+
+1. **Tekstuele sitemap uitleg** (markdown format)
+   - Overzicht van alle pagina's
+   - Motivatie voor de structuur
+   - UX en conversie overwegingen
+
+2. **Tool call** (direct aansluitend)
+   Gebruik de \`emit_wireframe\` tool om de volledige JSON te leveren:
+   - Tool name: emit_wireframe
+   - Parameter: wireframe (array van pagina objecten)
+
+   Elke pagina heeft:
+   - \`page\`: naam van de pagina
+   - \`rationale\`: uitleg waarom deze pagina zo is opgebouwd (2-4 zinnen met concrete redenen)
+   - \`blocks\`: array van component blocks
+
+**BELANGRIJK**:
+- Geef BEIDE outputs in één response. Eerst de tekstuele uitleg, dan DIRECT de tool call.
+- Gebruik de emit_wireframe tool voor de JSON (niet een code block).
+- Geen vervolgvragen, geen opdeling.`
 
 export const SPEC = `# Component Specificaties
 

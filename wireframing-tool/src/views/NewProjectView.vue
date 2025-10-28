@@ -16,6 +16,7 @@ const formData = ref({
 })
 
 const isCreating = ref(false)
+const loadingStep = ref('')
 const uploadedFiles = ref([])
 const isDragging = ref(false)
 
@@ -103,12 +104,14 @@ const createProject = async () => {
     // 1. Convert uploaded files to base64 (for AI context only, not for storage)
     let filesBase64 = []
     if (uploadedFiles.value.length > 0) {
+      loadingStep.value = 'Bestanden voorbereiden...'
       console.log('Converting files to base64 for AI context...')
       filesBase64 = await convertFilesToBase64(uploadedFiles.value)
       console.log(`${filesBase64.length} file(s) prepared for AI`)
     }
 
     // 2. Roep Edge Function aan om wireframe te genereren
+    loadingStep.value = 'AI genereert wireframe...'
     console.log('Genereren wireframe via Edge Function...')
     const wireframeResult = await wireframeService.generateWireframe({
       projectName: formData.value.projectName,
@@ -120,9 +123,11 @@ const createProject = async () => {
     })
 
     // 3. Converteer naar project pages formaat
+    loadingStep.value = "Pagina's structureren..."
     const pages = wireframeService.convertToProjectPages(wireframeResult.wireframeJson)
 
     // 4. Maak project aan in database (WITHOUT files)
+    loadingStep.value = 'Project opslaan...'
     const newProject = {
       name: formData.value.projectName,
       company: formData.value.companyName,
@@ -139,12 +144,14 @@ const createProject = async () => {
     console.log('Project succesvol aangemaakt:', savedProject)
 
     // 5. Open het project in de editor
+    loadingStep.value = 'Editor openen...'
     router.push(`/editor/${savedProject.id}`)
   } catch (error) {
     console.error('Error creating project:', error)
     alert(`Fout bij aanmaken project: ${error.message}`)
   } finally {
     isCreating.value = false
+    loadingStep.value = ''
   }
 }
 </script>
@@ -299,5 +306,37 @@ const createProject = async () => {
         </div>
       </div>
     </div>
+
+    <!-- Loading Overlay -->
+    <Transition
+      enter-active-class="transition-opacity duration-300"
+      leave-active-class="transition-opacity duration-300"
+      enter-from-class="opacity-0"
+      leave-to-class="opacity-0"
+    >
+      <div
+        v-if="isCreating"
+        class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center"
+      >
+        <div
+          class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-2xl max-w-md w-full mx-4"
+        >
+          <div class="flex flex-col items-center text-center">
+            <!-- Animated Spinner -->
+            <div class="relative mb-6">
+              <div
+                class="w-16 h-16 rounded-full border-4 border-zinc-800 border-t-violet-500 animate-spin"
+              ></div>
+            </div>
+            <h3 class="text-xl font-bold text-zinc-100 mb-2">Project Wordt Gegenereerd</h3>
+            <p class="text-zinc-400 mb-6">
+              {{ loadingStep || 'Voorbereiden...' }}
+            </p>
+            <!-- Info Text -->
+            <p class="text-xs text-zinc-500 mt-4">Dit kan even duren...</p>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>

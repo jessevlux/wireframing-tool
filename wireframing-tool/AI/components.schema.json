@@ -4,9 +4,13 @@
   "type": "array",
   "items": {
     "type": "object",
-    "required": ["page", "blocks"],
+    "required": ["page", "rationale", "blocks"],
     "properties": {
       "page": { "type": "string" },
+      "rationale": {
+        "type": "string",
+        "description": "Uitleg over waarom deze pagina zo is opgebouwd (2-4 zinnen)"
+      },
       "blocks": {
         "type": "array",
         "items": { "$ref": "#/definitions/TopLevelComponent" }
@@ -188,12 +192,7 @@
             "Usp text 2": { "type": "string" },
             "Usp Text 3": { "type": "string" }
           },
-          "required": [
-            "Has Primary Button",
-            "Has Second Button",
-            "Has List",
-            "Has description"
-          ],
+          "required": ["Has Primary Button", "Has Second Button", "Has List", "Has description"],
           "additionalProperties": false
         },
         "children": {
@@ -432,9 +431,9 @@
             "Example category": { "type": "string" },
             "Example header": { "type": "string" },
             "Example description": { "type": "string" },
-            "Has example project": {"type": "boolean"},
-            "Has description": {"type": "boolean"},
-            "Description": {"type": "string"}
+            "Has example project": { "type": "boolean" },
+            "Has description": { "type": "boolean" },
+            "Description": { "type": "string" }
           },
           "required": ["Title"],
           "additionalProperties": false
