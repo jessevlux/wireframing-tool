@@ -692,7 +692,6 @@ const closeNewPageModal = () => {
 
           <!-- AI Rationale -->
           <div v-if="selectedPage" class="mt-6 pt-6 border-t border-zinc-800">
-            <h4 class="text-sm font-semibold mb-3 text-zinc-300">AI Rationale</h4>
             <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
               <p
                 v-if="selectedPage.rationale"

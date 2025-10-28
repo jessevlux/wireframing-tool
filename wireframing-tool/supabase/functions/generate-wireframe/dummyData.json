@@ -1,0 +1,222 @@
+[
+  {
+    "page": "Homepage (Dummy)",
+    "rationale": "Deze homepage is zorgvuldig opgebouwd met een duidelijke hiërarchie:\n\n1. **Hero sectie**: Directe aandachtstrekker met de belangrijkste boodschap en call-to-action. Dit is vaak het eerste wat bezoekers zien.\n\n2. **Grid sectie**: Visueel overzicht van diensten met kaarten die meer informatie bieden. Dit helpt bezoekers snel te scannen wat het bedrijf aanbiedt.\n\n3. **Call to Action**: Strategisch geplaatste oproep tot actie om bezoekers te motiveren contact op te nemen.\n\n4. **Footer**: Laatste opportuniteit om navigatie, contactgegevens en extra informatie aan te bieden.",
+    "blocks": [
+      {
+        "component": "Hero",
+        "props": {
+          "Has Title": true,
+          "Hero Title": "{{projectName}}",
+          "Has Description": true,
+          "Description": "{{description}}",
+          "Has Usps": true,
+          "Usp 1": "Hoogste kwaliteit",
+          "Usp 2": "Snelle service",
+          "Usp 3": "Tevreden klanten",
+          "Has Button Primary": true,
+          "Has Button Secondary": false
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Meer informatie"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Grid",
+        "props": {
+          "Property 1": "Default",
+          "Title": "Onze diensten"
+        },
+        "children": [
+          {
+            "component": "Inner Grid Card",
+            "index": 0,
+            "props": {
+              "Title": "Dienst 1",
+              "Description": "Uitstekende kwaliteit en service",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Lees meer"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 1,
+            "props": {
+              "Title": "Dienst 2",
+              "Description": "Professionele aanpak",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Lees meer"
+                }
+              }
+            ]
+          },
+          {
+            "component": "Inner Grid Card",
+            "index": 2,
+            "props": {
+              "Title": "Dienst 3",
+              "Description": "Tevreden klanten",
+              "Has button": true
+            },
+            "children": [
+              {
+                "component": "Button Primary",
+                "props": {
+                  "Property 1": "Default",
+                  "Text primary button": "Lees meer"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "CalltoAction",
+        "props": {
+          "Has Title": true,
+          "Title": "Klaar om te starten?",
+          "Has Description": true,
+          "Description": "Neem vandaag nog contact met ons op",
+          "Has Usps": false,
+          "Has Button Primary": true,
+          "Has Button Secondary": false
+        },
+        "children": [
+          {
+            "component": "Button Primary",
+            "props": {
+              "Property 1": "Default",
+              "Text primary button": "Contact opnemen"
+            }
+          }
+        ]
+      },
+      {
+        "component": "Footer",
+        "props": {
+          "Has Column 1": true,
+          "Header 1": "Over ons",
+          "Link1A": "Wie zijn wij",
+          "Link1B": "Ons team",
+          "Link1C": "Carrière",
+          "Has Column 2": true,
+          "Header 2": "Diensten",
+          "Link2A": "Dienst 1",
+          "Link2B": "Dienst 2",
+          "Link2C": "Dienst 3",
+          "Has Column 3": true,
+          "Header 3": "Contact",
+          "Link3A": "Email ons",
+          "Link3B": "Bel ons",
+          "Link3C": "Locatie",
+          "Has Column 4": false,
+          "Has Nieuwsbrief": true
+        }
+      }
+    ]
+  },
+  {
+    "page": "Contact",
+    "rationale": "De contactpagina is gestructureerd voor maximale duidelijkheid:\n\n1. **Hero met titel**: Directe verkenning dat dit de contactpagina is, met een vriendelijke beschrijving.\n\n2. **Kolommen layout**: Verdeelt informatie visueel in beelden en content, zodat bezoekers zowel visuele als tekstuele informatie krijgen.\n\n3. **Footer**: Consistente navigatie en extra contactmogelijkheden.",
+    "blocks": [
+      {
+        "component": "Hero",
+        "props": {
+          "Has Title": true,
+          "Hero Title": "Neem contact op",
+          "Has Description": true,
+          "Description": "We helpen je graag verder",
+          "Has Usps": false,
+          "Has Button Primary": false,
+          "Has Button Secondary": false
+        },
+        "children": []
+      },
+      {
+        "component": "Kolommen",
+        "props": {
+          "Property 1": "Default"
+        },
+        "children": [
+          {
+            "component": "Media",
+            "props": {
+              "Property 1": "Default"
+            }
+          },
+          {
+            "component": "Content Kolommen Block",
+            "props": {
+              "Has Accordion": false,
+              "Has Text": true
+            },
+            "children": [
+              {
+                "component": "Text Element",
+                "props": {
+                  "Has Primary Button": true,
+                  "Has Second Button": false,
+                  "Has List": false,
+                  "Has description": true,
+                  "Title of text Block": "Contacteer ons",
+                  "Description": "Vul het formulier in en we nemen snel contact op"
+                },
+                "children": [
+                  {
+                    "component": "Button Primary",
+                    "props": {
+                      "Property 1": "Default",
+                      "Text primary button": "Verstuur bericht"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "component": "Footer",
+        "props": {
+          "Has Column 1": true,
+          "Header 1": "Over ons",
+          "Link1A": "Wie zijn wij",
+          "Link1B": "Ons team",
+          "Link1C": "Carrière",
+          "Has Column 2": true,
+          "Header 2": "Diensten",
+          "Link2A": "Dienst 1",
+          "Link2B": "Dienst 2",
+          "Link2C": "Dienst 3",
+          "Has Column 3": true,
+          "Header 3": "Contact",
+          "Link3A": "Email ons",
+          "Link3B": "Bel ons",
+          "Link3C": "Locatie",
+          "Has Column 4": false,
+          "Has Nieuwsbrief": true
+        }
+      }
+    ]
+  }
+]
