@@ -536,7 +536,7 @@ Genereer wireframes in JSON volgens het \`components.schema.json\`.
 - Analyseer doel van de site.
 - Analyseer doelgroep en overtuigingsfactoren.
 
-### Stap 2. Sitemap uitleg (tekstueel)
+### Stap 2. Sitemap
 
 - Standaard: Home + Contact, meestal ook Over ons en/of Oplossingen / Diensten (niet altijd verplicht).
 - Voeg extra pagina's toe (Projecten / Producten, Nieuws) als dit logisch is.
@@ -566,7 +566,6 @@ Direct na de tekstuele uitleg, genereer de **volledige JSON** in één code bloc
 Je response moet EXACT deze structuur hebben:
 
 1. **Tekstuele sitemap uitleg** (markdown format)
-   - Overzicht van alle pagina's
    - Motivatie voor de structuur
    - UX en conversie overwegingen
 

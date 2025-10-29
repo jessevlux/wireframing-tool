@@ -939,7 +939,7 @@ const closeNewPageModal = () => {
       <div class="flex items-center justify-between p-6 border-b border-zinc-800">
         <div>
           <h2 class="text-xl font-bold text-zinc-100">Exporteer JSON</h2>
-          <p class="text-sm text-zinc-400 mt-1">Kopieer deze JSON voor de Figma plugin</p>
+          <p class="text-sm text-zinc-400 mt-1">Plak deze JSON in de Figma plugin</p>
         </div>
         <button @click="closeJsonModal" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
           <X class="w-5 h-5 text-zinc-400" />
