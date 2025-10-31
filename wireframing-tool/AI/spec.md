@@ -11,7 +11,9 @@ Alle JSON-output moet voldoen aan `components.schema.json`.
 - **Index altijd verplicht** bij Grid-cards, Entry Posts, Project Cards en News Cards.
 - **Children alleen toevoegen** als booleans dit vereisen.
 - **Footer verplicht** als laatste blok van elke pagina.
-- **Projects** en **News**: alleen op hun eigen pagina’s en altijd gevolgd door CalltoAction + Footer.
+- **Projects** en **News**: alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
+- **Detail page**: hele-pagina component, alleen Footer toegestaan als aanvullend blok. Exact één header type moet true zijn.
+- **Form** vs **Contactform**: gebruik Form voor algemene formulieren, Contactform specifiek voor contactpagina's.
 - **Geen lorem ipsum** → gebruik korte, realistische Nederlandse microcopy.
 - **Variatie toepassen**: kies bewust tussen Default en varianten.
 
@@ -217,6 +219,68 @@ Alle JSON-output moet voldoen aan `components.schema.json`.
   - `Category` (string)
   - `Date` (string)
   - `Description` (string)
+
+---
+
+## Form
+
+- **Props**:
+  - `Has Field 1` (bool)
+  - `Field 1` (string)
+  - `Has Field 2` (bool)
+  - `Field 2.1` (string) – eerste veld in horizontale rij
+  - `Field 2.2` (string) – tweede veld in horizontale rij
+  - `Has Field 3` (bool)
+  - `Field 3` (string) – grotere input
+  - `Has Radio Buttons` (bool)
+  - `Radio Button 1` (string)
+  - `Radio Button 2` (string)
+  - `Radio Button 3` (string)
+  - `Has Checkboxes` (bool)
+  - `Checkbox 1` (string)
+  - `Checkbox 2` (string)
+  - `Checkbox 3` (string)
+  - `Has Dropdown` (bool)
+  - `Dropdown title` (string)
+  - `Has Name` (bool)
+  - `Has Email` (bool)
+  - `Has Phone number` (bool)
+  - `Has Date Timed` (bool)
+
+---
+
+## Contactform
+
+- Specifiek formulier voor contactpagina's.
+- **Props**:
+  - Geen properties.
+
+---
+
+## Detail page
+
+- **Hele pagina** component voor nieuws- of projectdetails.
+- **Verplichte Footer** als laatste blok.
+- **Geen andere blokken** toegestaan (behalve Footer).
+- **Belangrijke regels**:
+  - **Slechts één header** mag `true` zijn: ofwel `Has Project Header` ofwel `Has News Header`.
+  - **Altijd één header** verplicht `true`.
+  - **Has More Projects** of **Has More News**: niet allebei `true`.
+  - De "Has More" moet matchen met de gekozen header.
+
+- **Props**:
+  - `Has Project Header` (bool) – header/hero voor projectenpagina
+  - `Has News Header` (bool) – header/hero voor nieuwsartikel
+  - `Paragraph 1` (string)
+  - `Paragraph 2` (string)
+  - `Has Highlight Paragraph` (bool)
+  - `Highlight Title` (string)
+  - `Highlight Paragraph` (string)
+  - `Paragraph 3 Title` (string)
+  - `Paragraph 3` (string)
+  - `Paragraph 4` (string)
+  - `Has More Projects` (bool)
+  - `Has More News` (bool)
 
 ---
 

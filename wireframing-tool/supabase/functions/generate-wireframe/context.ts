@@ -35,6 +35,9 @@ export const COMPONENTS_SCHEMA = JSON.stringify(
           { $ref: '#/definitions/Footer' },
           { $ref: '#/definitions/Projects' },
           { $ref: '#/definitions/News' },
+          { $ref: '#/definitions/Form' },
+          { $ref: '#/definitions/Contactform' },
+          { $ref: '#/definitions/detailpage' },
         ],
       },
       Hero: {
@@ -513,6 +516,99 @@ export const COMPONENTS_SCHEMA = JSON.stringify(
         },
         additionalProperties: false,
       },
+      Form: {
+        properties: {
+          component: { const: 'Form' },
+          props: {
+            type: 'object',
+            properties: {
+              'Has Field 1': { type: 'boolean' },
+              'Field 1': { type: 'string' },
+              'Has Field 2': { type: 'boolean' },
+              'Field 2.1': { type: 'string' },
+              'Field 2.2': { type: 'string' },
+              'Has Field 3': { type: 'boolean' },
+              'Field 3': { type: 'string' },
+              'Has Radio Buttons': { type: 'boolean' },
+              'Radio Button 1': { type: 'string' },
+              'Radio Button 2': { type: 'string' },
+              'Radio Button 3': { type: 'string' },
+              'Has Checkboxes': { type: 'boolean' },
+              'Checkbox 1': { type: 'string' },
+              'Checkbox 2': { type: 'string' },
+              'Checkbox 3': { type: 'string' },
+              'Has Dropdown': { type: 'boolean' },
+              'Dropdown title': { type: 'string' },
+              'Has Name': { type: 'boolean' },
+              'Has Email': { type: 'boolean' },
+              'Has Phone number': { type: 'boolean' },
+              'Has Date Timed': { type: 'boolean' },
+            },
+            required: [
+              'Has Field 1',
+              'Has Field 2',
+              'Has Field 3',
+              'Has Radio Buttons',
+              'Has Checkboxes',
+              'Has Dropdown',
+              'Has Name',
+              'Has Email',
+              'Has Phone number',
+              'Has Date Timed',
+            ],
+            additionalProperties: false,
+          },
+        },
+        additionalProperties: false,
+      },
+      Contactform: {
+        properties: {
+          component: { const: 'Contactform' },
+          props: {
+            type: 'object',
+            additionalProperties: false,
+          },
+        },
+        additionalProperties: false,
+      },
+      detailpage: {
+        properties: {
+          component: { const: 'detailpage' },
+          props: {
+            type: 'object',
+            properties: {
+              'Has Project Header': { type: 'boolean' },
+              'Has News Header': { type: 'boolean' },
+              'Paragraph 1': { type: 'string' },
+              'Paragraph 2': { type: 'string' },
+              'Has Highlight Paragraph': { type: 'boolean' },
+              'Highlight Title': { type: 'string' },
+              'Highlight Paragraph': { type: 'string' },
+              'Paragraph 3 Title': { type: 'string' },
+              'Paragraph 3': { type: 'string' },
+              'Paragraph 4': { type: 'string' },
+              'Has More Projects': { type: 'boolean' },
+              'Has More News': { type: 'boolean' },
+            },
+            required: [
+              'Has Project Header',
+              'Has News Header',
+              'Has Highlight Paragraph',
+              'Has More Projects',
+              'Has More News',
+            ],
+            additionalProperties: false,
+          },
+          children: {
+            type: 'array',
+            items: { $ref: '#/definitions/CalltoAction' },
+            minItems: 1,
+            maxItems: 1,
+          },
+        },
+        required: ['component', 'props', 'children'],
+        additionalProperties: false,
+      },
     },
   },
   null,
@@ -542,6 +638,7 @@ Genereer wireframes in JSON volgens het \`components.schema.json\`.
 - Voeg extra pagina's toe (Projecten / Producten, Nieuws) als dit logisch is.
 - Een **one-pager** alleen als er weinig content is (en leg kort uit waarom).
 - **Footer** is altijd verplicht als laatste blok.
+- **detailpage**: een speciaal component dat een hele pagina vertegenwoordigt (voor nieuws- of projectdetails). Heeft altijd precies één CalltoAction als child (verplicht). Mag alleen Footer als aanvullend blok bevatten. Slechts één header type mag true zijn (Has Project Header OF Has News Header), en één is altijd verplicht. De "Has More" opties (Projects/News) moeten matchen met de gekozen header en kunnen niet beide true zijn.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven **NIET** meegenomen te worden in de sitemap en JSON.
 
 Geef een **tekstueel overzicht** met:
@@ -594,5 +691,7 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 - Index altijd verplicht bij Grid-cards, Entry Posts, Project Cards en News Cards.
 - Children alleen toevoegen als booleans dit vereisen.
 - Footer verplicht als laatste blok van elke pagina.
+- detailpage: hele-pagina component met verplichte CalltoAction child, alleen Footer toegestaan als aanvullend blok. Exact één header type moet true zijn.
+- Form vs Contactform: gebruik Form voor algemene formulieren, Contactform specifiek voor contactpagina's.
 - Geen lorem ipsum → gebruik korte, realistische Nederlandse microcopy.
 - Variatie toepassen: kies bewust tussen Default en varianten.`

@@ -21,6 +21,7 @@ Genereer wireframes in JSON volgens het `components.schema.json`.
 - Voeg extra pagina's toe (Projecten / Producten, Nieuws) als dit logisch is. Als een website tot ongeveer 4 producten/diensten (of dergelijke) aanbiedt, gebruik per product "Kolommen" met Default en Variant2 om en om. Optioneel: als een website meerdere producten aanbiedt, gebruik blok "Projecten" (met Has example project = false) om producten te tonen (niet verplicht).
 - Een **one-pager** alleen als er weinig content is (en leg kort uit waarom).
 - **Footer** is altijd verplicht als laatste blok.
+- **Detail page**: een speciaal component dat een hele pagina vertegenwoordigt (voor nieuws- of projectdetails). Mag alleen Footer als aanvullend blok bevatten. Slechts één header type mag true zijn (Has Project Header OF Has News Header), en één is altijd verplicht. De "Has More" opties (Projects/News) moeten matchen met de gekozen header en kunnen niet beide true zijn.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven **NIET** meegenomen te worden in de sitemap en JSON.
 
 Geef een **tekstueel overzicht** met:

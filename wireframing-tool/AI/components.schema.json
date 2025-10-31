@@ -31,7 +31,10 @@
         { "$ref": "#/definitions/CalltoAction" },
         { "$ref": "#/definitions/Footer" },
         { "$ref": "#/definitions/Projects" },
-        { "$ref": "#/definitions/News" }
+        { "$ref": "#/definitions/News" },
+        { "$ref": "#/definitions/Form" },
+        { "$ref": "#/definitions/Contactform" },
+        { "$ref": "#/definitions/Detailpage" }
       ]
     },
 
@@ -530,6 +533,95 @@
             "Text Secondary Button": { "type": "string" }
           },
           "required": ["Property 1", "Text Secondary Button"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "Form": {
+      "properties": {
+        "component": { "const": "Form" },
+        "props": {
+          "type": "object",
+          "properties": {
+            "Has Field 1": { "type": "boolean" },
+            "Field 1": { "type": "string" },
+            "Has Field 2": { "type": "boolean" },
+            "Field 2.1": { "type": "string" },
+            "Field 2.2": { "type": "string" },
+            "Has Field 3": { "type": "boolean" },
+            "Field 3": { "type": "string" },
+            "Has Radio Buttons": { "type": "boolean" },
+            "Radio Button 1": { "type": "string" },
+            "Radio Button 2": { "type": "string" },
+            "Radio Button 3": { "type": "string" },
+            "Has Checkboxes": { "type": "boolean" },
+            "Checkbox 1": { "type": "string" },
+            "Checkbox 2": { "type": "string" },
+            "Checkbox 3": { "type": "string" },
+            "Has Dropdown": { "type": "boolean" },
+            "Dropdown title": { "type": "string" },
+            "Has Name": { "type": "boolean" },
+            "Has Email": { "type": "boolean" },
+            "Has Phone number": { "type": "boolean" },
+            "Has Date Timed": { "type": "boolean" }
+          },
+          "required": [
+            "Has Field 1",
+            "Has Field 2",
+            "Has Field 3",
+            "Has Radio Buttons",
+            "Has Checkboxes",
+            "Has Dropdown",
+            "Has Name",
+            "Has Email",
+            "Has Phone number",
+            "Has Date Timed"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "Contactform": {
+      "properties": {
+        "component": { "const": "Contactform" },
+        "props": {
+          "type": "object",
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "Detailpage": {
+      "properties": {
+        "component": { "const": "Detail page" },
+        "props": {
+          "type": "object",
+          "properties": {
+            "Has Project Header": { "type": "boolean" },
+            "Has News Header": { "type": "boolean" },
+            "Paragraph 1": { "type": "string" },
+            "Paragraph 2": { "type": "string" },
+            "Has Highlight Paragraph": { "type": "boolean" },
+            "Highlight Title": { "type": "string" },
+            "Highlight Paragraph": { "type": "string" },
+            "Paragraph 3 Title": { "type": "string" },
+            "Paragraph 3": { "type": "string" },
+            "Paragraph 4": { "type": "string" },
+            "Has More Projects": { "type": "boolean" },
+            "Has More News": { "type": "boolean" }
+          },
+          "required": [
+            "Has Project Header",
+            "Has News Header",
+            "Has Highlight Paragraph",
+            "Has More Projects",
+            "Has More News"
+          ],
           "additionalProperties": false
         }
       },

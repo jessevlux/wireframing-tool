@@ -1,7 +1,18 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { ChevronRight, Plus, Download, Save, Edit2, Copy, Check, X } from 'lucide-vue-next'
+import {
+  ChevronRight,
+  Plus,
+  Download,
+  Save,
+  Edit2,
+  Copy,
+  Check,
+  X,
+  Undo2,
+  Redo2,
+} from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import BlockItem from '../components/BlockItem.vue'
 
@@ -24,6 +35,100 @@ const newPageData = ref({
   description: '',
 })
 
+// Drag and drop state
+const draggedBlockId = ref(null)
+const dragOverBlockId = ref(null)
+
+// Undo/Redo history
+const history = ref([])
+const historyIndex = ref(-1)
+const MAX_HISTORY = 50 // Limit history to prevent memory issues
+
+// Undo/Redo history management
+const saveToHistory = () => {
+  if (!project.value || !selectedPageId.value) return
+
+  // Create a deep copy of the current page state
+  const currentPage = project.value.pages.find((p) => p.id === selectedPageId.value)
+  if (!currentPage) return
+
+  const snapshot = JSON.parse(JSON.stringify(currentPage))
+
+  // Remove future history if we're not at the end
+  if (historyIndex.value < history.value.length - 1) {
+    history.value = history.value.slice(0, historyIndex.value + 1)
+  }
+
+  // Add new snapshot
+  history.value.push(snapshot)
+
+  // Limit history size
+  if (history.value.length > MAX_HISTORY) {
+    history.value.shift()
+  } else {
+    historyIndex.value++
+  }
+}
+
+const undo = () => {
+  if (!canUndo.value) return
+
+  historyIndex.value--
+  restoreFromHistory()
+}
+
+const redo = () => {
+  if (!canRedo.value) return
+
+  historyIndex.value++
+  restoreFromHistory()
+}
+
+const restoreFromHistory = () => {
+  if (!project.value || historyIndex.value < 0 || historyIndex.value >= history.value.length) return
+
+  const snapshot = history.value[historyIndex.value]
+  const pageIndex = project.value.pages.findIndex((p) => p.id === selectedPageId.value)
+
+  if (pageIndex !== -1) {
+    // Deep copy to prevent reference issues
+    project.value.pages[pageIndex] = JSON.parse(JSON.stringify(snapshot))
+
+    // Clear selection to avoid stale references
+    selectedBlock.value = null
+    selectedChildInfo.value = null
+
+    // Save to backend (without adding to history)
+    saveProjectWithoutHistory()
+  }
+}
+
+const canUndo = computed(() => historyIndex.value > 0)
+const canRedo = computed(() => historyIndex.value < history.value.length - 1)
+
+// Keyboard shortcuts for undo/redo
+onMounted(() => {
+  const handleKeyPress = (e) => {
+    // Ctrl+Z or Cmd+Z (Mac)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault()
+      undo()
+    }
+    // Ctrl+Y or Ctrl+Shift+Z or Cmd+Shift+Z (Mac)
+    else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      e.preventDefault()
+      redo()
+    }
+  }
+
+  window.addEventListener('keydown', handleKeyPress)
+
+  // Cleanup on unmount
+  return () => {
+    window.removeEventListener('keydown', handleKeyPress)
+  }
+})
+
 // Load project from Supabase or localStorage
 onMounted(async () => {
   const projectId = parseInt(route.params.id)
@@ -33,6 +138,8 @@ onMounted(async () => {
     // Select first page by default
     if (project.value?.pages?.length > 0) {
       selectedPageId.value = project.value.pages[0].id
+      // Initialize history with current state
+      saveToHistory()
     }
   } catch (err) {
     console.error('Error loading project:', err)
@@ -48,6 +155,8 @@ const loadFromLocalStorage = (projectId) => {
     project.value = projects.find((p) => p.id === projectId)
     if (project.value?.pages?.length > 0) {
       selectedPageId.value = project.value.pages[0].id
+      // Initialize history with current state
+      saveToHistory()
     }
   }
 }
@@ -157,48 +266,25 @@ const closeProperties = () => {
 
 // Beschikbare component types
 const availableComponents = [
-  { value: 'Hero', label: 'Hero', icon: '🎯' },
-  { value: 'MediaGroot', label: 'Media Groot', icon: '🖼️' },
-  { value: 'Kolommen', label: 'Kolommen', icon: '📋' },
-  { value: 'MediaSlider', label: 'Media Slider', icon: '🎠' },
-  { value: 'Grid', label: 'Grid', icon: '📦' },
-  { value: 'EntryPostSlider', label: 'Entry Post Slider', icon: '📰' },
-  { value: 'LogoSlider', label: 'Logo Slider', icon: '🏢' },
   { value: 'CalltoAction', label: 'Call to Action', icon: '📢' },
+  { value: 'Contactform', label: 'Contactform', icon: '✉️' },
+  { value: 'detailpage', label: 'Detail page', icon: '📄' },
+  { value: 'EntryPostSlider', label: 'Entry Post Slider', icon: '📰' },
   { value: 'Footer', label: 'Footer', icon: '📄' },
-  { value: 'Projects', label: 'Projects', icon: '💼' },
+  { value: 'Form', label: 'Form', icon: '📝' },
+  { value: 'Grid', label: 'Grid', icon: '📦' },
+  { value: 'Hero', label: 'Hero', icon: '🎯' },
+  { value: 'Kolommen', label: 'Kolommen', icon: '📋' },
+  { value: 'LogoSlider', label: 'Logo Slider', icon: '🏢' },
+  { value: 'MediaGroot', label: 'Media Groot', icon: '🖼️' },
+  { value: 'MediaSlider', label: 'Media Slider', icon: '🎠' },
   { value: 'News', label: 'News', icon: '📰' },
+  { value: 'Projects', label: 'Projects', icon: '💼' },
 ]
 
 // Genereer default props voor een component type
 const getDefaultPropsForComponent = (componentType) => {
   const defaults = {
-    Hero: {
-      'Has Title': true,
-      'Hero Title': 'Nieuwe hero sectie',
-      'Has Description': true,
-      Description: 'Beschrijving',
-      'Has Usps': false,
-      'Has Button Primary': false,
-      'Has Button Secondary': false,
-    },
-    MediaGroot: {},
-    Kolommen: {
-      'Property 1': 'Default',
-    },
-    MediaSlider: {
-      Title: 'Media slider titel',
-    },
-    Grid: {
-      'Property 1': 'Default',
-      Title: 'Grid titel',
-    },
-    EntryPostSlider: {
-      Title: 'Slider titel',
-    },
-    LogoSlider: {
-      Title: 'Logo slider',
-    },
     CalltoAction: {
       'Has Title': true,
       Title: 'Call to action',
@@ -208,6 +294,17 @@ const getDefaultPropsForComponent = (componentType) => {
       'Has Button Primary': false,
       'Has Button Secondary': false,
     },
+    Contactform: {},
+    detailpage: {
+      'Has Project Header': false,
+      'Has News Header': true,
+      'Has Highlight Paragraph': false,
+      'Has More Projects': false,
+      'Has More News': false,
+    },
+    EntryPostSlider: {
+      Title: 'Slider titel',
+    },
     Footer: {
       'Has Column 1': false,
       'Has Column 2': false,
@@ -215,14 +312,49 @@ const getDefaultPropsForComponent = (componentType) => {
       'Has Column 4': false,
       'Has Nieuwsbrief': false,
     },
-    Projects: {
-      Title: 'Projecten',
-      'Has description': false,
-      'Has example project': false,
+    Form: {
+      'Has Field 1': false,
+      'Has Field 2': false,
+      'Has Field 3': false,
+      'Has Radio Buttons': false,
+      'Has Checkboxes': false,
+      'Has Dropdown': false,
+      'Has Name': false,
+      'Has Email': false,
+      'Has Phone number': false,
+      'Has Date Timed': false,
+    },
+    Grid: {
+      'Property 1': 'Default',
+      Title: 'Grid titel',
+    },
+    Hero: {
+      'Has Title': true,
+      'Hero Title': 'Nieuwe hero sectie',
+      'Has Description': true,
+      Description: 'Beschrijving',
+      'Has Usps': false,
+      'Has Button Primary': false,
+      'Has Button Secondary': false,
+    },
+    Kolommen: {
+      'Property 1': 'Default',
+    },
+    LogoSlider: {
+      Title: 'Logo slider',
+    },
+    MediaGroot: {},
+    MediaSlider: {
+      Title: 'Media slider titel',
     },
     News: {
       Title: 'Nieuws',
       Description: 'Laatste nieuws',
+    },
+    Projects: {
+      Title: 'Projecten',
+      'Has description': false,
+      'Has example project': false,
     },
   }
   return defaults[componentType] || {}
@@ -236,6 +368,48 @@ const addBlock = (componentType = 'Hero') => {
     component: componentType,
     props: getDefaultPropsForComponent(componentType),
     children: [],
+  }
+
+  // Add default children for specific components
+  if (componentType === 'detailpage') {
+    // detailpage always has a CalltoAction as child
+    newBlock.children.push({
+      component: 'CalltoAction',
+      props: {
+        'Has Title': true,
+        Title: 'Neem contact op',
+        'Has Description': true,
+        Description: 'Beschrijving',
+        'Has Usps': false,
+        'Has Button Primary': true,
+        'Has Button Secondary': false,
+      },
+      children: [
+        {
+          component: 'Button Primary',
+          props: {
+            'Property 1': 'Default',
+            'Text primary button': 'Contact',
+          },
+        },
+      ],
+    })
+  } else if (componentType === 'Grid') {
+    // Grid gets default cards based on variant (Default = 3 cards)
+    const variant = newBlock.props['Property 1'] || 'Default'
+    const cardCount = variant === 'Default' ? 3 : variant === 'Variant2' ? 4 : 2
+    for (let i = 0; i < cardCount; i++) {
+      newBlock.children.push({
+        component: 'Inner Grid Card',
+        index: i,
+        props: {
+          Title: `Card ${i + 1}`,
+          Description: 'Beschrijving',
+          'Has button': false,
+        },
+        children: [],
+      })
+    }
   }
 
   // Add to page
@@ -276,6 +450,54 @@ const moveBlock = (blockId, direction) => {
     selectedPage.value.blocks = blocks
     saveProject()
   }
+}
+
+// Drag and drop handlers
+const handleDragStart = (blockId, event) => {
+  draggedBlockId.value = blockId
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', blockId)
+  // Add visual feedback
+  event.target.style.opacity = '0.5'
+}
+
+const handleDragEnd = (event) => {
+  draggedBlockId.value = null
+  dragOverBlockId.value = null
+  // Reset visual feedback
+  event.target.style.opacity = '1'
+}
+
+const handleDragOver = (blockId) => {
+  if (draggedBlockId.value && draggedBlockId.value !== blockId) {
+    dragOverBlockId.value = blockId
+  }
+}
+
+const handleDrop = (targetBlockId) => {
+  if (!selectedPage.value || !draggedBlockId.value || draggedBlockId.value === targetBlockId) {
+    dragOverBlockId.value = null
+    return
+  }
+
+  const fromIndex = selectedPage.value.blocks.findIndex((b) => b.id === draggedBlockId.value)
+  const toIndex = selectedPage.value.blocks.findIndex((b) => b.id === targetBlockId)
+
+  if (fromIndex === -1 || toIndex === -1) {
+    dragOverBlockId.value = null
+    return
+  }
+
+  // Reorder blocks
+  const blocks = [...selectedPage.value.blocks]
+  const [movedBlock] = blocks.splice(fromIndex, 1)
+  blocks.splice(toIndex, 0, movedBlock)
+
+  selectedPage.value.blocks = blocks
+  dragOverBlockId.value = null
+
+  // Save with history
+  saveProject()
 }
 
 // Bepaal of een property getoond moet worden op basis van conditielogica
@@ -363,6 +585,30 @@ const shouldShowProperty = (propKey, allProps) => {
     // Buttons (Property 1 en text velden altijd verplicht)
     'Text primary button': undefined, // Altijd tonen (verplicht in schema)
     'Text Secondary Button': undefined, // Altijd tonen (verplicht in schema)
+
+    // Contactform (geen properties)
+
+    // Detail page
+    'Paragraph 1': undefined, // Altijd tonen
+    'Paragraph 2': undefined, // Altijd tonen
+    'Highlight Title': 'Has Highlight Paragraph',
+    'Highlight Paragraph': 'Has Highlight Paragraph',
+    'Paragraph 3 Title': undefined, // Altijd tonen
+    'Paragraph 3': undefined, // Altijd tonen
+    'Paragraph 4': undefined, // Altijd tonen
+
+    // Form
+    'Field 1': 'Has Field 1',
+    'Field 2.1': 'Has Field 2',
+    'Field 2.2': 'Has Field 2',
+    'Field 3': 'Has Field 3',
+    'Radio Button 1': 'Has Radio Buttons',
+    'Radio Button 2': 'Has Radio Buttons',
+    'Radio Button 3': 'Has Radio Buttons',
+    'Checkbox 1': 'Has Checkboxes',
+    'Checkbox 2': 'Has Checkboxes',
+    'Checkbox 3': 'Has Checkboxes',
+    'Dropdown title': 'Has Dropdown',
   }
 
   // Als het veld expliciet undefined heeft, altijd tonen
@@ -400,6 +646,10 @@ const updateBlockProp = (propKey, value) => {
       if (child && child.props) {
         child.props[propKey] = value
         selectedBlock.value = { ...child }
+
+        // Handle children for child blocks too
+        handleChildrenForBooleans(child, propKey, value)
+
         saveProject()
         return
       }
@@ -411,6 +661,42 @@ const updateBlockProp = (propKey, value) => {
   if (block && block.props) {
     block.props[propKey] = value
     selectedBlock.value = { ...block }
+
+    // Handle Grid variant changes - adjust number of cards
+    if (block.component === 'Grid' && propKey === 'Property 1') {
+      const cardCount = value === 'Default' ? 3 : value === 'Variant2' ? 4 : 2
+      const currentCount = block.children?.length || 0
+
+      if (!block.children) {
+        block.children = []
+      }
+
+      // Add or remove cards to match the variant
+      if (currentCount < cardCount) {
+        // Add cards
+        for (let i = currentCount; i < cardCount; i++) {
+          block.children.push({
+            component: 'Inner Grid Card',
+            index: i,
+            props: {
+              Title: `Card ${i + 1}`,
+              Description: 'Beschrijving',
+              'Has button': false,
+            },
+            children: [],
+          })
+        }
+      } else if (currentCount > cardCount) {
+        // Remove excess cards
+        block.children = block.children.slice(0, cardCount)
+        // Update indices
+        block.children.forEach((child, idx) => {
+          if (child.index !== undefined) {
+            child.index = idx
+          }
+        })
+      }
+    }
 
     // Automatisch children toevoegen/verwijderen op basis van boolean properties
     handleChildrenForBooleans(block, propKey, value)
@@ -465,6 +751,52 @@ const handleChildrenForBooleans = (block, propKey, value) => {
     }
   }
 
+  // Content Kolommen Block - Accordion
+  if (propKey === 'Has Accordion' && block.component === 'Content Kolommen Block') {
+    if (value === true) {
+      const hasAccordion = block.children.some((c) => c.component === 'Accordion list')
+      if (!hasAccordion) {
+        block.children.push({
+          component: 'Accordion list',
+          props: {
+            'Has Title': true,
+            Title: 'Accordion titel',
+            Text: 'Accordion tekst',
+            'Text 2': 'Tekst 2',
+            'Text 3': 'Tekst 3',
+            'Text 4': 'Tekst 4',
+            'Text open item': 'Open item tekst',
+          },
+        })
+      }
+    } else {
+      block.children = block.children.filter((c) => c.component !== 'Accordion list')
+    }
+  }
+
+  // Content Kolommen Block - Text Element
+  if (propKey === 'Has Text' && block.component === 'Content Kolommen Block') {
+    if (value === true) {
+      const hasText = block.children.some((c) => c.component === 'Text Element')
+      if (!hasText) {
+        block.children.push({
+          component: 'Text Element',
+          props: {
+            'Has Primary Button': false,
+            'Has Second Button': false,
+            'Has List': false,
+            'Has description': true,
+            'Title of text Block': 'Text blok titel',
+            Description: 'Beschrijving',
+          },
+          children: [],
+        })
+      }
+    } else {
+      block.children = block.children.filter((c) => c.component !== 'Text Element')
+    }
+  }
+
   // Inner Grid Card button
   if (propKey === 'Has button' && block.component === 'Inner Grid Card') {
     if (value === true) {
@@ -496,9 +828,74 @@ const handleChildrenForBooleans = (block, propKey, value) => {
       })
     }
   }
+
+  // Grid - automatisch juiste aantal Inner Grid Cards op basis van variant
+  if (propKey === 'Property 1' && block.component === 'Grid') {
+    const variantCounts = {
+      Default: 3,
+      Variant2: 4,
+      Variant3: 2,
+    }
+    const requiredCount = variantCounts[value] || 3
+    const currentCount = block.children.filter((c) => c.component === 'Inner Grid Card').length
+
+    if (currentCount < requiredCount) {
+      // Voeg extra cards toe
+      for (let i = currentCount; i < requiredCount; i++) {
+        block.children.push({
+          component: 'Inner Grid Card',
+          index: i,
+          props: {
+            Title: `Card ${i + 1}`,
+            Description: `Beschrijving ${i + 1}`,
+            'Has button': false,
+          },
+          children: [],
+        })
+      }
+    } else if (currentCount > requiredCount) {
+      // Verwijder overtollige cards
+      block.children = block.children.filter((c) => {
+        if (c.component !== 'Inner Grid Card') return true
+        return c.index < requiredCount
+      })
+    }
+
+    // Update indices
+    block.children
+      .filter((c) => c.component === 'Inner Grid Card')
+      .forEach((c, idx) => {
+        c.index = idx
+      })
+  }
 }
 
 const saveProject = async () => {
+  if (!project.value) return
+
+  // Save to history before saving to backend
+  saveToHistory()
+
+  isSaving.value = true
+
+  try {
+    await projectService.updateProject(project.value.id, {
+      pages: project.value.pages,
+      updated_at: new Date().toISOString(),
+    })
+  } catch (err) {
+    console.error('Error saving project:', err)
+    // Fallback to localStorage
+    saveToLocalStorage()
+  } finally {
+    setTimeout(() => {
+      isSaving.value = false
+    }, 500)
+  }
+}
+
+// Save without adding to history (used when restoring from history)
+const saveProjectWithoutHistory = async () => {
   if (!project.value) return
 
   isSaving.value = true
@@ -629,6 +1026,32 @@ const closeNewPageModal = () => {
         </div>
 
         <div class="flex items-center gap-3">
+          <!-- Undo/Redo buttons -->
+          <div class="flex items-center gap-1">
+            <button
+              @click="undo"
+              :disabled="!canUndo"
+              :title="'Ongedaan maken (Ctrl+Z)'"
+              :class="[
+                'p-2 rounded-lg transition-colors',
+                canUndo ? 'hover:bg-zinc-800 text-zinc-300' : 'text-zinc-600 cursor-not-allowed',
+              ]"
+            >
+              <Undo2 class="w-4 h-4" />
+            </button>
+            <button
+              @click="redo"
+              :disabled="!canRedo"
+              :title="'Opnieuw (Ctrl+Y)'"
+              :class="[
+                'p-2 rounded-lg transition-colors',
+                canRedo ? 'hover:bg-zinc-800 text-zinc-300' : 'text-zinc-600 cursor-not-allowed',
+              ]"
+            >
+              <Redo2 class="w-4 h-4" />
+            </button>
+          </div>
+          <div class="h-6 w-px bg-zinc-800" />
           <div
             :class="[
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
@@ -767,12 +1190,17 @@ const closeNewPageModal = () => {
               :block="block"
               :index="index"
               :is-selected="selectedBlock?.id === block.id"
+              :is-drag-over="dragOverBlockId === block.id"
               :is-first="index === 0"
               :is-last="index === blocks.length - 1"
               @select="selectBlock"
               @move-up="moveBlock(block.id, 'up')"
               @move-down="moveBlock(block.id, 'down')"
               @delete="deleteBlock(block.id)"
+              @drag-start="handleDragStart"
+              @drag-end="handleDragEnd"
+              @drag-over="handleDragOver"
+              @drop="handleDrop"
             />
           </div>
         </div>

@@ -148,7 +148,7 @@ interface ProjectRequest {
   projectName: string
   companyName?: string
   description?: string
-  numPages: number
+  numPages?: number // Optional - AI will determine automatically if not provided
   language: string
   files?: ProjectFile[] // Optional uploaded files for AI context only
   additionalContext?: string
@@ -173,9 +173,9 @@ serve(async (req) => {
     }: ProjectRequest = await req.json()
 
     // Validate input
-    if (!projectName || !numPages || !language) {
+    if (!projectName || !language) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: projectName, numPages, language' }),
+        JSON.stringify({ error: 'Missing required fields: projectName, language' }),
         {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -285,10 +285,11 @@ Volg deze instructies EXACT op. Genereer altijd valide JSON volgens het schema.`
 **Projectnaam:** ${projectName}
 ${companyName ? `**Bedrijfsnaam:** ${companyName}` : ''}
 ${description ? `**Beschrijving:** ${description}` : ''}
-**Aantal pagina's:** ${numPages}
 **Taal:** ${language}
 ${additionalContext ? `**Extra context:** ${additionalContext}` : ''}
 ${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.length} (zie bijgevoegde documenten voor extra context)` : ''}
+
+${numPages ? `**Gevraagd aantal pagina's:** ${numPages} (gebruik dit als richtlijn, maar pas aan indien nodig)` : "**Bepaal zelf het optimale aantal pagina's** op basis van de projectbeschrijving en best practices"}
 
 Volg de instructies exact:
 1. Geef EERST een tekstuele sitemap uitleg met de structuur en motivatie

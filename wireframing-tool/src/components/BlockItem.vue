@@ -22,9 +22,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  isDragOver: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete'])
+const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete', 'dragStart', 'dragEnd', 'dragOver', 'drop'])
 
 // Helper om een korte beschrijving te maken van de block
 const getBlockDescription = () => {
@@ -58,16 +62,23 @@ const getBlockDescription = () => {
 
 <template>
   <div
+    draggable="true"
+    @dragstart="emit('dragStart', block.id, $event)"
+    @dragend="emit('dragEnd', $event)"
+    @dragover.prevent="emit('dragOver', block.id, $event)"
+    @drop.prevent="emit('drop', block.id, $event)"
     @click="emit('select', block)"
     :class="[
       'border-2 rounded-xl p-5 cursor-pointer transition-all group',
       isSelected
         ? 'border-violet-500 bg-violet-500/5'
-        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
+        : isDragOver
+          ? 'border-fuchsia-500 bg-fuchsia-500/10'
+          : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
     ]"
   >
     <div class="flex items-center gap-4">
-      <div class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab">
+      <div class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab active:cursor-grabbing">
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">

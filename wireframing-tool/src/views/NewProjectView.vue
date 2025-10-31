@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { X, Zap, Upload, Trash2 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
@@ -11,8 +11,17 @@ const formData = ref({
   projectName: '',
   companyName: '',
   description: '',
-  numPages: 5,
   language: 'Nederlands',
+  autoNumPages: true, // when true, AI decides; when false, user provides numPages
+  numPages: 5,
+})
+
+// Select-mode for number of pages (maps to autoNumPages boolean)
+const numPagesMode = computed({
+  get: () => (formData.value.autoNumPages ? 'auto' : 'manual'),
+  set: (mode) => {
+    formData.value.autoNumPages = mode === 'auto'
+  },
 })
 
 const isCreating = ref(false)
@@ -113,14 +122,20 @@ const createProject = async () => {
     // 2. Roep Edge Function aan om wireframe te genereren
     loadingStep.value = 'AI genereert wireframe...'
     console.log('Genereren wireframe via Edge Function...')
-    const wireframeResult = await wireframeService.generateWireframe({
+    // Build payload; include numPages only if user opts out of AI deciding
+    const payload = {
       projectName: formData.value.projectName,
       companyName: formData.value.companyName,
       description: formData.value.description,
-      numPages: formData.value.numPages,
       language: formData.value.language,
       files: filesBase64, // Files for AI context only (not stored in DB)
-    })
+    }
+
+    if (!formData.value.autoNumPages && Number.isFinite(formData.value.numPages)) {
+      payload.numPages = formData.value.numPages
+    }
+
+    const wireframeResult = await wireframeService.generateWireframe(payload)
 
     // 3. Converteer naar project pages formaat
     loadingStep.value = "Pagina's structureren..."
@@ -209,20 +224,8 @@ const createProject = async () => {
             />
           </div>
 
-          <!-- Pages & Language -->
-          <div class="grid grid-cols-2 gap-6">
-            <!-- Number of Pages -->
-            <div>
-              <label class="block text-sm font-medium mb-2">Aantal Pagina's</label>
-              <input
-                v-model.number="formData.numPages"
-                type="number"
-                min="1"
-                max="10"
-                class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
-              />
-            </div>
-
+          <!-- Language & Pages -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <!-- Language -->
             <div>
               <label class="block text-sm font-medium mb-2">Taal</label>
@@ -233,6 +236,27 @@ const createProject = async () => {
                 <option>Nederlands</option>
                 <option>English</option>
               </select>
+            </div>
+
+            <!-- Pages -->
+            <div>
+              <label class="block text-sm font-medium mb-2">Aantal pagina's</label>
+              <select
+                v-model="numPagesMode"
+                class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+              >
+                <option value="auto">Automatisch</option>
+                <option value="manual">Handmatig</option>
+              </select>
+              <div v-if="numPagesMode === 'manual'" class="mt-3">
+                <input
+                  v-model.number="formData.numPages"
+                  type="number"
+                  min="1"
+                  max="20"
+                  class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+                />
+              </div>
             </div>
           </div>
 
