@@ -594,7 +594,7 @@
 
     "Detailpage": {
       "properties": {
-        "component": { "const": "Detail page" },
+        "component": { "const": "Detailpage" },
         "props": {
           "type": "object",
           "properties": {
