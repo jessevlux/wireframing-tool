@@ -268,7 +268,7 @@ const closeProperties = () => {
 const availableComponents = [
   { value: 'CalltoAction', label: 'Call to Action', icon: '📢' },
   { value: 'Contactform', label: 'Contactform', icon: '✉️' },
-  { value: 'detailpage', label: 'Detail page', icon: '📄' },
+  { value: 'Detailpage', label: 'Detail page', icon: '📄' },
   { value: 'EntryPostSlider', label: 'Entry Post Slider', icon: '📰' },
   { value: 'Footer', label: 'Footer', icon: '📄' },
   { value: 'Form', label: 'Form', icon: '📝' },
@@ -295,7 +295,7 @@ const getDefaultPropsForComponent = (componentType) => {
       'Has Button Secondary': false,
     },
     Contactform: {},
-    detailpage: {
+    Detailpage: {
       'Has Project Header': false,
       'Has News Header': true,
       'Has Highlight Paragraph': false,
@@ -371,8 +371,8 @@ const addBlock = (componentType = 'Hero') => {
   }
 
   // Add default children for specific components
-  if (componentType === 'detailpage') {
-    // detailpage always has a CalltoAction as child
+  if (componentType === 'Detailpage') {
+    // Detailpage always has a CalltoAction as child
     newBlock.children.push({
       component: 'CalltoAction',
       props: {

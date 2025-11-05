@@ -5,11 +5,10 @@ import Ajv from 'https://esm.sh/ajv@8.12.0'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 // Import context files
-import { COMPONENTS_SCHEMA, INSTRUCTIONS, SPEC } from './context.ts'
 // Import dummy data
 import dummyDataTemplate from './dummyData.json' with { type: 'json' }
-// Import schema for validation
-import componentsSchemaJson from '../../../AI/components.schema.json' with { type: 'json' }
+// Import schema for validation (local copy)
+import componentsSchemaJson from './components.schema.json' with { type: 'json' }
 
 // Rate limiting: simple in-memory store (per Edge Function instance)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
@@ -264,19 +263,26 @@ serve(async (req) => {
     })
 
     // Build the prompt for Claude
+    // const hasLargeInput = (description?.length || 0) > 600 || (files && files.length > 0)
+    // Read external context files
+    const [specMd, instructionsMd] = await Promise.all([
+      Deno.readTextFile(new URL('./spec.md', import.meta.url)),
+      Deno.readTextFile(new URL('./instructions.md', import.meta.url)),
+    ])
+
     const systemPrompt = `Je bent een expert UX/UI designer en wireframe architect.
-    Je taak is om wireframes te genereren in JSON formaat volgens het opgegeven schema.
-
-# Context Bestanden
-
-## Components Schema (JSON Schema voor validatie)
-${COMPONENTS_SCHEMA}
+    Hanteer componenten als generieke UI-archetypen.
+    Kies archetypen op basis van UX-doel; map ze zelfstandig naar het schema (namen zijn niet domein-gebonden).
+    Output is rijk en volledig, microcopy NL, props/booleans expliciet.
+    Volg instructies van ${instructionsMd}. Gebruik ${specMd} als referentie voor de componenten en hun eigenschappen.
+    ${hasLargeInput ? 'Houd de structuur compact vanwege grote input; beperk tot doelmatige blokken en voorkom overbodige variatie.' : ''}
+    Je taak is om wireframes te genereren in JSON formaat volgens ${JSON.stringify(componentsSchemaJson, null, 2)}.
 
 ## Instructions
-${INSTRUCTIONS}
+${instructionsMd}
 
 ## Spec (Component Specificaties)
-${SPEC}
+${specMd}
 
 Volg deze instructies EXACT op. Genereer altijd valide JSON volgens het schema.`
 
@@ -290,10 +296,6 @@ ${additionalContext ? `**Extra context:** ${additionalContext}` : ''}
 ${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.length} (zie bijgevoegde documenten voor extra context)` : ''}
 
 ${numPages ? `**Gevraagd aantal pagina's:** ${numPages} (gebruik dit als richtlijn, maar pas aan indien nodig)` : "**Bepaal zelf het optimale aantal pagina's** op basis van de projectbeschrijving en best practices"}
-
-Volg de instructies exact:
-1. Geef EERST een tekstuele sitemap uitleg met de structuur en motivatie
-2. Sluit DAARNA af door de tool 'emit_wireframe' aan te roepen met de volledige wireframe JSON
 
 BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code block). Begin nu!`
 
@@ -332,10 +334,12 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
     })
 
     console.log('Calling Anthropic API...')
+    const callStart = Date.now()
 
     // Call Anthropic API with tools
+    const selectedModel = hasLargeInput ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001'
     const message = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
+      model: selectedModel,
       max_tokens: 16000,
       temperature: 0.2,
       system: systemPrompt,
@@ -463,6 +467,139 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
         jsonStart > 0 ? responseText.substring(0, jsonStart).trim() : responseText.trim()
     }
 
+    // ---- SANITIZER: fix Detailpage misplacements before validation ----
+    const looksLikeDetailpageProps = (props: any) => {
+      if (!props || typeof props !== 'object') return false
+      const keys = Object.keys(props)
+      const markers = [
+        'Has Project Header',
+        'Has News Header',
+        'Paragraph 1',
+        'Paragraph 2',
+        'Has Highlight Paragraph',
+        'Highlight Title',
+        'Highlight Paragraph',
+        'Paragraph 3 Title',
+        'Paragraph 3',
+        'Paragraph 4',
+        'Has More Projects',
+        'Has More News',
+      ]
+      return markers.some((k) => keys.includes(k))
+    }
+
+    const ensureCTAChild = () => ({
+      component: 'CalltoAction',
+      props: {
+        'Has Title': true,
+        Title: 'Meer weten?',
+        'Has Description': true,
+        Description: 'Neem contact op of bekijk gerelateerde items.',
+        'Has Usps': false,
+        'Usp 1': '',
+        'Usp 2': '',
+        'Usp 3': '',
+        'Has Button Primary': true,
+        'Has Button Secondary': false,
+      },
+      children: [
+        {
+          component: 'Button Primary',
+          props: { 'Property 1': 'Default', 'Text primary button': 'Contact opnemen' },
+        },
+      ],
+    })
+
+    const ensureFooter = () => ({
+      component: 'Footer',
+      props: {
+        'Has Column 1': false,
+        'Header 1': '',
+        Link1A: '',
+        Link1B: '',
+        Link1C: '',
+        Link1D: '',
+        Link1E: '',
+        Link1F: '',
+        Link1G: '',
+        'Has Column 2': false,
+        'Header 2': '',
+        Link2A: '',
+        Link2B: '',
+        Link2C: '',
+        Link2D: '',
+        Link2E: '',
+        Link2F: '',
+        Link2G: '',
+        'Has Column 3': false,
+        'Header 3': '',
+        Link3A: '',
+        Link3B: '',
+        Link3C: '',
+        Link3D: '',
+        Link3E: '',
+        Link3F: '',
+        Link3G: '',
+        'Has Column 4': false,
+        'Header 4': '',
+        Link4A: '',
+        Link4B: '',
+        Link4C: '',
+        Link4D: '',
+        Link4E: '',
+        Link4F: '',
+        Link4G: '',
+        'Has Nieuwsbrief': false,
+      },
+    })
+
+    if (Array.isArray(wireframeJson)) {
+      wireframeJson = wireframeJson.map((page: any) => {
+        if (!page || !Array.isArray(page.blocks)) return page
+        const first = page.blocks[0]
+        if (first && looksLikeDetailpageProps(first.props)) {
+          const normalizedDetail = {
+            component: 'Detail page',
+            props: {
+              'Has Project Header': !!first.props['Has Project Header'],
+              'Has News Header': !!first.props['Has News Header'],
+              'Paragraph 1': first.props['Paragraph 1'] || '',
+              'Paragraph 2': first.props['Paragraph 2'] || '',
+              'Has Highlight Paragraph': !!first.props['Has Highlight Paragraph'],
+              'Highlight Title': first.props['Highlight Title'] || '',
+              'Highlight Paragraph': first.props['Highlight Paragraph'] || '',
+              'Paragraph 3 Title': first.props['Paragraph 3 Title'] || '',
+              'Paragraph 3': first.props['Paragraph 3'] || '',
+              'Paragraph 4': first.props['Paragraph 4'] || '',
+              'Has More Projects': !!first.props['Has More Projects'],
+              'Has More News': !!first.props['Has More News'],
+            },
+            children: [ensureCTAChild()],
+          }
+
+          const hasProject = normalizedDetail.props['Has Project Header']
+          const hasNews = normalizedDetail.props['Has News Header']
+          if (hasProject && hasNews) {
+            normalizedDetail.props['Has News Header'] = false
+          } else if (!hasProject && !hasNews) {
+            normalizedDetail.props['Has Project Header'] = true
+          }
+
+          if (normalizedDetail.props['Has Project Header']) {
+            normalizedDetail.props['Has More Projects'] = true
+            normalizedDetail.props['Has More News'] = false
+          } else {
+            normalizedDetail.props['Has More Projects'] = false
+            normalizedDetail.props['Has More News'] = true
+          }
+
+          return { ...page, blocks: [normalizedDetail, ensureFooter()] }
+        }
+        return page
+      })
+    }
+    // ---- END SANITIZER ----
+
     // Validate wireframe JSON with schema
     if (wireframeJson) {
       const ajv = new Ajv({ allErrors: true })
@@ -470,19 +607,29 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
       const valid = validate(wireframeJson)
 
       if (!valid) {
-        console.warn('Validation failed, attempting auto-repair...')
-        console.error('Errors:', JSON.stringify(validate.errors, null, 2))
-
-        try {
-          wireframeJson = await attemptAutoRepair(
-            anthropic,
-            wireframeJson,
-            validate.errors,
-            systemPrompt,
+        const elapsedMs = Date.now() - callStart
+        const skipRepair = elapsedMs > 45000 || (files && files.length > 0)
+        console.warn('Validation failed', {
+          elapsedMs,
+          skipRepair,
+          errors: validate.errors?.length,
+        })
+        if (!skipRepair) {
+          try {
+            wireframeJson = await attemptAutoRepair(
+              anthropic,
+              wireframeJson,
+              validate.errors,
+              systemPrompt,
+            )
+            console.log('Auto-repair successful')
+          } catch (repairError) {
+            console.error('Auto-repair failed:', repairError)
+          }
+        } else {
+          console.log(
+            'Skipping auto-repair due to time/size constraints; returning best-effort result',
           )
-          console.log('Auto-repair successful')
-        } catch (repairError) {
-          console.error('Auto-repair failed:', repairError)
         }
       }
     } else {

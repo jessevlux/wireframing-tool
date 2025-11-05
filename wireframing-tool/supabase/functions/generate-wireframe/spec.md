@@ -11,11 +11,14 @@ Alle JSON-output moet voldoen aan `components.schema.json`.
 - **Index altijd verplicht** bij Grid-cards, Entry Posts, Project Cards en News Cards.
 - **Children alleen toevoegen** als booleans dit vereisen.
 - **Footer verplicht** als laatste blok van elke pagina.
-- **Projects** en **News**: alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
-- **Detail page**: hele-pagina component, alleen Footer toegestaan als aanvullend blok. Exact één header type moet true zijn.
-- **Form** vs **Contactform**: gebruik Form voor algemene formulieren, Contactform specifiek voor contactpagina's.
 - **Geen lorem ipsum** → gebruik korte, realistische Nederlandse microcopy.
 - **Variatie toepassen**: kies bewust tussen Default en varianten.
+
+## Bijzonderheden
+
+- **Projects** en **News** en **Detail page** : alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
+- **Detail page**: Exact één header type moet true zijn.
+- **Form** vs **Contactform**: gebruik Form voor algemene formulieren, Contactform specifiek voor contactpagina's.
 
 ---
 
@@ -259,18 +262,17 @@ Alle JSON-output moet voldoen aan `components.schema.json`.
 
 ## Detail page
 
-- **Hele pagina** component voor nieuws- of projectdetails.
-- **Verplichte Footer** als laatste blok.
-- **Geen andere blokken** toegestaan (behalve Footer).
+- **Hele pagina** component (voor bijv. nieuws- of projectdetails).
+- **Volgorde regel**: altijd gevolgd door CalltoAction + Footer.
 - **Belangrijke regels**:
   - **Slechts één header** mag `true` zijn: ofwel `Has Project Header` ofwel `Has News Header`.
   - **Altijd één header** verplicht `true`.
   - **Has More Projects** of **Has More News**: niet allebei `true`.
-  - De "Has More" moet matchen met de gekozen header.
+  - De "Has More ..." moet matchen met de gekozen header.
 
 - **Props**:
-  - `Has Project Header` (bool) – header/hero voor projectenpagina
-  - `Has News Header` (bool) – header/hero voor nieuwsartikel
+  - `Has Project Header` (bool)
+  - `Has News Header` (bool)
   - `Paragraph 1` (string)
   - `Paragraph 2` (string)
   - `Has Highlight Paragraph` (bool)
