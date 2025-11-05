@@ -3,6 +3,8 @@ import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import Anthropic from 'https://esm.sh/@anthropic-ai/sdk@0.24.3'
 import Ajv from 'https://esm.sh/ajv@8.12.0'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { SPEC_MD } from './spec.ts'
+import { INSTRUCTIONS_MD } from './instructions.ts'
 
 // Import context files
 // Import dummy data
@@ -263,28 +265,21 @@ serve(async (req) => {
     })
 
     // Build the prompt for Claude
-    // const hasLargeInput = (description?.length || 0) > 600 || (files && files.length > 0)
-    // Read external context files
-    const [specMd, instructionsMd] = await Promise.all([
-      Deno.readTextFile(new URL('./spec.md', import.meta.url)),
-      Deno.readTextFile(new URL('./instructions.md', import.meta.url)),
-    ])
+    const hasLargeInput = (description?.length || 0) > 600 || (files && files.length > 0)
+    // Use embedded context (bundler-safe)
+    const specMd = SPEC_MD
+    const instructionsMd = INSTRUCTIONS_MD
 
-    const systemPrompt = `Je bent een expert UX/UI designer en wireframe architect.
-    Hanteer componenten als generieke UI-archetypen.
-    Kies archetypen op basis van UX-doel; map ze zelfstandig naar het schema (namen zijn niet domein-gebonden).
-    Output is rijk en volledig, microcopy NL, props/booleans expliciet.
-    Volg instructies van ${instructionsMd}. Gebruik ${specMd} als referentie voor de componenten en hun eigenschappen.
-    ${hasLargeInput ? 'Houd de structuur compact vanwege grote input; beperk tot doelmatige blokken en voorkom overbodige variatie.' : ''}
-    Je taak is om wireframes te genereren in JSON formaat volgens ${JSON.stringify(componentsSchemaJson, null, 2)}.
-
-## Instructions
-${instructionsMd}
-
-## Spec (Component Specificaties)
-${specMd}
-
-Volg deze instructies EXACT op. Genereer altijd valide JSON volgens het schema.`
+    const systemPrompt = [
+      'Je bent een UX/UI wireframe-architect.',
+      'Eerst een tekstuele sitemap (uitleg), daarna de tool call emit_wireframe met de volledige JSON.',
+      'Genereer valide JSON volgens het schema. Gebruik de context hieronder strikt.',
+      hasLargeInput ? 'LET OP: input is groot, houd de structuur compact en doelmatig.' : '',
+      '\n# Instructions\n',
+      instructionsMd,
+      '\n# Spec\n',
+      specMd,
+    ].join('\n')
 
     const userPromptText = `Genereer een wireframe voor het volgende project:
 
@@ -467,138 +462,7 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
         jsonStart > 0 ? responseText.substring(0, jsonStart).trim() : responseText.trim()
     }
 
-    // ---- SANITIZER: fix Detailpage misplacements before validation ----
-    const looksLikeDetailpageProps = (props: any) => {
-      if (!props || typeof props !== 'object') return false
-      const keys = Object.keys(props)
-      const markers = [
-        'Has Project Header',
-        'Has News Header',
-        'Paragraph 1',
-        'Paragraph 2',
-        'Has Highlight Paragraph',
-        'Highlight Title',
-        'Highlight Paragraph',
-        'Paragraph 3 Title',
-        'Paragraph 3',
-        'Paragraph 4',
-        'Has More Projects',
-        'Has More News',
-      ]
-      return markers.some((k) => keys.includes(k))
-    }
-
-    const ensureCTAChild = () => ({
-      component: 'CalltoAction',
-      props: {
-        'Has Title': true,
-        Title: 'Meer weten?',
-        'Has Description': true,
-        Description: 'Neem contact op of bekijk gerelateerde items.',
-        'Has Usps': false,
-        'Usp 1': '',
-        'Usp 2': '',
-        'Usp 3': '',
-        'Has Button Primary': true,
-        'Has Button Secondary': false,
-      },
-      children: [
-        {
-          component: 'Button Primary',
-          props: { 'Property 1': 'Default', 'Text primary button': 'Contact opnemen' },
-        },
-      ],
-    })
-
-    const ensureFooter = () => ({
-      component: 'Footer',
-      props: {
-        'Has Column 1': false,
-        'Header 1': '',
-        Link1A: '',
-        Link1B: '',
-        Link1C: '',
-        Link1D: '',
-        Link1E: '',
-        Link1F: '',
-        Link1G: '',
-        'Has Column 2': false,
-        'Header 2': '',
-        Link2A: '',
-        Link2B: '',
-        Link2C: '',
-        Link2D: '',
-        Link2E: '',
-        Link2F: '',
-        Link2G: '',
-        'Has Column 3': false,
-        'Header 3': '',
-        Link3A: '',
-        Link3B: '',
-        Link3C: '',
-        Link3D: '',
-        Link3E: '',
-        Link3F: '',
-        Link3G: '',
-        'Has Column 4': false,
-        'Header 4': '',
-        Link4A: '',
-        Link4B: '',
-        Link4C: '',
-        Link4D: '',
-        Link4E: '',
-        Link4F: '',
-        Link4G: '',
-        'Has Nieuwsbrief': false,
-      },
-    })
-
-    if (Array.isArray(wireframeJson)) {
-      wireframeJson = wireframeJson.map((page: any) => {
-        if (!page || !Array.isArray(page.blocks)) return page
-        const first = page.blocks[0]
-        if (first && looksLikeDetailpageProps(first.props)) {
-          const normalizedDetail = {
-            component: 'Detail page',
-            props: {
-              'Has Project Header': !!first.props['Has Project Header'],
-              'Has News Header': !!first.props['Has News Header'],
-              'Paragraph 1': first.props['Paragraph 1'] || '',
-              'Paragraph 2': first.props['Paragraph 2'] || '',
-              'Has Highlight Paragraph': !!first.props['Has Highlight Paragraph'],
-              'Highlight Title': first.props['Highlight Title'] || '',
-              'Highlight Paragraph': first.props['Highlight Paragraph'] || '',
-              'Paragraph 3 Title': first.props['Paragraph 3 Title'] || '',
-              'Paragraph 3': first.props['Paragraph 3'] || '',
-              'Paragraph 4': first.props['Paragraph 4'] || '',
-              'Has More Projects': !!first.props['Has More Projects'],
-              'Has More News': !!first.props['Has More News'],
-            },
-            children: [ensureCTAChild()],
-          }
-
-          const hasProject = normalizedDetail.props['Has Project Header']
-          const hasNews = normalizedDetail.props['Has News Header']
-          if (hasProject && hasNews) {
-            normalizedDetail.props['Has News Header'] = false
-          } else if (!hasProject && !hasNews) {
-            normalizedDetail.props['Has Project Header'] = true
-          }
-
-          if (normalizedDetail.props['Has Project Header']) {
-            normalizedDetail.props['Has More Projects'] = true
-            normalizedDetail.props['Has More News'] = false
-          } else {
-            normalizedDetail.props['Has More Projects'] = false
-            normalizedDetail.props['Has More News'] = true
-          }
-
-          return { ...page, blocks: [normalizedDetail, ensureFooter()] }
-        }
-        return page
-      })
-    }
-    // ---- END SANITIZER ----
+    // Sanitizer removed: rely on schema-only validation and instructions
 
     // Validate wireframe JSON with schema
     if (wireframeJson) {

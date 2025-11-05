@@ -1,9 +1,9 @@
-# Instructions
+export const INSTRUCTIONS_MD = `# Instructions
 
 **Doel**
-Genereer wireframes in JSON volgens het `components.schema.json`.
+Genereer wireframes in JSON volgens het \`components.schema.json\`.
 
-- Top-level structuur = array van pagina-objecten met `page`, `rationale` en `blocks`.
+- Top-level structuur = array van pagina-objecten met \`page\`, \`rationale\` en \`blocks\`.
 - Output bevat ZOWEL tekstuele uitleg ALS de volledige JSON in één response.
 
 ---
@@ -37,7 +37,7 @@ Gebruik optioneel marketing- en gedragspsychologie modellen om de keuzes te moti
 Direct na de tekstuele uitleg, genereer de volledige JSON in één tool call (emit_wireframe).
 
 - Alle pagina's die in de tekstuele uitleg zijn beschreven moeten in dezelfde JSON staan
-- Elke pagina heeft een `rationale` field met uitleg over de opbouw van die specifieke pagina
+- Elke pagina heeft een \`rationale\` field met uitleg over de opbouw van die specifieke pagina
 - Lever alles in één complete response aan
 
 ---
@@ -64,9 +64,9 @@ Je response moet EXACT deze structuur hebben:
 
 Elke pagina heeft:
 
-- `page`: naam van de pagina
-- `rationale`: uitleg waarom deze pagina zo is opgebouwd (2–4 zinnen)
-- `blocks`: array van component blocks
+- \`page\`: naam van de pagina
+- \`rationale\`: uitleg waarom deze pagina zo is opgebouwd (2–4 zinnen)
+- \`blocks\`: array van component blocks
 
 ## Output-eisen (verrijkt)
 
@@ -79,3 +79,4 @@ Elke pagina heeft:
 - Geef BEIDE outputs in één response. Eerst de tekstuele uitleg, dan DIRECT de tool call.
 - Gebruik de emit_wireframe tool voor de JSON (niet een code block).
 - Geen vervolgvragen, geen opdeling.
+`
