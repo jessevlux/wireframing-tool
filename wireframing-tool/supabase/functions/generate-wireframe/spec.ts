@@ -16,9 +16,12 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 ## Bijzonderheden
 
-- **Projects** en **News** en **Detail page** : alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
-- **Detail page**: Exact één header type moet true zijn.
-- **Form** vs **Contactform**: gebruik Form voor algemene formulieren, Contactform specifiek voor contactpagina's.
+- **Projects** en **News**: alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
+- **Detail page (exclusieve pagina-opbouw)**:
+  - Een pagina die het blok \`Detail page\` bevat, bestaat **exact** uit: \`Detail page\`, \`CalltoAction\` en \`Footer\`.
+  - **GEEN andere blokken** toegestaan op die pagina.
+  - Exact één header type moet \`true\` zijn (ofwel \`Has Project Header\`, ofwel \`Has News Header\`).
+- **Form** vs **Contactform**: gebruik \`Form\` voor algemene formulieren, \`Contactform\` specifiek voor contactpagina's.
 
 ---
 
@@ -263,7 +266,7 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 ## Detail page
 
 - **Hele pagina** component (voor bijv. nieuws- of projectdetails).
-- **Volgorde regel**: altijd gevolgd door CalltoAction + Footer.
+- **Volgorde & exclusiviteit**: een pagina met \`Detail page\` heeft **uitsluitend** de blokken in deze volgorde: \`Detail page\`, \`CalltoAction\`, \`Footer\` (geen extra blokken).
 - **Belangrijke regels**:
   - **Slechts één header** mag \`true\` zijn: ofwel \`Has Project Header\` ofwel \`Has News Header\`.
   - **Altijd één header** verplicht \`true\`.

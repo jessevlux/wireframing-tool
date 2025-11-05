@@ -272,13 +272,15 @@ serve(async (req) => {
 
     const systemPrompt = [
       'Je bent een UX/UI wireframe-architect.',
-      'Eerst een tekstuele sitemap (uitleg), daarna de tool call emit_wireframe met de volledige JSON.',
+      'GEEF ALLEEN EEN TOOL-CALL TERUG: gebruik uitsluitend de tool `emit_wireframe` om de volledige JSON te leveren. Geen tekst, geen codeblocks.',
       'Genereer valide JSON volgens het schema. Gebruik de context hieronder strikt.',
       hasLargeInput ? 'LET OP: input is groot, houd de structuur compact en doelmatig.' : '',
       '\n# Instructions\n',
       instructionsMd,
       '\n# Spec\n',
       specMd,
+      '\n# Components Schema (JSON Schema)\n',
+      JSON.stringify(componentsSchemaJson, null, 2),
     ].join('\n')
 
     const userPromptText = `Genereer een wireframe voor het volgende project:
@@ -292,7 +294,7 @@ ${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.lengt
 
 ${numPages ? `**Gevraagd aantal pagina's:** ${numPages} (gebruik dit als richtlijn, maar pas aan indien nodig)` : "**Bepaal zelf het optimale aantal pagina's** op basis van de projectbeschrijving en best practices"}
 
-BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code block). Begin nu!`
+BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN tekst, GEEN codeblock.`
 
     // Build message content with files (if any)
     const messageContent: any[] = []
@@ -333,12 +335,12 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
 
     // Call Anthropic API with tools (opt for faster model / fewer tokens for large inputs)
     const isLargeInput = (description?.length || 0) > 500 || (files && files.length > 0)
-    const selectedModel = isLargeInput ? 'claude-haiku-4-5-20251001' : 'claude-haiku-4-5-20251001'
-    const maxTokens = isLargeInput ? 6000 : 12000
+    const selectedModel = 'claude-haiku-4-5-20251001'
+    const maxTokens = isLargeInput ? 10000 : 12000
     const message = await anthropic.messages.create({
       model: selectedModel,
       max_tokens: maxTokens,
-      temperature: 0.2,
+      temperature: 0.1,
       system: systemPrompt,
       tools: wireframeTools,
       messages: [
