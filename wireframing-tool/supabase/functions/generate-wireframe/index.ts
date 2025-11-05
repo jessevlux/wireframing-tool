@@ -331,11 +331,13 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
     console.log('Calling Anthropic API...')
     const callStart = Date.now()
 
-    // Call Anthropic API with tools
-    const selectedModel = hasLargeInput ? 'claude-sonnet-4-5-20250929' : 'claude-haiku-4-5-20251001'
+    // Call Anthropic API with tools (opt for faster model / fewer tokens for large inputs)
+    const isLargeInput = (description?.length || 0) > 500 || (files && files.length > 0)
+    const selectedModel = isLargeInput ? 'claude-haiku-4-5-20251001' : 'claude-haiku-4-5-20251001'
+    const maxTokens = isLargeInput ? 6000 : 12000
     const message = await anthropic.messages.create({
       model: selectedModel,
-      max_tokens: 16000,
+      max_tokens: maxTokens,
       temperature: 0.2,
       system: systemPrompt,
       tools: wireframeTools,
@@ -347,80 +349,82 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
       ],
     })
 
-    // Save full communication to Supabase Storage for inspection
+    // Save full communication to Supabase Storage for inspection (skip for large input; add short timeout)
     let logFilePath: string | null = null
     try {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')
-      const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+      if (!isLargeInput) {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')
+        const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
-      if (supabaseUrl && supabaseServiceRoleKey) {
-        const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-        const bucket = 'ai-logs'
+        if (supabaseUrl && supabaseServiceRoleKey) {
+          const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
+          const bucket = 'ai-logs'
 
-        // Try to create bucket (ignore error if exists)
-        try {
-          await supabase.storage.createBucket(bucket, { public: false })
-        } catch (_) {
-          // Bucket probably already exists
-        }
+          try {
+            await supabase.storage.createBucket(bucket, { public: false })
+          } catch (_) {}
 
-        const safeProject = projectName.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-        const fileName = `full-log/${timestamp}_${safeProject}.json`
+          const safeProject = projectName.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
+          const fileName = `full-log/${timestamp}_${safeProject}.json`
 
-        // Create comprehensive log object
-        const fullLog = {
-          timestamp: new Date().toISOString(),
-          project: {
-            name: projectName,
-            company: companyName,
-            description,
-            numPages,
-            language,
-            additionalContext,
-          },
-          request: {
-            systemPrompt,
-            userPrompt: userPromptText,
-            model: 'claude-sonnet-4-5-20250929',
-            temperature: 0.2,
-            maxTokens: 16000,
-            tools: wireframeTools,
-            hasAttachments: files && files.length > 0,
-            attachmentCount: files?.length || 0,
-          },
-          response: {
-            full: message,
-            contentBlocks: message.content.map((block: any) => ({
-              type: block.type,
-              ...(block.type === 'text'
-                ? { text: block.text, length: block.text.length }
-                : block.type === 'tool_use'
-                  ? { tool: block.name, hasData: !!block.input }
-                  : {}),
-            })),
-          },
-          metadata: {
-            id: message.id,
-            model: message.model,
-            usage: message.usage,
-            stopReason: message.stop_reason,
-          },
-        }
+          const fullLog = {
+            timestamp: new Date().toISOString(),
+            project: {
+              name: projectName,
+              company: companyName,
+              description,
+              numPages,
+              language,
+              additionalContext,
+            },
+            request: {
+              systemPrompt,
+              userPrompt: userPromptText,
+              model: selectedModel,
+              temperature: 0.2,
+              maxTokens,
+              tools: wireframeTools,
+              hasAttachments: !!(files && files.length > 0),
+              attachmentCount: files?.length || 0,
+            },
+            response: {
+              full: message,
+              contentBlocks: message.content.map((block: any) => ({
+                type: block.type,
+                ...(block.type === 'text'
+                  ? { text: block.text, length: block.text.length }
+                  : block.type === 'tool_use'
+                    ? { tool: block.name, hasData: !!block.input }
+                    : {}),
+              })),
+            },
+            metadata: {
+              id: message.id,
+              model: message.model,
+              usage: message.usage,
+              stopReason: message.stop_reason,
+            },
+          }
 
-        const fileBody = new Blob([JSON.stringify(fullLog, null, 2)], {
-          type: 'application/json',
-        })
+          const fileBody = new Blob([JSON.stringify(fullLog, null, 2)], {
+            type: 'application/json',
+          })
 
-        const { error: uploadError } = await supabase.storage
-          .from(bucket)
-          .upload(fileName, fileBody, { upsert: true, contentType: 'application/json' })
-
-        if (uploadError) {
-          console.error('Failed to save log file:', uploadError)
-        } else {
-          logFilePath = `${bucket}/${fileName}`
-          console.log('Log saved to Storage:', fileName)
+          const abort = new AbortController()
+          const t = setTimeout(() => abort.abort(), 5000)
+          const { error: uploadError } = await supabase.storage
+            .from(bucket)
+            .upload(fileName, fileBody, {
+              upsert: true,
+              contentType: 'application/json',
+              signal: abort.signal,
+            })
+          clearTimeout(t)
+          if (!uploadError) {
+            logFilePath = `${bucket}/${fileName}`
+            console.log('Log saved to Storage:', fileName)
+          }
         }
       }
     } catch (e) {
@@ -466,13 +470,13 @@ BELANGRIJK: Gebruik de emit_wireframe tool voor de JSON output (niet een code bl
 
     // Validate wireframe JSON with schema
     if (wireframeJson) {
-      const ajv = new Ajv({ allErrors: true })
+      const ajv = new Ajv({ allErrors: true, strict: false })
       const validate = ajv.compile(componentsSchemaJson)
       const valid = validate(wireframeJson)
 
       if (!valid) {
         const elapsedMs = Date.now() - callStart
-        const skipRepair = elapsedMs > 45000 || (files && files.length > 0)
+        const skipRepair = elapsedMs > 45000 || isLargeInput
         console.warn('Validation failed', {
           elapsedMs,
           skipRepair,
