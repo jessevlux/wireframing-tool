@@ -24,7 +24,7 @@ Genereer wireframes in JSON volgens het \`components.schema.json\`.
 - BELANGRIJK – Detail page component: Dit is ALLEEN voor detailpagina's (Project Detail, News Detail). Als een pagina een Detail page blok bevat, dan bestaat die pagina uit exact: Detail page, CalltoAction, Footer. Geen andere blokken.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven NIET meegenomen te worden in de sitemap en JSON.
 
-Geef een tekstueel overzicht met:
+Geef een uitleg met:
 
 - Welke pagina's je aanmaakt en waarom
 - Hoe de homepage is opgebouwd volgens de landing page formule
@@ -43,14 +43,14 @@ Genereer de volledige JSON in één tool call (emit_wireframe).
 
 ## Ontwerpprincipes (component-neutraal)
 
-- Behandel componentnamen in het schema als generieke UI-archetypen (bijv. grid van kaarten, content-kolommen, media/slider, formulier, CTA).
+- Behandel componentnamen in het schema als generieke UI-archetypen.
 - Kies archetypen op basis van het UX-doel en de gebruikersflow; map ze vervolgens zelfstandig naar het schema (namen zijn niet domein-gebonden).
 - Hergebruik van archetypen is toegestaan als dit UX-technisch logisch is; varieer waar mogelijk met varianten.
 - Schrijf duidelijke Nederlandse microcopy en vul alle vereiste props en booleans expliciet in.
 
 ## Kwaliteitscriteria
 
-- Per pagina: 3–6 logische blokken (meer mag indien functioneel nodig); geef een rationale per pagina (2–4 zinnen).
+- Per pagina: aantal logische blokken is aan jou om te bepalen; geef een rationale per pagina (2–4 zinnen).
 - Varieer archetypen over de site; voorkom monotone herhaling tenzij functioneel gewenst.
 - Elk blok draagt aantoonbaar bij aan oriëntatie, bewijsvoering of conversie.
 

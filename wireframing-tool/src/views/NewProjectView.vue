@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { X, Zap, Upload, Trash2 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
+import { isDemoAccount } from '../utils/auth.js'
 
 const router = useRouter()
 
@@ -119,8 +120,15 @@ const createProject = async () => {
       console.log(`${filesBase64.length} file(s) prepared for AI`)
     }
 
-    // 2. Roep Edge Function aan om wireframe te genereren
-    loadingStep.value = 'AI genereert wireframe...'
+    // 2. Check if user is demo account (to avoid unnecessary API calls)
+    const isDemo = await isDemoAccount()
+    if (isDemo) {
+      console.log('Demo account detected - using dummy data to avoid API calls')
+      loadingStep.value = 'Demo data wordt geladen...'
+    } else {
+      loadingStep.value = 'AI genereert wireframe...'
+    }
+
     console.log('Genereren wireframe via Edge Function...')
     // Build payload; include numPages only if user opts out of AI deciding
     const payload = {
@@ -129,6 +137,7 @@ const createProject = async () => {
       description: formData.value.description,
       language: formData.value.language,
       files: filesBase64, // Files for AI context only (not stored in DB)
+      useDummyData: isDemo, // Flag to tell Edge Function to use dummy data
     }
 
     if (!formData.value.autoNumPages && Number.isFinite(formData.value.numPages)) {
@@ -178,7 +187,7 @@ const createProject = async () => {
       <div class="max-w-4xl mx-auto px-8 py-6">
         <button
           @click="goBack"
-          class="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 mb-4"
+          class="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 mb-4 cursor-pointer"
         >
           <X class="w-5 h-5" />
           Terug naar Dashboard
@@ -302,7 +311,7 @@ const createProject = async () => {
                 </div>
                 <button
                   @click="removeFile(index)"
-                  class="ml-4 p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+                  class="ml-4 p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4 text-red-400" />
                 </button>
@@ -315,17 +324,17 @@ const createProject = async () => {
         <div class="flex gap-4 mt-8">
           <button
             @click="goBack"
-            class="flex-1 px-6 py-3 border border-zinc-800 rounded-xl font-medium hover:bg-zinc-800"
+            class="flex-1 px-6 py-3 border border-zinc-800 rounded-xl font-medium hover:bg-zinc-800 cursor-pointer"
           >
             Annuleren
           </button>
           <button
             @click="createProject"
             :disabled="isCreating"
-            class="flex-1 px-6 py-3 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl font-medium shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+            class="flex-1 px-6 py-3 bg-violet-600 text-white rounded-xl font-medium shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             <Zap class="w-5 h-5" />
-            {{ isCreating ? 'Bezig met aanmaken...' : 'Sitemap Genereren' }}
+            {{ isCreating ? 'Bezig met aanmaken...' : 'Genereren' }}
           </button>
         </div>
       </div>

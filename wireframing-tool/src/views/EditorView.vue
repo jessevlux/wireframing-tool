@@ -1017,7 +1017,10 @@ const closeNewPageModal = () => {
     <div class="bg-zinc-900 border-b border-zinc-800 px-6 py-4">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-6">
-          <button @click="goBack" class="flex items-center gap-2 text-zinc-400 hover:text-zinc-100">
+          <button
+            @click="goBack"
+            class="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 cursor-pointer"
+          >
             <ChevronRight class="w-5 h-5 rotate-180" />
             Projecten
           </button>
@@ -1034,7 +1037,9 @@ const closeNewPageModal = () => {
               :title="'Ongedaan maken (Ctrl+Z)'"
               :class="[
                 'p-2 rounded-lg transition-colors',
-                canUndo ? 'hover:bg-zinc-800 text-zinc-300' : 'text-zinc-600 cursor-not-allowed',
+                canUndo
+                  ? 'hover:bg-zinc-800 text-zinc-300 cursor-pointer'
+                  : 'text-zinc-600 cursor-not-allowed',
               ]"
             >
               <Undo2 class="w-4 h-4" />
@@ -1045,7 +1050,9 @@ const closeNewPageModal = () => {
               :title="'Opnieuw (Ctrl+Y)'"
               :class="[
                 'p-2 rounded-lg transition-colors',
-                canRedo ? 'hover:bg-zinc-800 text-zinc-300' : 'text-zinc-600 cursor-not-allowed',
+                canRedo
+                  ? 'hover:bg-zinc-800 text-zinc-300 cursor-pointer'
+                  : 'text-zinc-600 cursor-not-allowed',
               ]"
             >
               <Redo2 class="w-4 h-4" />
@@ -1064,7 +1071,7 @@ const closeNewPageModal = () => {
           <div class="h-6 w-px bg-zinc-800" />
           <button
             @click="exportJSON"
-            class="flex items-center gap-2 px-4 py-2 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg font-medium shadow-lg"
+            class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium shadow-lg cursor-pointer"
           >
             <Download class="w-4 h-4" />
             JSON
@@ -1082,7 +1089,7 @@ const closeNewPageModal = () => {
             <h3 class="font-semibold">Pagina's</h3>
             <button
               @click="addNewPage"
-              class="p-2 rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20"
+              class="p-2 rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 cursor-pointer"
             >
               <Plus class="w-4 h-4" />
             </button>
@@ -1093,9 +1100,9 @@ const closeNewPageModal = () => {
               :key="page.id"
               @click="selectPage(page.id)"
               :class="[
-                'w-full text-left px-4 py-3 rounded-xl transition-all',
+                'w-full text-left px-4 py-3 rounded-xl transition-all cursor-pointer',
                 selectedPageId === page.id
-                  ? 'bg-linear-to-r from-violet-600 to-fuchsia-600 text-white shadow-lg'
+                  ? 'bg-violet-600 text-white shadow-lg'
                   : 'hover:bg-zinc-800 text-zinc-100',
               ]"
             >
@@ -1137,7 +1144,7 @@ const closeNewPageModal = () => {
           <div class="flex items-center justify-between mb-6">
             <div>
               <button
-                class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 mb-1"
+                class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 mb-1 cursor-pointer"
               >
                 Regenerate
               </button>
@@ -1148,7 +1155,7 @@ const closeNewPageModal = () => {
             <div class="relative">
               <button
                 @click="showBlockTypeMenu = !showBlockTypeMenu"
-                class="px-4 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg text-sm font-medium flex items-center gap-2"
+                class="px-4 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg text-sm font-medium flex items-center gap-2 cursor-pointer"
               >
                 <Plus class="w-4 h-4" />
                 Nieuw blok
@@ -1163,7 +1170,7 @@ const closeNewPageModal = () => {
                   v-for="component in availableComponents"
                   :key="component.value"
                   @click="addBlock(component.value)"
-                  class="w-full text-left px-4 py-3 hover:bg-zinc-700 transition-colors flex items-center gap-3 border-b border-zinc-700/50 last:border-b-0"
+                  class="w-full text-left px-4 py-3 hover:bg-zinc-700 transition-colors flex items-center gap-3 border-b border-zinc-700/50 last:border-b-0 cursor-pointer"
                 >
                   <span class="text-2xl">{{ component.icon }}</span>
                   <span class="text-sm font-medium text-zinc-100">{{ component.label }}</span>
@@ -1215,7 +1222,7 @@ const closeNewPageModal = () => {
               <div class="flex items-center gap-2 text-sm mb-3">
                 <button
                   @click="goBackToParent"
-                  class="text-zinc-400 hover:text-violet-400 transition-colors"
+                  class="text-zinc-400 hover:text-violet-400 transition-colors cursor-pointer"
                 >
                   {{ getParentBlock(selectedBlock)?.component }}
                 </button>
@@ -1228,7 +1235,10 @@ const closeNewPageModal = () => {
 
             <div class="flex items-center justify-between mb-6">
               <h3 class="font-semibold">Properties</h3>
-              <button @click="closeProperties" class="text-zinc-500 hover:text-zinc-300">
+              <button
+                @click="closeProperties"
+                class="text-zinc-500 hover:text-zinc-300 cursor-pointer"
+              >
                 <X class="w-5 h-5" />
               </button>
             </div>
@@ -1369,7 +1379,10 @@ const closeNewPageModal = () => {
           <h2 class="text-xl font-bold text-zinc-100">Exporteer JSON</h2>
           <p class="text-sm text-zinc-400 mt-1">Plak deze JSON in de Figma plugin</p>
         </div>
-        <button @click="closeJsonModal" class="p-2 hover:bg-zinc-800 rounded-lg transition-colors">
+        <button
+          @click="closeJsonModal"
+          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+        >
           <X class="w-5 h-5 text-zinc-400" />
         </button>
       </div>
@@ -1390,13 +1403,13 @@ const closeNewPageModal = () => {
         <div class="flex gap-3">
           <button
             @click="closeJsonModal"
-            class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors"
+            class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
           >
             Sluiten
           </button>
           <button
             @click="copyJsonToClipboard"
-            class="px-4 py-2 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all"
+            class="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all cursor-pointer"
             :class="jsonCopied ? 'from-emerald-600 to-emerald-600' : ''"
           >
             <Check v-if="jsonCopied" class="w-4 h-4" />
@@ -1423,7 +1436,7 @@ const closeNewPageModal = () => {
         </div>
         <button
           @click="closeNewPageModal"
-          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors"
+          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
         >
           <X class="w-5 h-5 text-zinc-400" />
         </button>
@@ -1470,14 +1483,14 @@ const closeNewPageModal = () => {
       <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
         <button
           @click="closeNewPageModal"
-          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors"
+          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
         >
           Annuleer
         </button>
         <button
           @click="createPage"
           :disabled="!newPageData.name.trim()"
-          class="px-6 py-2 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+          class="px-6 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           <Plus class="w-4 h-4" />
           Maak Pagina

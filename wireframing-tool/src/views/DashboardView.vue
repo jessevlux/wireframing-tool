@@ -124,20 +124,18 @@ const deleteProject = async (projectId) => {
       <div class="max-w-7xl mx-auto px-8 py-6">
         <div class="flex items-center justify-between">
           <div>
-            <h1
-              class="text-3xl font-bold bg-linear-to-r from-violet-400 to-fuchsia-400 bg-clip-text text-transparent"
-            >
+            <h1 class="text-3xl font-bold bg-violet-400 bg-clip-text text-transparent">
               Codigital Wireframe Studio
             </h1>
           </div>
           <div class="flex items-center gap-4">
-            <button @click="toggleDarkMode" :class="`p-3 rounded-xl ${hover}`">
+            <button @click="toggleDarkMode" :class="`p-3 rounded-xl ${hover} cursor-pointer`">
               <Sun v-if="darkMode" class="w-5 h-5" />
               <Moon v-else class="w-5 h-5" />
             </button>
             <button
               @click="goToNewProject"
-              class="flex items-center gap-2 px-6 py-3 bg-linear-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl font-medium shadow-lg"
+              class="flex items-center gap-2 px-6 py-3 bg-violet-600 hover:from-violet-500 hover:to-fuchsia-500 text-white rounded-xl font-medium shadow-lg cursor-pointer"
             >
               <Plus class="w-5 h-5" />
               Nieuw Project
@@ -173,7 +171,7 @@ const deleteProject = async (projectId) => {
         <p :class="`${text2} mb-6`">Create your first wireframe project</p>
         <button
           @click="goToNewProject"
-          class="inline-flex items-center gap-2 px-6 py-3 bg-linear-to-r from-violet-600 to-fuchsia-600 text-white rounded-xl font-medium shadow-lg"
+          class="inline-flex items-center gap-2 px-6 py-3 bg-violet-600 text-white rounded-xl font-medium shadow-lg cursor-pointer"
         >
           <Plus class="w-5 h-5" />
           Create Project
@@ -188,7 +186,7 @@ const deleteProject = async (projectId) => {
           :class="`${card} border-2 border-dashed ${border} rounded-2xl p-6 flex flex-col items-center justify-center ${hover} cursor-pointer group`"
         >
           <div
-            class="w-16 h-16 rounded-full bg-linear-to-br from-violet-500/20 to-fuchsia-500/20 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
+            class="w-16 h-16 rounded-full bg-violet-500/10 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform"
           >
             <Plus class="w-8 h-8 text-violet-400" />
           </div>

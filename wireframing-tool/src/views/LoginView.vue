@@ -59,7 +59,7 @@ const loginEmailPassword = async () => {
         <button
           @click="loginEmailPassword"
           :disabled="loading"
-          class="w-full py-3 bg-violet-600 rounded-xl disabled:opacity-50"
+          class="w-full py-3 bg-violet-600 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
         >
           Inloggen
         </button>

@@ -65,7 +65,7 @@ const wireframeTools = [
   {
     name: 'emit_wireframe',
     description:
-      'Emit the complete wireframe JSON for all pages. Use this tool to provide the final structured wireframe data after your textual explanation.',
+      'VERPLICHT: Gebruik deze tool om de volledige wireframe JSON te retourneren. Geen tekstuele uitleg, alleen deze tool call met de JSON data.',
     input_schema: {
       type: 'object',
       properties: {
@@ -116,7 +116,7 @@ Fix these errors and emit the corrected wireframe using the emit_wireframe tool.
 
   const repairMessage = await anthropic.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 16000,
+    max_tokens: 64000, // Increased to handle large wireframe responses
     temperature: 0.1,
     system: systemPrompt,
     tools: wireframeTools,
@@ -153,6 +153,7 @@ interface ProjectRequest {
   language: string
   files?: ProjectFile[] // Optional uploaded files for AI context only
   additionalContext?: string
+  useDummyData?: boolean // Flag to force dummy data (for demo accounts)
 }
 
 serve(async (req) => {
@@ -171,6 +172,7 @@ serve(async (req) => {
       language,
       files,
       additionalContext,
+      useDummyData,
     }: ProjectRequest = await req.json()
 
     // Validate input
@@ -208,12 +210,9 @@ serve(async (req) => {
       )
     }
 
-    // Check if Anthropic API key is configured
-    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
-
-    // If no API key, return dummy data for testing
-    if (!anthropicApiKey) {
-      console.log('No ANTHROPIC_API_KEY - returning dummy data')
+    // Helper function to return dummy data
+    const returnDummyData = () => {
+      console.log('Returning dummy data (demo account or no API key)')
 
       // Load dummy data and replace placeholders
       const dummyWireframe = JSON.parse(JSON.stringify(dummyDataTemplate))
@@ -244,9 +243,11 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           success: true,
-          sitemapProposal: `# Dummy Sitemap voor ${projectName}\n\n**LET OP:** Dit is dummy data omdat er geen Anthropic API key is geconfigureerd.\n\n## Homepage\n- Hero sectie met title en USPs\n- Grid met 3 diensten\n- Call to Action\n- Footer\n\n## Contact\n- Hero met contacttitel\n- Kolommen met formulier\n- Footer\n\nConfigureer ANTHROPIC_API_KEY voor echte AI-gegenereerde wireframes.`,
+          sitemapProposal: `# Dummy Sitemap voor ${projectName}\n\n${useDummyData ? '**DEMO ACCOUNT:** Dit is demo data om onnodige API calls te voorkomen.\n\n' : '**LET OP:** Dit is dummy data omdat er geen Anthropic API key is geconfigureerd.\n\n'}## Homepage\n- Hero sectie met title en USPs\n- Grid met 3 diensten\n- Call to Action\n- Footer\n\n## Contact\n- Hero met contacttitel\n- Kolommen met formulier\n- Footer\n${useDummyData ? '' : '\nConfigureer ANTHROPIC_API_KEY voor echte AI-gegenereerde wireframes.'}`,
           wireframeJson: processedDummyData,
-          fullResponse: 'Dummy data - geen AI gebruikt',
+          fullResponse: useDummyData
+            ? 'Demo data - geen AI gebruikt'
+            : 'Dummy data - geen AI gebruikt',
           usage: {
             inputTokens: 0,
             outputTokens: 0,
@@ -257,6 +258,20 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         },
       )
+    }
+
+    // If useDummyData flag is set (demo account), return dummy data immediately
+    if (useDummyData === true) {
+      return returnDummyData()
+    }
+
+    // Check if Anthropic API key is configured
+    const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
+
+    // If no API key, return dummy data for testing
+    if (!anthropicApiKey) {
+      console.log('No ANTHROPIC_API_KEY - returning dummy data')
+      return returnDummyData()
     }
 
     // Real Anthropic API call
@@ -272,7 +287,10 @@ serve(async (req) => {
 
     const systemPrompt = [
       'Je bent een UX/UI wireframe-architect.',
-      'GEEF ALLEEN EEN TOOL-CALL TERUG: gebruik uitsluitend de tool `emit_wireframe` om de volledige JSON te leveren. Geen tekst, geen codeblocks.',
+      '',
+      'KRITIEK BELANGRIJK: Je MOET de tool `emit_wireframe` gebruiken om de JSON te retourneren. GEEN tekstuele output, ALLEEN een tool call.',
+      'Je response bestaat UITSLUITEND uit een tool call met de volledige wireframe JSON. Geen voorafgaande tekst, geen code blocks, geen uitleg.',
+      '',
       'Genereer valide JSON volgens het schema. Gebruik de context hieronder strikt.',
       hasLargeInput ? 'LET OP: input is groot, houd de structuur compact en doelmatig.' : '',
       '\n# Instructions\n',
@@ -294,7 +312,7 @@ ${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.lengt
 
 ${numPages ? `**Gevraagd aantal pagina's:** ${numPages} (gebruik dit als richtlijn, maar pas aan indien nodig)` : "**Bepaal zelf het optimale aantal pagina's** op basis van de projectbeschrijving en best practices"}
 
-BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN tekst, GEEN codeblock.`
+KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLEEN een tool call met de volledige JSON. Start direct met de tool call, geen uitleg vooraf.`
 
     // Build message content with files (if any)
     const messageContent: any[] = []
@@ -336,20 +354,85 @@ BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN
     // Call Anthropic API with tools (opt for faster model / fewer tokens for large inputs)
     const isLargeInput = (description?.length || 0) > 500 || (files && files.length > 0)
     const selectedModel = 'claude-haiku-4-5-20251001'
-    const maxTokens = isLargeInput ? 10000 : 12000
-    const message = await anthropic.messages.create({
-      model: selectedModel,
-      max_tokens: maxTokens,
-      temperature: 0.1,
-      system: systemPrompt,
-      tools: wireframeTools,
-      messages: [
-        {
-          role: 'user',
-          content: messageContent,
-        },
-      ],
-    })
+    const maxTokens = 64000
+
+    // Retry logic for Anthropic API overload errors (529) and empty tool calls
+    const maxRetries = 3
+    const baseDelay = 1000 // 1 second
+    let message: any = null
+    let lastError: any = null
+    let wireframeJson: any = null
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        message = await anthropic.messages.create({
+          model: selectedModel,
+          max_tokens: maxTokens,
+          temperature: 0.0, // Lower temperature for more deterministic tool use
+          system: systemPrompt,
+          tools: wireframeTools,
+          tool_choice: { type: 'tool', name: 'emit_wireframe' }, // Force tool use
+          messages: [
+            {
+              role: 'user',
+              content: messageContent,
+            },
+          ],
+        })
+
+        // Check if tool call has valid data
+        wireframeJson = null
+        for (const content of message.content) {
+          if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
+            wireframeJson = content.input?.wireframe
+            break
+          }
+        }
+
+        // If we have valid wireframe JSON, success - break out of retry loop
+        if (wireframeJson && Array.isArray(wireframeJson) && wireframeJson.length > 0) {
+          if (attempt > 0) {
+            console.log(`Anthropic API call succeeded on attempt ${attempt + 1}`)
+          }
+          break
+        }
+
+        // Empty or invalid tool call - retry if we have attempts left
+        if (attempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, attempt) // Exponential backoff: 1s, 2s, 4s
+          console.warn(
+            `Empty or invalid tool call, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`,
+          )
+          await new Promise((resolve) => setTimeout(resolve, delay))
+          continue
+        }
+
+        // Max retries reached with empty tool call
+        throw new Error('AI returned empty or invalid wireframe after all retries')
+      } catch (error: any) {
+        lastError = error
+        const status = error?.status || error?.response?.status
+        const isOverloaded = status === 529 || error?.error?.type === 'overloaded_error'
+
+        // Only retry on 529 overloaded errors
+        if (isOverloaded && attempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, attempt) // Exponential backoff: 1s, 2s, 4s
+          console.warn(
+            `Anthropic API overloaded (529), retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`,
+          )
+          await new Promise((resolve) => setTimeout(resolve, delay))
+          continue
+        }
+
+        // Not a retryable error or max retries reached - throw
+        throw error
+      }
+    }
+
+    // If we exhausted retries and still no message, throw last error
+    if (!message) {
+      throw lastError || new Error('Failed to get response from Anthropic API after retries')
+    }
 
     // Save full communication to Supabase Storage for inspection (skip for large input; add short timeout)
     let logFilePath: string | null = null
@@ -436,27 +519,51 @@ BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN
     console.log('Response received')
 
     // Extract wireframe JSON and sitemap proposal
-    let wireframeJson = null
+    // wireframeJson is already set from retry loop if valid, otherwise parse again
     let sitemapProposal = ''
     let responseText = ''
 
     // Parse response: prioritize tool_use, fallback to text + code block
-    for (const content of message.content) {
-      if (content.type === 'text') {
-        responseText += content.text
-      } else if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
-        wireframeJson = content.input.wireframe
+    // Only parse if wireframeJson wasn't already set in retry loop
+    if (!wireframeJson || !Array.isArray(wireframeJson) || wireframeJson.length === 0) {
+      wireframeJson = null
+      for (const content of message.content) {
+        if (content.type === 'text') {
+          responseText += content.text
+        } else if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
+          wireframeJson = content.input?.wireframe
+        }
+      }
+    } else {
+      // Extract text for sitemap proposal if we already have wireframeJson
+      for (const content of message.content) {
+        if (content.type === 'text') {
+          responseText += content.text
+        }
       }
     }
 
-    // Fallback: if no tool_use, try to extract JSON from text
+    // Fallback: if no tool_use, try to extract JSON from text (code blocks or raw JSON)
     if (!wireframeJson && responseText) {
+      // Try code block first
       const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
       if (jsonMatch) {
         try {
           wireframeJson = JSON.parse(jsonMatch[1])
         } catch (e) {
-          console.error('Failed to parse JSON from response:', e)
+          console.error('Failed to parse JSON from code block:', e)
+        }
+      }
+
+      // If still no JSON, try to find raw JSON array in text
+      if (!wireframeJson) {
+        const arrayMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/)
+        if (arrayMatch) {
+          try {
+            wireframeJson = JSON.parse(arrayMatch[0])
+          } catch (e) {
+            console.error('Failed to parse JSON from raw text:', e)
+          }
         }
       }
     }
@@ -467,8 +574,6 @@ BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN
       sitemapProposal =
         jsonStart > 0 ? responseText.substring(0, jsonStart).trim() : responseText.trim()
     }
-
-    // Sanitizer removed: rely on schema-only validation and instructions
 
     // Validate wireframe JSON with schema
     if (wireframeJson) {
@@ -510,6 +615,31 @@ BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN
       `Complete: ${wireframeJson?.length || 0} pages, ${message.usage.input_tokens}/${message.usage.output_tokens} tokens`,
     )
 
+    // Hard guard: als er geen bruikbare array is, error met 502 (niet "success")
+    if (!Array.isArray(wireframeJson) || wireframeJson.length === 0) {
+      console.error('No valid wireframe JSON returned from model', {
+        hasWireframeJson: !!wireframeJson,
+        isArray: Array.isArray(wireframeJson),
+        length: wireframeJson?.length,
+        responseText: responseText?.substring(0, 500), // First 500 chars for debugging
+      })
+      return new Response(
+        JSON.stringify({
+          error: 'AI did not return valid wireframe JSON',
+          message:
+            'De AI heeft geen geldig wireframe geretourneerd. Probeer het opnieuw met een kortere beschrijving of zonder bijlagen.',
+          hint: 'Probeer kortere beschrijving of zonder bijlagen; of probeer opnieuw.',
+          fullResponse: responseText || null,
+          details: {
+            hasWireframeJson: !!wireframeJson,
+            isArray: Array.isArray(wireframeJson),
+            length: wireframeJson?.length,
+          },
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      )
+    }
+
     // Return response
     return new Response(
       JSON.stringify({
@@ -527,15 +657,37 @@ BELANGRIJK: ROEP DIRECT de tool 'emit_wireframe' aan met de VOLLEDIGE JSON. GEEN
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error:', error)
+
+    // Handle Anthropic API overload errors specifically
+    const status = error?.status || error?.response?.status
+    const isOverloaded = status === 529 || error?.error?.type === 'overloaded_error'
+
+    if (isOverloaded) {
+      return new Response(
+        JSON.stringify({
+          error: 'Anthropic API is temporarily overloaded',
+          message:
+            'De AI service is momenteel overbelast. Probeer het over een paar seconden opnieuw.',
+          details:
+            'Alle retry pogingen zijn mislukt. De service is mogelijk tijdelijk niet beschikbaar.',
+          retryable: true,
+        }),
+        {
+          status: 503, // Service Unavailable
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        },
+      )
+    }
+
     return new Response(
       JSON.stringify({
-        error: error.message,
-        details: error.toString(),
+        error: error?.message || 'Unknown error',
+        details: error?.toString() || String(error),
       }),
       {
-        status: 500,
+        status: error?.status || 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       },
     )

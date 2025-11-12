@@ -28,7 +28,16 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete', 'dragStart', 'dragEnd', 'dragOver', 'drop'])
+const emit = defineEmits([
+  'select',
+  'moveUp',
+  'moveDown',
+  'delete',
+  'dragStart',
+  'dragEnd',
+  'dragOver',
+  'drop',
+])
 
 // Helper om een korte beschrijving te maken van de block
 const getBlockDescription = () => {
@@ -78,7 +87,9 @@ const getBlockDescription = () => {
     ]"
   >
     <div class="flex items-center gap-4">
-      <div class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab active:cursor-grabbing">
+      <div
+        class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab active:cursor-grabbing"
+      >
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">
@@ -90,7 +101,7 @@ const getBlockDescription = () => {
               :disabled="isFirst"
               :class="[
                 'p-2 rounded-lg hover:bg-zinc-800',
-                isFirst ? 'opacity-40 cursor-not-allowed' : '',
+                isFirst ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
               ]"
             >
               <ChevronUp class="w-4 h-4" />
@@ -100,12 +111,15 @@ const getBlockDescription = () => {
               :disabled="isLast"
               :class="[
                 'p-2 rounded-lg hover:bg-zinc-800',
-                isLast ? 'opacity-40 cursor-not-allowed' : '',
+                isLast ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
               ]"
             >
               <ChevronDown class="w-4 h-4" />
             </button>
-            <button @click.stop="emit('delete')" class="p-2 rounded-lg hover:bg-zinc-800">
+            <button
+              @click.stop="emit('delete')"
+              class="p-2 rounded-lg hover:bg-zinc-800 cursor-pointer"
+            >
               <Trash2 class="w-4 h-4 text-red-400" />
             </button>
           </div>

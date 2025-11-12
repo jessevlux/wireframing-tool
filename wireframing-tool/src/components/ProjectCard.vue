@@ -55,7 +55,7 @@ const getStatusColor = (status) => {
       </div>
       <button
         @click="handleDelete"
-        :class="`p-2 rounded-lg ${hover} opacity-0 group-hover:opacity-100`"
+        :class="`p-2 rounded-lg ${hover} opacity-0 group-hover:opacity-100 cursor-pointer`"
       >
         <Trash2 class="w-4 h-4 text-red-400" />
       </button>
