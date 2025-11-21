@@ -131,9 +131,10 @@ onMounted(() => {
 
 // Load project from Supabase or localStorage
 onMounted(async () => {
-  const projectId = parseInt(route.params.id)
+  const projectId = route.params.id // UUID is a string, not a number
 
   try {
+    // Probeer eerst Supabase (voor UUID projecten)
     project.value = await projectService.getProject(projectId)
     // Select first page by default
     if (project.value?.pages?.length > 0) {
@@ -143,7 +144,7 @@ onMounted(async () => {
     }
   } catch (err) {
     console.error('Error loading project:', err)
-    // Fallback to localStorage
+    // Fallback to localStorage (voor oude projecten met number IDs of UUIDs)
     loadFromLocalStorage(projectId)
   }
 })
@@ -152,7 +153,9 @@ const loadFromLocalStorage = (projectId) => {
   const saved = localStorage.getItem('wireframe_projects')
   if (saved) {
     const projects = JSON.parse(saved)
-    project.value = projects.find((p) => p.id === projectId)
+    // Support both UUID strings and number IDs (for backward compatibility)
+    // Convert both to strings for comparison
+    project.value = projects.find((p) => String(p.id) === String(projectId))
     if (project.value?.pages?.length > 0) {
       selectedPageId.value = project.value.pages[0].id
       // Initialize history with current state

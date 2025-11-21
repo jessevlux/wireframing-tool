@@ -12,9 +12,25 @@ export const projectService = {
    */
   async createProject(projectData) {
     try {
+      // Haal de huidige gebruiker op en voeg user_id toe
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (userError || !user) {
+        throw new Error('Je moet ingelogd zijn om een project aan te maken')
+      }
+
+      // Voeg user_id toe aan project data
+      const projectWithUser = {
+        ...projectData,
+        user_id: user.id,
+      }
+
       const { data, error } = await supabase
         .from('projects')
-        .insert([projectData])
+        .insert([projectWithUser])
         .select()
         .single()
 
