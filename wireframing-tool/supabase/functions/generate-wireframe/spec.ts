@@ -50,6 +50,7 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 ## Kolommen
 
+- gebruik dit blok om iets aan te tonen met tekst
 - **Props**:
   - \`Property 1\`: \"Default\" (Media links/Content rechts) of \"Variant2\" (Content links/Media rechts).
 - **Children**:
@@ -188,6 +189,7 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 ## Projects
 
+- Dit blok heeft 2 kolommen van 4 kaarten. Daarboven staat een header, dit is een uitgelicht project. Gebruik dit om bijvoorbeeld projecten, producten, etc. aan te tonen. Bij een beperkt aantal, of als je iets duidelijker wilt aantonen, gebruik dan het Kolommen blok.
 - **Props**:
   - \`Title\` (string)
   - \`Description\` (string)
@@ -212,6 +214,7 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 ## News
 
+- Dit blok is een grid van 3x3. Gebruik dit blok om bijvoorbeeld nieuws, evenementen, etc. aan te tonen. Bij een beperkt aantal, of als je iets duidelijker wilt aantonen, gebruik dan het Kolommen blok.
 - **Props**:
   - \`Title\` (string)
   - \`Description\` (string)

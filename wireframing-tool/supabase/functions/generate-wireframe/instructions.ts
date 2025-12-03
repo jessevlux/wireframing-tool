@@ -53,6 +53,7 @@ Genereer de volledige JSON in één tool call (emit_wireframe).
 - Per pagina: aantal logische blokken is aan jou om te bepalen; geef een rationale per pagina (2–4 zinnen).
 - Varieer archetypen over de site; voorkom monotone herhaling tenzij functioneel gewenst.
 - Elk blok draagt aantoonbaar bij aan oriëntatie, bewijsvoering of conversie.
+- Gebruik het kolommen blok om tekst weer te geven op de website.
 
 ## Output Format
 

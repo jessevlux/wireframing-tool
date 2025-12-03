@@ -115,7 +115,7 @@ ${JSON.stringify(invalidJson, null, 2)}
 Fix these errors and emit the corrected wireframe using the emit_wireframe tool.`
 
   const repairMessage = await anthropic.messages.create({
-    model: 'claude-haiku-4-5-20251001',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 64000, // Increased to handle large wireframe responses
     temperature: 0.1,
     system: systemPrompt,
@@ -353,7 +353,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
 
     // Call Anthropic API with tools (opt for faster model / fewer tokens for large inputs)
     const isLargeInput = (description?.length || 0) > 500 || (files && files.length > 0)
-    const selectedModel = 'claude-haiku-4-5-20251001'
+    const selectedModel = 'claude-opus-4-5-20251101'
     const maxTokens = 64000
 
     // Retry logic for Anthropic API overload errors (529) and empty tool calls
