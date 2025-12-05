@@ -18,6 +18,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // Rate limit configuration
@@ -65,31 +66,66 @@ const wireframeTools = [
   {
     name: 'emit_wireframe',
     description:
-      'VERPLICHT: Gebruik deze tool om de volledige wireframe JSON te retourneren. Geen tekstuele uitleg, alleen deze tool call met de JSON data.',
+      'VERPLICHT: Gebruik deze tool om de volledige wireframe JSON te retourneren. De structuur moet sections EN pages bevatten.',
     input_schema: {
       type: 'object',
       properties: {
         wireframe: {
-          type: 'array',
-          description: 'Array of page objects, each with page name, rationale, and blocks',
-          items: {
-            type: 'object',
-            properties: {
-              page: {
-                type: 'string',
-                description: 'Name of the page',
-              },
-              rationale: {
-                type: 'string',
-                description: 'Explanation of why this page is structured this way (2-4 sentences)',
-              },
-              blocks: {
-                type: 'array',
-                description: 'Array of component blocks for this page',
+          type: 'object',
+          description: 'Object met sections array en pages array',
+          properties: {
+            sections: {
+              type: 'array',
+              description: 'Array van Craft CMS section definities',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string', description: 'Weergavenaam van de section' },
+                  handle: { type: 'string', description: 'Technische handle (camelCase)' },
+                  type: {
+                    type: 'string',
+                    enum: ['single', 'channel', 'structure'],
+                    description: 'Section type',
+                  },
+                  slug: { type: 'string', description: 'URL patroon' },
+                  template: { type: 'string', description: 'Template pad' },
+                  entryTypes: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Entry type handles',
+                  },
+                  fetchesFrom: {
+                    type: 'string',
+                    description: 'Channel handle voor overview sections',
+                  },
+                  categories: {
+                    type: 'array',
+                    items: { type: 'string' },
+                    description: 'Categorieën (planning)',
+                  },
+                },
+                required: ['name', 'handle', 'type', 'slug', 'template'],
               },
             },
-            required: ['page', 'rationale', 'blocks'],
+            pages: {
+              type: 'array',
+              description: 'Array van pagina objecten',
+              items: {
+                type: 'object',
+                properties: {
+                  page: { type: 'string', description: 'Naam van de pagina' },
+                  section: { type: 'string', description: 'Handle van de gekoppelde section' },
+                  rationale: {
+                    type: 'string',
+                    description: 'Uitleg over de pagina opbouw (2-4 zinnen)',
+                  },
+                  blocks: { type: 'array', description: 'Array van component blocks' },
+                },
+                required: ['page', 'section', 'rationale', 'blocks'],
+              },
+            },
           },
+          required: ['sections', 'pages'],
         },
       },
       required: ['wireframe'],
@@ -115,7 +151,7 @@ ${JSON.stringify(invalidJson, null, 2)}
 Fix these errors and emit the corrected wireframe using the emit_wireframe tool.`
 
   const repairMessage = await anthropic.messages.create({
-    model: 'claude-opus-4-5-20251101',
+    model: 'claude-sonnet-4-5',
     max_tokens: 64000, // Increased to handle large wireframe responses
     temperature: 0.1,
     system: systemPrompt,
@@ -214,8 +250,8 @@ serve(async (req) => {
     const returnDummyData = () => {
       console.log('Returning dummy data (demo account or no API key)')
 
-      // Load dummy data and replace placeholders
-      const dummyWireframe = JSON.parse(JSON.stringify(dummyDataTemplate))
+      // Load dummy data (already in correct format with sections and pages)
+      const dummyData = JSON.parse(JSON.stringify(dummyDataTemplate))
 
       // Replace placeholders in the dummy data
       const replaceInObject = (obj: any): any => {
@@ -238,12 +274,12 @@ serve(async (req) => {
         return obj
       }
 
-      const processedDummyData = replaceInObject(dummyWireframe)
+      const processedDummyData = replaceInObject(dummyData)
 
       return new Response(
         JSON.stringify({
           success: true,
-          sitemapProposal: `# Dummy Sitemap voor ${projectName}\n\n${useDummyData ? '**DEMO ACCOUNT:** Dit is demo data om onnodige API calls te voorkomen.\n\n' : '**LET OP:** Dit is dummy data omdat er geen Anthropic API key is geconfigureerd.\n\n'}## Homepage\n- Hero sectie met title en USPs\n- Grid met 3 diensten\n- Call to Action\n- Footer\n\n## Contact\n- Hero met contacttitel\n- Kolommen met formulier\n- Footer\n${useDummyData ? '' : '\nConfigureer ANTHROPIC_API_KEY voor echte AI-gegenereerde wireframes.'}`,
+          sitemapProposal: `# Dummy Sitemap voor ${projectName}\n\n${useDummyData ? '**DEMO ACCOUNT:** Dit is demo data om onnodige API calls te voorkomen.\n\n' : '**LET OP:** Dit is dummy data omdat er geen Anthropic API key is geconfigureerd.\n\n'}## Homepage\n- Hero sectie met title en USPs\n- Grid met 3 diensten\n- Entry section met nieuws\n- Call to Action\n- Footer\n\n## Nieuws Overzicht\n- Hero\n- Entry section met alle nieuws\n- Footer\n\n## Contact\n- Hero met contacttitel\n- Kolommen met formulier\n- Footer\n${useDummyData ? '' : '\nConfigureer ANTHROPIC_API_KEY voor echte AI-gegenereerde wireframes.'}`,
           wireframeJson: processedDummyData,
           fullResponse: useDummyData
             ? 'Demo data - geen AI gebruikt'
@@ -297,8 +333,6 @@ serve(async (req) => {
       instructionsMd,
       '\n# Spec\n',
       specMd,
-      '\n# Components Schema (JSON Schema)\n',
-      JSON.stringify(componentsSchemaJson, null, 2),
     ].join('\n')
 
     const userPromptText = `Genereer een wireframe voor het volgende project:
@@ -353,7 +387,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
 
     // Call Anthropic API with tools (opt for faster model / fewer tokens for large inputs)
     const isLargeInput = (description?.length || 0) > 500 || (files && files.length > 0)
-    const selectedModel = 'claude-opus-4-5-20251101'
+    const selectedModel = 'claude-sonnet-4-5'
     const maxTokens = 64000
 
     // Retry logic for Anthropic API overload errors (529) and empty tool calls
@@ -390,7 +424,16 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
         }
 
         // If we have valid wireframe JSON, success - break out of retry loop
-        if (wireframeJson && Array.isArray(wireframeJson) && wireframeJson.length > 0) {
+        // Support both new structure (object with sections/pages) and legacy (array of pages)
+        const isValidNewStructure =
+          wireframeJson &&
+          typeof wireframeJson === 'object' &&
+          !Array.isArray(wireframeJson) &&
+          wireframeJson.sections &&
+          wireframeJson.pages
+        const isValidLegacyStructure =
+          wireframeJson && Array.isArray(wireframeJson) && wireframeJson.length > 0
+        if (isValidNewStructure || isValidLegacyStructure) {
           if (attempt > 0) {
             console.log(`Anthropic API call succeeded on attempt ${attempt + 1}`)
           }
@@ -525,7 +568,16 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
 
     // Parse response: prioritize tool_use, fallback to text + code block
     // Only parse if wireframeJson wasn't already set in retry loop
-    if (!wireframeJson || !Array.isArray(wireframeJson) || wireframeJson.length === 0) {
+    // Support both new structure (object with sections/pages) and legacy (array of pages)
+    const hasValidNewStructure =
+      wireframeJson &&
+      typeof wireframeJson === 'object' &&
+      !Array.isArray(wireframeJson) &&
+      wireframeJson.sections &&
+      wireframeJson.pages
+    const hasValidLegacyStructure =
+      wireframeJson && Array.isArray(wireframeJson) && wireframeJson.length > 0
+    if (!hasValidNewStructure && !hasValidLegacyStructure) {
       wireframeJson = null
       for (const content of message.content) {
         if (content.type === 'text') {
@@ -611,16 +663,32 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
       console.error('No wireframe JSON in response')
     }
 
+    // Determine page count for logging
+    const pageCount =
+      wireframeJson?.pages?.length || (Array.isArray(wireframeJson) ? wireframeJson.length : 0)
+    const sectionCount = wireframeJson?.sections?.length || 0
+
     console.log(
-      `Complete: ${wireframeJson?.length || 0} pages, ${message.usage.input_tokens}/${message.usage.output_tokens} tokens`,
+      `Complete: ${sectionCount} sections, ${pageCount} pages, ${message.usage.input_tokens}/${message.usage.output_tokens} tokens`,
     )
 
-    // Hard guard: als er geen bruikbare array is, error met 502 (niet "success")
-    if (!Array.isArray(wireframeJson) || wireframeJson.length === 0) {
+    // Hard guard: validate wireframe structure
+    const isNewStructureValid =
+      wireframeJson &&
+      typeof wireframeJson === 'object' &&
+      !Array.isArray(wireframeJson) &&
+      wireframeJson.sections &&
+      wireframeJson.pages
+    const isLegacyStructureValid =
+      wireframeJson && Array.isArray(wireframeJson) && wireframeJson.length > 0
+
+    if (!isNewStructureValid && !isLegacyStructureValid) {
       console.error('No valid wireframe JSON returned from model', {
         hasWireframeJson: !!wireframeJson,
+        isObject: typeof wireframeJson === 'object',
+        hasSections: !!wireframeJson?.sections,
+        hasPages: !!wireframeJson?.pages,
         isArray: Array.isArray(wireframeJson),
-        length: wireframeJson?.length,
         responseText: responseText?.substring(0, 500), // First 500 chars for debugging
       })
       return new Response(
@@ -632,21 +700,21 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           fullResponse: responseText || null,
           details: {
             hasWireframeJson: !!wireframeJson,
-            isArray: Array.isArray(wireframeJson),
-            length: wireframeJson?.length,
+            isObject: typeof wireframeJson === 'object',
+            hasSections: !!wireframeJson?.sections,
+            hasPages: !!wireframeJson?.pages,
           },
         }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
       )
     }
 
-    // Return response
+    // Return response (fullResponse weggelaten om response size te beperken)
     return new Response(
       JSON.stringify({
         success: true,
-        sitemapProposal,
+        sitemapProposal: sitemapProposal?.substring(0, 2000) || '', // Limit sitemap proposal
         wireframeJson,
-        fullResponse: responseText,
         logFilePath, // Path to detailed log file in storage
         usage: {
           inputTokens: message.usage.input_tokens,

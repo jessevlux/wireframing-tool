@@ -1,24 +1,88 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Website Wireframe Schema",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "required": ["page", "rationale", "blocks"],
-    "properties": {
-      "page": { "type": "string" },
-      "rationale": {
-        "type": "string",
-        "description": "Uitleg over waarom deze pagina zo is opgebouwd (2-4 zinnen)"
-      },
-      "blocks": {
-        "type": "array",
-        "items": { "$ref": "#/definitions/TopLevelComponent" }
-      }
+  "title": "Website Wireframe Schema with Sections",
+  "type": "object",
+  "required": ["sections", "pages"],
+  "properties": {
+    "sections": {
+      "type": "array",
+      "description": "Array van CMS sections die aangemaakt moeten worden",
+      "items": { "$ref": "#/definitions/Section" }
     },
-    "additionalProperties": false
+    "pages": {
+      "type": "array",
+      "description": "Array van pagina's met content blokken",
+      "items": { "$ref": "#/definitions/Page" }
+    }
   },
+  "additionalProperties": false,
   "definitions": {
+    "Section": {
+      "type": "object",
+      "required": ["name", "handle", "type", "slug", "template"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Weergavenaam van de section"
+        },
+        "handle": {
+          "type": "string",
+          "description": "Unieke identifier voor de section (camelCase)",
+          "pattern": "^[a-z][a-zA-Z0-9]*$"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["single", "channel", "structure"],
+          "description": "Type section: single (unieke pagina), channel (meerdere entries), structure (hiërarchisch)"
+        },
+        "slug": {
+          "type": "string",
+          "description": "URL patroon. Gebruik {slug} voor dynamische delen"
+        },
+        "template": {
+          "type": "string",
+          "description": "Pad naar de twig template (bijv. _pages/news/entry.twig)"
+        },
+        "entryTypes": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Entry type handles voor deze section"
+        },
+        "fetchesFrom": {
+          "type": "string",
+          "description": "Handle van de channel section waaruit entries worden opgehaald (alleen voor overview pages)"
+        },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Categorieën voor deze section (voor planning/documentatie)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Page": {
+      "type": "object",
+      "required": ["page", "section", "rationale", "blocks"],
+      "properties": {
+        "page": {
+          "type": "string",
+          "description": "Naam van de pagina"
+        },
+        "section": {
+          "type": "string",
+          "description": "Handle van de section waar deze pagina bij hoort"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Uitleg over waarom deze pagina zo is opgebouwd (2-4 zinnen)"
+        },
+        "blocks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/TopLevelComponent" }
+        }
+      },
+      "additionalProperties": false
+    },
     "TopLevelComponent": {
       "oneOf": [
         { "$ref": "#/definitions/Hero" },
@@ -226,6 +290,15 @@
     "Grid": {
       "properties": {
         "component": { "const": "Grid" },
+        "blockType": {
+          "type": "string",
+          "enum": ["staticContent", "entrySection"],
+          "description": "Type blok: staticContent (handmatige cards) of entrySection (haalt entries op)"
+        },
+        "fetchesFrom": {
+          "type": "string",
+          "description": "Section handle waaruit entries worden opgehaald (alleen bij blockType: entrySection)"
+        },
         "props": {
           "type": "object",
           "properties": {
@@ -274,6 +347,10 @@
     "EntryPostSlider": {
       "properties": {
         "component": { "const": "EntryPostSlider" },
+        "fetchesFrom": {
+          "type": "string",
+          "description": "Section handle waaruit entries worden opgehaald"
+        },
         "props": {
           "type": "object",
           "properties": { "Title": { "type": "string" } },
@@ -423,6 +500,10 @@
     "Projects": {
       "properties": {
         "component": { "const": "Projects" },
+        "fetchesFrom": {
+          "type": "string",
+          "description": "Section handle waaruit project entries worden opgehaald"
+        },
         "props": {
           "type": "object",
           "properties": {
@@ -467,6 +548,10 @@
     "News": {
       "properties": {
         "component": { "const": "News" },
+        "fetchesFrom": {
+          "type": "string",
+          "description": "Section handle waaruit news entries worden opgehaald"
+        },
         "props": {
           "type": "object",
           "properties": {

@@ -22,6 +22,7 @@ const route = useRoute()
 // State
 const project = ref(null)
 const selectedPageId = ref(null)
+const selectedSectionId = ref(null) // Voor section selectie
 const selectedBlock = ref(null)
 const selectedChildInfo = ref(null) // { parentBlockId, childIndex }
 const isSaving = ref(false)
@@ -30,9 +31,19 @@ const showJsonModal = ref(false)
 const exportedJson = ref('')
 const jsonCopied = ref(false)
 const showNewPageModal = ref(false)
+const showNewSectionModal = ref(false)
 const newPageData = ref({
   name: '',
   description: '',
+})
+const newSectionData = ref({
+  name: '',
+  handle: '',
+  type: 'single',
+  slug: '',
+  template: '',
+  fetchesFrom: '',
+  categories: [],
 })
 
 // Drag and drop state
@@ -136,10 +147,24 @@ onMounted(async () => {
   try {
     // Probeer eerst Supabase (voor UUID projecten)
     project.value = await projectService.getProject(projectId)
-    // Select first page by default
-    if (project.value?.pages?.length > 0) {
+    
+    // Select first section if available, otherwise first page
+    if (project.value?.sections?.length > 0) {
+      selectedSectionId.value = project.value.sections[0].id
+      // Auto-select first page for this section
+      const firstSection = project.value.sections[0]
+      const pagesForSection = project.value.pages?.filter((p) => p.section === firstSection.handle)
+      if (pagesForSection?.length > 0) {
+        selectedPageId.value = pagesForSection[0].id
+      } else if (project.value?.pages?.length > 0) {
       selectedPageId.value = project.value.pages[0].id
+      }
+    } else if (project.value?.pages?.length > 0) {
+      selectedPageId.value = project.value.pages[0].id
+    }
+    
       // Initialize history with current state
+    if (selectedPageId.value) {
       saveToHistory()
     }
   } catch (err) {
@@ -165,6 +190,21 @@ const loadFromLocalStorage = (projectId) => {
 }
 
 // Computed
+const sections = computed(() => {
+  return project.value?.sections || []
+})
+
+const selectedSection = computed(() => {
+  if (!project.value || !selectedSectionId.value) return null
+  return project.value.sections?.find((s) => s.id === selectedSectionId.value)
+})
+
+// Get pages for selected section
+const pagesForSection = computed(() => {
+  if (!selectedSection.value || !project.value?.pages) return []
+  return project.value.pages.filter((p) => p.section === selectedSection.value.handle)
+})
+
 const selectedPage = computed(() => {
   if (!project.value || !selectedPageId.value) return null
   return project.value.pages.find((p) => p.id === selectedPageId.value)
@@ -174,9 +214,45 @@ const blocks = computed(() => {
   return selectedPage.value?.blocks || []
 })
 
+// Get available sections for entry section dropdown
+const availableSectionsForEntrySection = computed(() => {
+  if (!project.value?.sections) return []
+  return project.value.sections.filter((s) => s.type === 'channel')
+})
+
+// Determine block type label
+const getBlockTypeLabel = (block) => {
+  if (block.blockType === 'entrySection' || block.fetchesFrom) {
+    return 'Entry Section'
+  }
+  if (block.component === 'Kolommen' || block.component === 'CalltoAction') {
+    return 'Column Section'
+  }
+  if (block.component === 'Grid' || block.component === 'MediaSlider' || block.component === 'LogoSlider') {
+    return block.blockType === 'entrySection' ? 'Entry Section' : 'Static Content'
+  }
+  return null
+}
+
 // Methods
 const goBack = () => {
   router.push('/')
+}
+
+const selectSection = (sectionId) => {
+  selectedSectionId.value = sectionId
+  selectedBlock.value = null
+  selectedChildInfo.value = null
+  // Auto-select first page for this section
+  const section = project.value.sections?.find((s) => s.id === sectionId)
+  if (section) {
+    const pagesForThisSection = project.value.pages?.filter((p) => p.section === section.handle)
+    if (pagesForThisSection?.length > 0) {
+      selectedPageId.value = pagesForThisSection[0].id
+    } else {
+      selectedPageId.value = null
+    }
+  }
 }
 
 const selectPage = (pageId) => {
@@ -635,6 +711,33 @@ const shouldShowProperty = (propKey, allProps) => {
   return true
 }
 
+// Update blockType
+const updateBlockType = (value) => {
+  if (!selectedBlock.value || !selectedPage.value) return
+  
+  const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
+  if (block) {
+    block.blockType = value
+    if (value === 'staticContent') {
+      delete block.fetchesFrom
+    }
+    selectedBlock.value = { ...block }
+    saveProject()
+  }
+}
+
+// Update fetchesFrom
+const updateFetchesFrom = (value) => {
+  if (!selectedBlock.value || !selectedPage.value) return
+  
+  const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
+  if (block) {
+    block.fetchesFrom = value || undefined
+    selectedBlock.value = { ...block }
+    saveProject()
+  }
+}
+
 // Update een property binnen block.props (voor schema-conforme blocks en children)
 const updateBlockProp = (propKey, value) => {
   if (!selectedBlock.value) return
@@ -883,6 +986,7 @@ const saveProject = async () => {
 
   try {
     await projectService.updateProject(project.value.id, {
+      sections: project.value.sections || [],
       pages: project.value.pages,
       updated_at: new Date().toISOString(),
     })
@@ -931,24 +1035,41 @@ const saveToLocalStorage = () => {
   }
 }
 
-// Transform project data naar Figma plugin formaat
+// Transform project data naar Craft CMS import formaat
 const transformToFigmaFormat = () => {
-  if (!project.value) return []
+  if (!project.value) return {}
 
-  // Converteer pages naar het schema formaat (array van page objecten)
-  // ZONDER rationale (is alleen voor interne gebruik)
-  return project.value.pages.map((page) => ({
+  // Nieuwe structuur met sections en pages
+  const result = {
+    sections: (project.value.sections || []).map((section) => ({
+      name: section.name,
+      handle: section.handle,
+      type: section.type,
+      slug: section.slug,
+      template: section.template,
+      entryTypes: section.entryTypes || [section.handle],
+      ...(section.fetchesFrom ? { fetchesFrom: section.fetchesFrom } : {}),
+      ...(section.categories?.length > 0 ? { categories: section.categories } : {}),
+    })),
+    pages: project.value.pages.map((page) => ({
     page: page.name,
-    // rationale wordt bewust NIET meegenomen in Figma export
+      section: page.section || '',
+      rationale: page.rationale || '',
     blocks: page.blocks.map((block) => {
-      // Kopieer alleen component, props en children (zonder 'id')
-      return {
+        // Kopieer component, props, children en blockType/fetchesFrom
+        const blockData = {
         component: block.component,
         props: block.props,
-        ...(block.children && block.children.length > 0 ? { children: block.children } : {}),
       }
+        if (block.blockType) blockData.blockType = block.blockType
+        if (block.fetchesFrom) blockData.fetchesFrom = block.fetchesFrom
+        if (block.children && block.children.length > 0) blockData.children = block.children
+        return blockData
     }),
-  }))
+    })),
+  }
+
+  return result
 }
 
 const exportJSON = () => {
@@ -978,6 +1099,78 @@ const closeJsonModal = () => {
   jsonCopied.value = false
 }
 
+// Add new section
+const addNewSection = () => {
+  showNewSectionModal.value = true
+  newSectionData.value = {
+    name: '',
+    handle: '',
+    type: 'single',
+    slug: '',
+    template: '',
+    fetchesFrom: '',
+    categories: [],
+  }
+}
+
+const createSection = () => {
+  if (!newSectionData.value.name.trim() || !newSectionData.value.handle.trim()) return
+
+  // Ensure sections array exists
+  if (!project.value.sections) {
+    project.value.sections = []
+  }
+
+  const newSection = {
+    id: `section-${Date.now()}`,
+    name: newSectionData.value.name,
+    handle: newSectionData.value.handle,
+    type: newSectionData.value.type,
+    slug: newSectionData.value.slug || newSectionData.value.handle,
+    template: newSectionData.value.template || `_pages/${newSectionData.value.handle}/entry.twig`,
+    entryTypes: [newSectionData.value.handle],
+    fetchesFrom: newSectionData.value.fetchesFrom || undefined,
+    categories: newSectionData.value.categories || [],
+  }
+
+  project.value.sections.push(newSection)
+  selectedSectionId.value = newSection.id
+  showNewSectionModal.value = false
+  saveProject()
+}
+
+const closeNewSectionModal = () => {
+  showNewSectionModal.value = false
+  newSectionData.value = {
+    name: '',
+    handle: '',
+    type: 'single',
+    slug: '',
+    template: '',
+    fetchesFrom: '',
+    categories: [],
+  }
+}
+
+// Generate handle from name
+const generateHandle = (name) => {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((word, index) => index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
+    .join('')
+}
+
+// Auto-generate handle when name changes
+const onSectionNameChange = () => {
+  if (!newSectionData.value.handle) {
+    newSectionData.value.handle = generateHandle(newSectionData.value.name)
+  }
+}
+
 // Add new page
 const addNewPage = () => {
   showNewPageModal.value = true
@@ -994,6 +1187,7 @@ const createPage = () => {
     id: `page-${Date.now()}`,
     name: newPageData.value.name,
     description: newPageData.value.description || '',
+    section: selectedSection.value?.handle || '', // Link to selected section
     rationale: '', // Lege rationale voor handmatig aangemaakte pagina's
     blocks: [],
     created_at: new Date().toISOString(),
@@ -1085,17 +1279,68 @@ const closeNewPageModal = () => {
 
     <!-- 3 Column Layout -->
     <div class="flex-1 flex overflow-hidden">
-      <!-- Left Sidebar: Pages -->
-      <div class="w-72 bg-zinc-900 border-r border-zinc-800 overflow-y-auto">
+      <!-- Left Sidebar: Sections -->
+      <div class="w-80 bg-zinc-900 border-r border-zinc-800 overflow-y-auto">
         <div class="p-6">
-          <div class="flex items-center justify-between mb-6">
-            <h3 class="font-semibold">Pagina's</h3>
+          <!-- Sections Header -->
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Sections</h3>
             <button
-              @click="addNewPage"
+              @click="addNewSection"
               class="p-2 rounded-lg bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 cursor-pointer"
+              title="Nieuwe section"
             >
               <Plus class="w-4 h-4" />
             </button>
+          </div>
+
+          <!-- Sections List -->
+          <div class="space-y-2 mb-6">
+            <button
+              v-for="section in sections"
+              :key="section.id"
+              @click="selectSection(section.id)"
+              :class="[
+                'w-full text-left px-4 py-3 rounded-xl transition-all cursor-pointer',
+                selectedSectionId === section.id
+                  ? 'bg-violet-600 text-white shadow-lg'
+                  : 'hover:bg-zinc-800 text-zinc-100',
+              ]"
+            >
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="font-medium block">{{ section.name }}</span>
+                  <span
+                    :class="[
+                      'text-xs',
+                      selectedSectionId === section.id ? 'text-white/60' : 'text-zinc-500',
+                    ]"
+                  >
+                    {{ section.handle }}
+                  </span>
+                </div>
+                <span
+                  :class="[
+                    'text-xs px-2 py-1 rounded',
+                    selectedSectionId === section.id 
+                      ? 'bg-white/20 text-white' 
+                      : section.type === 'single' 
+                        ? 'bg-blue-500/20 text-blue-400'
+                        : section.type === 'channel'
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-amber-500/20 text-amber-400',
+                  ]"
+                >
+                  {{ section.type }}
+                </span>
+              </div>
+            </button>
+          </div>
+
+          <!-- Fallback: Pages without sections (backward compatibility) -->
+          <div v-if="!sections.length && project.pages?.length" class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="font-semibold text-zinc-400">Pagina's (legacy)</h3>
           </div>
           <div class="space-y-2">
             <button
@@ -1121,10 +1366,82 @@ const closeNewPageModal = () => {
                 </span>
               </div>
             </button>
+            </div>
+          </div>
+
+          <!-- Selected Section Details -->
+          <div v-if="selectedSection" class="border-t border-zinc-800 pt-4">
+            <h4 class="text-sm font-medium text-zinc-400 mb-3">Section Details</h4>
+            <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-3">
+              <div>
+                <span class="text-xs text-zinc-500 block">Handle</span>
+                <span class="text-sm text-zinc-300">{{ selectedSection.handle }}</span>
+              </div>
+              <div>
+                <span class="text-xs text-zinc-500 block">Type</span>
+                <span class="text-sm text-zinc-300 capitalize">{{ selectedSection.type }}</span>
+              </div>
+              <div>
+                <span class="text-xs text-zinc-500 block">Slug</span>
+                <span class="text-sm text-zinc-300">{{ selectedSection.slug }}</span>
+              </div>
+              <div>
+                <span class="text-xs text-zinc-500 block">Template</span>
+                <span class="text-sm text-zinc-300 font-mono text-xs">{{ selectedSection.template }}</span>
+              </div>
+              <div v-if="selectedSection.fetchesFrom">
+                <span class="text-xs text-zinc-500 block">Haalt entries uit</span>
+                <span class="text-sm text-emerald-400">{{ selectedSection.fetchesFrom }}</span>
+              </div>
+              <div v-if="selectedSection.categories?.length">
+                <span class="text-xs text-zinc-500 block">Categorieën</span>
+                <div class="flex flex-wrap gap-1 mt-1">
+                  <span
+                    v-for="cat in selectedSection.categories"
+                    :key="cat"
+                    class="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded"
+                  >
+                    {{ cat }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Pages for this section -->
+            <div class="mt-4">
+              <div class="flex items-center justify-between mb-2">
+                <h4 class="text-sm font-medium text-zinc-400">Pagina's</h4>
+                <button
+                  @click="addNewPage"
+                  class="p-1 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 cursor-pointer"
+                  title="Nieuwe pagina"
+                >
+                  <Plus class="w-3 h-3" />
+                </button>
+              </div>
+              <div class="space-y-1">
+                <button
+                  v-for="page in pagesForSection"
+                  :key="page.id"
+                  @click="selectPage(page.id)"
+                  :class="[
+                    'w-full text-left px-3 py-2 rounded-lg transition-all cursor-pointer text-sm',
+                    selectedPageId === page.id
+                      ? 'bg-zinc-800 text-white'
+                      : 'hover:bg-zinc-800/50 text-zinc-400',
+                  ]"
+                >
+                  {{ page.name }}
+                </button>
+                <p v-if="!pagesForSection.length" class="text-xs text-zinc-600 italic px-3">
+                  Geen pagina's voor deze section
+                </p>
+              </div>
+            </div>
           </div>
 
           <!-- AI Rationale -->
-          <div v-if="selectedPage" class="mt-6 pt-6 border-t border-zinc-800">
+          <div v-if="selectedPage && !selectedSection" class="mt-6 pt-6 border-t border-zinc-800">
             <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
               <p
                 v-if="selectedPage.rationale"
@@ -1133,8 +1450,7 @@ const closeNewPageModal = () => {
                 {{ selectedPage.rationale }}
               </p>
               <p v-else class="text-sm text-zinc-500 italic">
-                Geen AI rationale beschikbaar voor deze pagina. Rationale wordt automatisch
-                gegenereerd bij nieuwe projecten via AI.
+                Geen AI rationale beschikbaar voor deze pagina.
               </p>
             </div>
           </div>
@@ -1254,6 +1570,45 @@ const closeNewPageModal = () => {
                   disabled
                   class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-400 cursor-not-allowed"
                 />
+              </div>
+
+              <!-- Block Type (voor Grid, EntryPostSlider, etc.) -->
+              <div
+                v-if="selectedBlock.component === 'Grid' || selectedBlock.component === 'EntryPostSlider' || selectedBlock.component === 'Projects' || selectedBlock.component === 'News'"
+                class="border-t border-zinc-800 pt-4"
+              >
+                <h4 class="text-sm font-medium mb-4">Block Type</h4>
+                
+                <div class="mb-4">
+                  <label class="block text-xs font-medium mb-2 text-zinc-300">Type</label>
+                  <select
+                    :value="selectedBlock.blockType || 'staticContent'"
+                    @input="updateBlockType($event.target.value)"
+                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+                  >
+                    <option value="staticContent">Static Content</option>
+                    <option value="entrySection">Entry Section</option>
+                  </select>
+                </div>
+
+                <div v-if="selectedBlock.blockType === 'entrySection'" class="mb-4">
+                  <label class="block text-xs font-medium mb-2 text-zinc-300">Haalt entries uit</label>
+                  <select
+                    :value="selectedBlock.fetchesFrom || ''"
+                    @input="updateFetchesFrom($event.target.value)"
+                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+                  >
+                    <option value="">- Selecteer section -</option>
+                    <option
+                      v-for="section in availableSectionsForEntrySection"
+                      :key="section.handle"
+                      :value="section.handle"
+                    >
+                      {{ section.name }} ({{ section.handle }})
+                    </option>
+                  </select>
+                  <p class="text-xs text-zinc-500 mt-1">Selecteer een channel section om entries uit op te halen</p>
+                </div>
               </div>
 
               <div
@@ -1420,6 +1775,149 @@ const closeNewPageModal = () => {
             {{ jsonCopied ? 'Gekopieerd!' : 'Kopieer JSON' }}
           </button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- New Section Modal -->
+  <div
+    v-if="showNewSectionModal"
+    class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
+    @click.self="closeNewSectionModal"
+  >
+    <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b border-zinc-800">
+        <div>
+          <h2 class="text-xl font-bold text-zinc-100">Nieuwe Section</h2>
+          <p class="text-sm text-zinc-400 mt-1">Maak een nieuwe CMS section aan</p>
+        </div>
+        <button
+          @click="closeNewSectionModal"
+          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+        >
+          <X class="w-5 h-5 text-zinc-400" />
+        </button>
+      </div>
+
+      <!-- Form Content -->
+      <div class="p-6 space-y-5 overflow-y-auto">
+        <!-- Section Naam -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-zinc-300">
+            Section Naam<span class="text-red-400 ml-1">*</span>
+          </label>
+          <input
+            v-model="newSectionData.name"
+            @input="onSectionNameChange"
+            type="text"
+            placeholder="Bijv. Nieuws, Projecten, Over ons..."
+            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none"
+          />
+        </div>
+
+        <!-- Handle -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-zinc-300">
+            Handle<span class="text-red-400 ml-1">*</span>
+          </label>
+          <input
+            v-model="newSectionData.handle"
+            type="text"
+            placeholder="bijv. news, projects, aboutUs..."
+            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
+          />
+          <p class="text-xs text-zinc-500 mt-1">Technische identifier in camelCase</p>
+        </div>
+
+        <!-- Type -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-zinc-300">Type</label>
+          <select
+            v-model="newSectionData.type"
+            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+          >
+            <option value="single">Single (unieke pagina)</option>
+            <option value="channel">Channel (meerdere entries)</option>
+            <option value="structure">Structure (hiërarchisch)</option>
+          </select>
+        </div>
+
+        <!-- Slug -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-zinc-300">URL Slug</label>
+          <input
+            v-model="newSectionData.slug"
+            type="text"
+            placeholder="bijv. nieuws of nieuws/{slug}"
+            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
+          />
+          <p class="text-xs text-zinc-500 mt-1">Gebruik {slug} voor dynamische delen bij channels</p>
+        </div>
+
+        <!-- Template -->
+        <div>
+          <label class="block text-sm font-medium mb-2 text-zinc-300">Template Pad</label>
+          <input
+            v-model="newSectionData.template"
+            type="text"
+            placeholder="_pages/news/entry.twig"
+            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
+          />
+        </div>
+
+        <!-- Fetches From (voor overview sections) -->
+        <div v-if="newSectionData.type === 'single'">
+          <label class="block text-sm font-medium mb-2 text-zinc-300">Haalt entries uit (optioneel)</label>
+          <select
+            v-model="newSectionData.fetchesFrom"
+            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+          >
+            <option value="">- Geen -</option>
+            <option
+              v-for="section in sections.filter(s => s.type === 'channel')"
+              :key="section.handle"
+              :value="section.handle"
+            >
+              {{ section.name }} ({{ section.handle }})
+            </option>
+          </select>
+          <p class="text-xs text-zinc-500 mt-1">Voor overview pagina's die entries uit een channel tonen</p>
+        </div>
+
+        <!-- Info -->
+        <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
+          <p class="text-sm text-zinc-400">
+            <span class="font-medium text-zinc-300">Tip:</span>
+            <span v-if="newSectionData.type === 'single'">
+              Single sections zijn voor unieke pagina's zoals Home of Contact.
+            </span>
+            <span v-else-if="newSectionData.type === 'channel'">
+              Channel sections zijn voor collecties zoals nieuws of projecten.
+            </span>
+            <span v-else>
+              Structure sections zijn voor hiërarchische content zoals documentatie.
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
+        <button
+          @click="closeNewSectionModal"
+          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+        >
+          Annuleer
+        </button>
+        <button
+          @click="createSection"
+          :disabled="!newSectionData.name.trim() || !newSectionData.handle.trim()"
+          class="px-6 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Plus class="w-4 h-4" />
+          Maak Section
+        </button>
       </div>
     </div>
   </div>

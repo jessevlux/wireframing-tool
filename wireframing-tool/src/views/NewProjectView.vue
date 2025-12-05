@@ -5,6 +5,7 @@ import { X, Zap, Upload, Trash2 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
 import { isDemoAccount } from '../utils/auth.js'
+import { compressFilesForAI, getTotalSize } from '../utils/fileCompression.js'
 
 const router = useRouter()
 
@@ -80,26 +81,15 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-// Convert files to base64 for API transmission (not for storage)
-const convertFilesToBase64 = async (files) => {
-  const filePromises = files.map((file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = () => {
-        resolve({
-          name: file.name,
-          type: file.type,
-          size: file.size,
-          data: reader.result.split(',')[1], // Remove data:mime;base64, prefix
-        })
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
-  })
+// Computed: total original file size
+const totalFileSize = computed(() => {
+  return uploadedFiles.value.reduce((sum, f) => sum + f.size, 0)
+})
 
-  return await Promise.all(filePromises)
-}
+// Computed: check if files need compression (> 1MB)
+const needsCompression = computed(() => {
+  return totalFileSize.value > 1024 * 1024
+})
 
 // Create project and save to Supabase
 const createProject = async () => {
@@ -111,13 +101,23 @@ const createProject = async () => {
   isCreating.value = true
 
   try {
-    // 1. Convert uploaded files to base64 (for AI context only, not for storage)
-    let filesBase64 = []
+    // 1. Compress and convert uploaded files (for AI context only, not for storage)
+    let filesForAI = []
     if (uploadedFiles.value.length > 0) {
-      loadingStep.value = 'Bestanden voorbereiden...'
-      console.log('Converting files to base64 for AI context...')
-      filesBase64 = await convertFilesToBase64(uploadedFiles.value)
-      console.log(`${filesBase64.length} file(s) prepared for AI`)
+      loadingStep.value = 'Bestanden comprimeren...'
+      console.log('Compressing files for AI context...')
+      
+      const originalSize = totalFileSize.value
+      filesForAI = await compressFilesForAI(uploadedFiles.value, (status) => {
+        loadingStep.value = status
+      })
+      
+      const compressedSize = getTotalSize(filesForAI)
+      const savedPercent = Math.round((1 - compressedSize / originalSize) * 100)
+      console.log(
+        `Files compressed: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${savedPercent}% bespaard)`
+      )
+      console.log(`${filesForAI.length} file(s)/pages prepared for AI`)
     }
 
     // 2. Check if user is demo account (to avoid unnecessary API calls)
@@ -136,7 +136,7 @@ const createProject = async () => {
       companyName: formData.value.companyName,
       description: formData.value.description,
       language: formData.value.language,
-      files: filesBase64, // Files for AI context only (not stored in DB)
+      files: filesForAI, // Compressed files for AI context only (not stored in DB)
       useDummyData: isDemo, // Flag to tell Edge Function to use dummy data
     }
 
@@ -146,9 +146,9 @@ const createProject = async () => {
 
     const wireframeResult = await wireframeService.generateWireframe(payload)
 
-    // 3. Converteer naar project pages formaat
+    // 3. Converteer naar project format met sections en pages
     loadingStep.value = "Pagina's structureren..."
-    const pages = wireframeService.convertToProjectPages(wireframeResult.wireframeJson)
+    const projectData = wireframeService.convertToProjectFormat(wireframeResult.wireframeJson)
 
     // 4. Maak project aan in database (WITHOUT files)
     loadingStep.value = 'Project opslaan...'
@@ -156,7 +156,8 @@ const createProject = async () => {
       name: formData.value.projectName,
       company: formData.value.companyName,
       description: formData.value.description,
-      pages: pages,
+      sections: projectData.sections,
+      pages: projectData.pages,
       date: new Date().toLocaleDateString('nl-NL'),
       status: 'Draft',
       language: formData.value.language,

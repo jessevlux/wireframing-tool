@@ -5,6 +5,63 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 ---
 
+## Sectie Structuur (NIEUW)
+
+### Section Types
+
+De wireframe bevat een \`sections\` array die de CMS structuur definieert:
+
+- **single**: Unieke pagina (bijv. Home, Contact, Over ons). Er bestaat slechts één entry.
+- **channel**: Collectie van entries (bijv. Nieuws, Projecten, Blog). Meerdere entries met dezelfde structuur.
+- **structure**: Hiërarchische entries (bijv. Documentatie, Categorieën). Entries met parent-child relaties.
+
+### Section Properties
+
+Elke section heeft:
+- \`name\`: Weergavenaam
+- \`handle\`: Unieke identifier in camelCase (bijv. \`newsOverview\`, \`projectDetails\`)
+- \`type\`: \`single\`, \`channel\`, of \`structure\`
+- \`slug\`: URL patroon. Gebruik \`{slug}\` voor dynamische delen (bijv. \`news/{slug}\`)
+- \`template\`: Pad naar twig template (bijv. \`_pages/news/entry.twig\`)
+- \`entryTypes\`: Array van entry type handles
+- \`fetchesFrom\`: (optioneel) Handle van channel section waaruit entries worden opgehaald
+- \`categories\`: (optioneel) Categorieën voor deze section
+
+### Overview/Detail Koppeling
+
+Wanneer een overview pagina entries moet tonen van een channel:
+
+1. Maak een **single** section voor de overview (bijv. \`newsOverview\`)
+2. Maak een **channel** section voor de entries (bijv. \`news\`)
+3. Koppel met \`fetchesFrom\` in de overview section
+4. Gebruik \`blockType: "entrySection"\` en \`fetchesFrom\` in Grid/News/Projects blokken
+
+**Voorbeeld:**
+\`\`\`json
+{
+  "sections": [
+    {
+      "name": "Nieuws overzicht",
+      "handle": "newsOverview",
+      "type": "single",
+      "slug": "nieuws",
+      "template": "_pages/news/index.twig",
+      "fetchesFrom": "news"
+    },
+    {
+      "name": "Nieuws",
+      "handle": "news",
+      "type": "channel",
+      "slug": "nieuws/{slug}",
+      "template": "_pages/news/entry.twig",
+      "categories": ["Actueel", "Bedrijfsnieuws"]
+    }
+  ]
+}
+\`\`\`
+
+---
+
 ## Algemene regels
 
 - **Props en booleans altijd expliciet opnemen** (\`true\` of \`false\`).
@@ -13,10 +70,12 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 - **Footer verplicht** als laatste blok van elke pagina.
 - **Geen lorem ipsum** → gebruik korte, realistische Nederlandse microcopy.
 - **Variatie toepassen**: kies bewust tussen Default en varianten.
+- **Elke pagina moet een \`section\` property hebben** die verwijst naar een section handle.
 
 ## Bijzonderheden
 
 - **Projects** en **News**: alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
+- **Entry Section blokken**: Gebruik \`blockType: "entrySection"\` en \`fetchesFrom\` om aan te geven welke section.
 - **Detail page (exclusieve pagina-opbouw)**:
   - Een pagina die het blok \`Detail page\` bevat, bestaat **exact** uit: \`Detail page\`, \`CalltoAction\` en \`Footer\`.
   - **GEEN andere blokken** toegestaan op die pagina.
@@ -52,7 +111,7 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 - gebruik dit blok om iets aan te tonen met tekst
 - **Props**:
-  - \`Property 1\`: \"Default\" (Media links/Content rechts) of \"Variant2\" (Content links/Media rechts).
+  - \`Property 1\`: "Default" (Media links/Content rechts) of "Variant2" (Content links/Media rechts).
 - **Children**:
   - Media (met variantkeuze)
   - Content Kolommen Block (met Accordion list of Text Element).
@@ -63,9 +122,9 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 - **Props**:
   - \`Property 1\`:
-    - \"Default\" (1 image)
-    - \"Variant2\" (2 horizontale images)
-    - \"Variant3\" (1 horizontaal + 2 squares)
+    - "Default" (1 image)
+    - "Variant2" (2 horizontale images)
+    - "Variant3" (1 horizontaal + 2 squares)
 
 ---
 
@@ -113,14 +172,19 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 ## Grid
 
+Kan zowel statische content als entry sections bevatten.
+
 - **Props**:
   - \`Property 1\`:
-    - \"Default\" (3 kaarten)
-    - \"Variant2\" (4 kaarten)
-    - \"Variant3\" (2 kaarten)
+    - "Default" (3 kaarten)
+    - "Variant2" (4 kaarten)
+    - "Variant3" (2 kaarten)
   - \`Title\` (string)
+- **Optioneel**:
+  - \`blockType\`: "staticContent" (default) of "entrySection"
+  - \`fetchesFrom\`: Section handle (alleen bij \`blockType: "entrySection"\`)
 - **Children**:
-  - Inner Grid Card(s) (afhankelijk van variant).
+  - Inner Grid Card(s) (afhankelijk van variant) - alleen bij staticContent.
 
 ### Inner Grid Card
 
@@ -137,6 +201,8 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 
 - **Props**:
   - \`Title\` (string)
+- **Optioneel**:
+  - \`fetchesFrom\`: Section handle waaruit entries worden opgehaald
 - **Children**:
   - Altijd exact 3 Entry Post Inner (index 0–2).
 
@@ -198,6 +264,8 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
   - \`Example header\` (string)
   - \`Example description\` (string)
   - \`Has example project\` (bool)
+- **Optioneel**:
+  - \`fetchesFrom\`: Section handle waaruit project entries worden opgehaald
 
 - **Children**:
   - Altijd exact 8 Project Cards (index 0–7).
@@ -218,6 +286,8 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 - **Props**:
   - \`Title\` (string)
   - \`Description\` (string)
+- **Optioneel**:
+  - \`fetchesFrom\`: Section handle waaruit news entries worden opgehaald
 - **Children**:
   - Altijd exact 9 News Cards (index 0–8).
 - **Volgorde regel**: altijd gevolgd door CalltoAction + Footer.
@@ -297,12 +367,12 @@ Alle JSON-output moet voldoen aan \`components.schema.json\`.
 ### Button Primary
 
 - **Props**:
-  - \`Property 1\`: \"Default\"
+  - \`Property 1\`: "Default"
   - \`Text primary button\` (string)
 
 ### Button Secondary
 
 - **Props**:
-  - \`Property 1\`: \"Default\"
+  - \`Property 1\`: "Default"
   - \`Text Secondary Button\` (string)
 `
