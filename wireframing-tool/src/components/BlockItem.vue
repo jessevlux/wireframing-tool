@@ -77,7 +77,11 @@ const getBlockTypeLabel = () => {
   if (block.component === 'Kolommen' || block.component === 'CalltoAction') {
     return 'Column Section'
   }
-  if (block.component === 'Grid' || block.component === 'LogoSlider' || block.component === 'MediaSlider') {
+  if (
+    block.component === 'Grid' ||
+    block.component === 'LogoSlider' ||
+    block.component === 'MediaSlider'
+  ) {
     return 'Static Content'
   }
   return null
@@ -105,12 +109,11 @@ const getBlockTypeBadgeClass = () => {
     @drop.prevent="emit('drop', block.id, $event)"
     @click="emit('select', block)"
     :class="[
-      'border-2 rounded-xl p-5 cursor-pointer transition-all group',
+      'border-2 rounded-xl p-5 cursor-pointer transition-all group relative',
       isSelected
         ? 'border-violet-500 bg-violet-500/5'
-        : isDragOver
-          ? 'border-fuchsia-500 bg-fuchsia-500/10'
-          : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
+        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
+      isDragOver ? 'drag-indicator' : '',
     ]"
   >
     <div class="flex items-center gap-4">
@@ -170,3 +173,17 @@ const getBlockTypeBadgeClass = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.drag-indicator::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #a855f7, #d946ef);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+</style>

@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { X, Zap, Upload, Trash2 } from 'lucide-vue-next'
+import { X, Zap, Upload, Trash2, ChevronDown } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
 import { isDemoAccount } from '../utils/auth.js'
@@ -30,6 +30,7 @@ const isCreating = ref(false)
 const loadingStep = ref('')
 const uploadedFiles = ref([])
 const isDragging = ref(false)
+const expandedDescription = ref(false)
 
 const goBack = () => {
   router.push('/')
@@ -86,11 +87,6 @@ const totalFileSize = computed(() => {
   return uploadedFiles.value.reduce((sum, f) => sum + f.size, 0)
 })
 
-// Computed: check if files need compression (> 1MB)
-const needsCompression = computed(() => {
-  return totalFileSize.value > 1024 * 1024
-})
-
 // Create project and save to Supabase
 const createProject = async () => {
   if (!formData.value.projectName.trim()) {
@@ -106,16 +102,16 @@ const createProject = async () => {
     if (uploadedFiles.value.length > 0) {
       loadingStep.value = 'Bestanden comprimeren...'
       console.log('Compressing files for AI context...')
-      
+
       const originalSize = totalFileSize.value
       filesForAI = await compressFilesForAI(uploadedFiles.value, (status) => {
         loadingStep.value = status
       })
-      
+
       const compressedSize = getTotalSize(filesForAI)
       const savedPercent = Math.round((1 - compressedSize / originalSize) * 100)
       console.log(
-        `Files compressed: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${savedPercent}% bespaard)`
+        `Files compressed: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${savedPercent}% bespaard)`,
       )
       console.log(`${filesForAI.length} file(s)/pages prepared for AI`)
     }
@@ -136,41 +132,135 @@ const createProject = async () => {
       companyName: formData.value.companyName,
       description: formData.value.description,
       language: formData.value.language,
-      files: filesForAI, // Compressed files for AI context only (not stored in DB)
-      useDummyData: isDemo, // Flag to tell Edge Function to use dummy data
+      files: filesForAI,
+      useDummyData: isDemo,
     }
 
     if (!formData.value.autoNumPages && Number.isFinite(formData.value.numPages)) {
       payload.numPages = formData.value.numPages
     }
 
-    const wireframeResult = await wireframeService.generateWireframe(payload)
+    // Track if we've already redirected
+    let hasRedirected = false
+    let savedProjectId = null
 
-    // 3. Converteer naar project format met sections en pages
-    loadingStep.value = "Pagina's structureren..."
-    const projectData = wireframeService.convertToProjectFormat(wireframeResult.wireframeJson)
+    // Start wireframe generation with callbacks
+    const wireframeResult = await wireframeService.generateWireframe(payload, {
+      onProgress: (progress) => {
+        if (!hasRedirected) {
+          loadingStep.value = progress
+        }
+      },
+      onSitemapReady: async (sitemapData) => {
+        // Sitemap is ready - create project and redirect immediately!
+        console.log('Sitemap ready, creating project and redirecting...')
+        loadingStep.value = 'Sitemap gereed, project aanmaken...'
 
-    // 4. Maak project aan in database (WITHOUT files)
-    loadingStep.value = 'Project opslaan...'
-    const newProject = {
-      name: formData.value.projectName,
-      company: formData.value.companyName,
-      description: formData.value.description,
-      sections: projectData.sections,
-      pages: projectData.pages,
-      date: new Date().toLocaleDateString('nl-NL'),
-      status: 'Draft',
-      language: formData.value.language,
-      created_at: new Date().toISOString(),
+        try {
+          // Convert sitemap to project format
+          const projectData = wireframeService.convertToProjectFormat({
+            sections: sitemapData.sections,
+            pages: sitemapData.pages,
+          })
+
+          // Mark pages as pending (will be updated as they're generated)
+          projectData.pages = projectData.pages.map((page) => ({
+            ...page,
+            status: 'pending',
+          }))
+
+          // Create project with status 'generating'
+          const newProject = {
+            name: formData.value.projectName,
+            company: formData.value.companyName,
+            description: formData.value.description,
+            sections: projectData.sections,
+            pages: projectData.pages,
+            date: new Date().toLocaleDateString('nl-NL'),
+            status: 'generating', // Project is still being generated
+            language: formData.value.language,
+            created_at: new Date().toISOString(),
+          }
+
+          const savedProject = await projectService.createProject(newProject)
+          savedProjectId = savedProject.id
+          console.log('Project created with status generating:', savedProject.id)
+
+          // Store generation state for EditorView to continue listening
+          sessionStorage.setItem('generating_project_id', savedProject.id)
+
+          hasRedirected = true
+          loadingStep.value = 'Editor openen...'
+          router.push(`/editor/${savedProject.id}`)
+        } catch (err) {
+          console.error('Error creating project from sitemap:', err)
+        }
+      },
+      onPagesGenerated: async (pagesData) => {
+        // Pages generated - update project in database
+        if (savedProjectId) {
+          console.log(`Pages generated: ${pagesData.pages.map((p) => p.page).join(', ')}`)
+          try {
+            // Get current project
+            const currentProject = await projectService.getProject(savedProjectId)
+            if (currentProject) {
+              // Update pages that match (use .name from project format, .page from wireframe format)
+              const updatedPages = currentProject.pages.map((existingPage) => {
+                const newPage = pagesData.pages.find((p) => p.page === existingPage.name)
+                if (newPage) {
+                  console.log(
+                    `Updating page "${existingPage.name}" with ${newPage.blocks?.length || 0} blocks`,
+                  )
+                  // Convert but PRESERVE the original page ID!
+                  const converted = wireframeService.convertPageToProjectFormat(newPage)
+                  return {
+                    ...converted,
+                    id: existingPage.id, // Keep original ID
+                  }
+                }
+                return existingPage
+              })
+
+              // Final batch? Update project status
+              const isComplete = pagesData.percentage >= 100
+
+              await projectService.updateProject(savedProjectId, {
+                pages: updatedPages,
+                status: isComplete ? 'Draft' : 'generating',
+              })
+              console.log(`Database updated, isComplete: ${isComplete}`)
+            }
+          } catch (err) {
+            console.error('Error updating pages:', err)
+          }
+        }
+      },
+    })
+
+    // If demo account or old behavior (no sitemap_ready event), handle normally
+    if (!hasRedirected) {
+      loadingStep.value = "Pagina's structureren..."
+      const projectData = wireframeService.convertToProjectFormat(wireframeResult.wireframeJson)
+
+      loadingStep.value = 'Project opslaan...'
+      const newProject = {
+        name: formData.value.projectName,
+        company: formData.value.companyName,
+        description: formData.value.description,
+        sections: projectData.sections,
+        pages: projectData.pages,
+        date: new Date().toLocaleDateString('nl-NL'),
+        status: 'Draft',
+        language: formData.value.language,
+        created_at: new Date().toISOString(),
+      }
+
+      const savedProject = await projectService.createProject(newProject)
+      console.log('Project succesvol aangemaakt:', savedProject)
+
+      loadingStep.value = 'Editor openen...'
+      router.push(`/editor/${savedProject.id}`)
     }
-
-    const savedProject = await projectService.createProject(newProject)
-
-    console.log('Project succesvol aangemaakt:', savedProject)
-
-    // 5. Open het project in de editor
-    loadingStep.value = 'Editor openen...'
-    router.push(`/editor/${savedProject.id}`)
   } catch (error) {
     console.error('Error creating project:', error)
     alert(`Fout bij aanmaken project: ${error.message}`)
@@ -223,15 +313,28 @@ const createProject = async () => {
             />
           </div>
 
-          <!-- Description -->
+          <!-- Description (Expandable height) -->
           <div>
             <label class="block text-sm font-medium mb-2">Beschrijving</label>
-            <textarea
-              v-model="formData.description"
-              rows="4"
-              placeholder="Beschrijf je project..."
-              class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none resize-none"
-            />
+            <div class="relative">
+              <textarea
+                v-model="formData.description"
+                :rows="expandedDescription ? 12 : 4"
+                placeholder="Beschrijf je project..."
+                class="w-full px-4 py-3 pr-10 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none resize-none transition-all"
+              />
+              <button
+                type="button"
+                @click="expandedDescription = !expandedDescription"
+                class="absolute top-3 right-3 p-1 rounded hover:bg-zinc-800 text-zinc-500 hover:text-zinc-300 transition-all cursor-pointer"
+                :title="expandedDescription ? 'Kleiner maken' : 'Groter maken'"
+              >
+                <ChevronDown
+                  class="w-4 h-4 transition-transform"
+                  :class="{ 'rotate-180': expandedDescription }"
+                />
+              </button>
+            </div>
           </div>
 
           <!-- Language & Pages -->

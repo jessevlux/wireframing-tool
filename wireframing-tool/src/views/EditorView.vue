@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import {
   ChevronRight,
@@ -12,6 +12,8 @@ import {
   X,
   Undo2,
   Redo2,
+  Loader2,
+  Trash2,
 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import BlockItem from '../components/BlockItem.vue'
@@ -147,7 +149,7 @@ onMounted(async () => {
   try {
     // Probeer eerst Supabase (voor UUID projecten)
     project.value = await projectService.getProject(projectId)
-    
+
     // Select first section if available, otherwise first page
     if (project.value?.sections?.length > 0) {
       selectedSectionId.value = project.value.sections[0].id
@@ -157,15 +159,21 @@ onMounted(async () => {
       if (pagesForSection?.length > 0) {
         selectedPageId.value = pagesForSection[0].id
       } else if (project.value?.pages?.length > 0) {
-      selectedPageId.value = project.value.pages[0].id
+        selectedPageId.value = project.value.pages[0].id
       }
     } else if (project.value?.pages?.length > 0) {
       selectedPageId.value = project.value.pages[0].id
     }
-    
-      // Initialize history with current state
+
+    // Initialize history with current state
     if (selectedPageId.value) {
       saveToHistory()
+    }
+
+    // Start polling if project is still generating
+    if (project.value?.status === 'generating') {
+      console.log('Project is generating, starting polling...')
+      startPolling()
     }
   } catch (err) {
     console.error('Error loading project:', err)
@@ -188,6 +196,57 @@ const loadFromLocalStorage = (projectId) => {
     }
   }
 }
+
+// Check if project is still generating
+const isGenerating = computed(() => project.value?.status === 'generating')
+
+// Polling interval for live updates
+let pollInterval = null
+
+const startPolling = () => {
+  if (pollInterval) return
+
+  pollInterval = setInterval(async () => {
+    if (!project.value || !isGenerating.value) {
+      stopPolling()
+      return
+    }
+
+    try {
+      const updated = await projectService.getProject(project.value.id)
+      if (updated) {
+        // Update pages but preserve current selection
+        const currentPageId = selectedPageId.value
+        const currentSectionId = selectedSectionId.value
+
+        project.value = updated
+
+        // Restore selection
+        selectedPageId.value = currentPageId
+        selectedSectionId.value = currentSectionId
+
+        // Stop polling if generation is complete
+        if (updated.status !== 'generating') {
+          stopPolling()
+          console.log('Generation complete, polling stopped')
+        }
+      }
+    } catch (err) {
+      console.error('Polling error:', err)
+    }
+  }, 3000) // Poll every 3 seconds
+}
+
+const stopPolling = () => {
+  if (pollInterval) {
+    clearInterval(pollInterval)
+    pollInterval = null
+  }
+}
+
+onUnmounted(() => {
+  stopPolling()
+})
 
 // Computed
 const sections = computed(() => {
@@ -219,20 +278,6 @@ const availableSectionsForEntrySection = computed(() => {
   if (!project.value?.sections) return []
   return project.value.sections.filter((s) => s.type === 'channel')
 })
-
-// Determine block type label
-const getBlockTypeLabel = (block) => {
-  if (block.blockType === 'entrySection' || block.fetchesFrom) {
-    return 'Entry Section'
-  }
-  if (block.component === 'Kolommen' || block.component === 'CalltoAction') {
-    return 'Column Section'
-  }
-  if (block.component === 'Grid' || block.component === 'MediaSlider' || block.component === 'LogoSlider') {
-    return block.blockType === 'entrySection' ? 'Entry Section' : 'Static Content'
-  }
-  return null
-}
 
 // Methods
 const goBack = () => {
@@ -341,6 +386,50 @@ const goBackToParent = () => {
 const closeProperties = () => {
   selectedBlock.value = null
   selectedChildInfo.value = null
+}
+
+// Verwijder een pagina
+const deletePage = (pageId) => {
+  if (!confirm('Weet je zeker dat je deze pagina wilt verwijderen?')) return
+
+  if (!project.value?.pages) return
+
+  project.value.pages = project.value.pages.filter((p) => p.id !== pageId)
+
+  // Als de verwijderde pagina geselecteerd was, deselecteer
+  if (selectedPageId.value === pageId) {
+    selectedPageId.value = null
+    selectedBlock.value = null
+    selectedChildInfo.value = null
+  }
+}
+
+// Verwijder een section
+const deleteSection = (sectionHandle) => {
+  if (
+    !confirm(
+      "Weet je zeker dat je deze section wilt verwijderen? Alle bijbehorende pagina's worden ook verwijderd.",
+    )
+  )
+    return
+
+  if (!project.value?.sections) return
+
+  // Verwijder de section
+  project.value.sections = project.value.sections.filter((s) => s.handle !== sectionHandle)
+
+  // Verwijder ook alle pagina's die bij deze section horen
+  if (project.value.pages) {
+    project.value.pages = project.value.pages.filter((p) => p.section !== sectionHandle)
+  }
+
+  // Als de verwijderde section geselecteerd was, deselecteer
+  if (selectedSectionId.value === sectionHandle) {
+    selectedSectionId.value = null
+    selectedPageId.value = null
+    selectedBlock.value = null
+    selectedChildInfo.value = null
+  }
 }
 
 // Beschikbare component types
@@ -591,6 +680,13 @@ const shouldShowProperty = (propKey, allProps) => {
     return true
   }
 
+  // Inner Grid Card: Title en Description altijd tonen (geen Has conditie)
+  if (selectedBlock.value?.component === 'Inner Grid Card') {
+    if (propKey === 'Title' || propKey === 'Description') {
+      return true
+    }
+  }
+
   // Mapping van properties naar hun "Has X" conditie (exact zoals in schema)
   const conditionalFields = {
     // Hero & CalltoAction (Has Title, Has Description, Has Usps, Has Button Primary/Secondary)
@@ -714,7 +810,7 @@ const shouldShowProperty = (propKey, allProps) => {
 // Update blockType
 const updateBlockType = (value) => {
   if (!selectedBlock.value || !selectedPage.value) return
-  
+
   const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
   if (block) {
     block.blockType = value
@@ -729,7 +825,7 @@ const updateBlockType = (value) => {
 // Update fetchesFrom
 const updateFetchesFrom = (value) => {
   if (!selectedBlock.value || !selectedPage.value) return
-  
+
   const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
   if (block) {
     block.fetchesFrom = value || undefined
@@ -1052,20 +1148,20 @@ const transformToFigmaFormat = () => {
       ...(section.categories?.length > 0 ? { categories: section.categories } : {}),
     })),
     pages: project.value.pages.map((page) => ({
-    page: page.name,
+      page: page.name,
       section: page.section || '',
       rationale: page.rationale || '',
-    blocks: page.blocks.map((block) => {
+      blocks: page.blocks.map((block) => {
         // Kopieer component, props, children en blockType/fetchesFrom
         const blockData = {
-        component: block.component,
-        props: block.props,
-      }
+          component: block.component,
+          props: block.props,
+        }
         if (block.blockType) blockData.blockType = block.blockType
         if (block.fetchesFrom) blockData.fetchesFrom = block.fetchesFrom
         if (block.children && block.children.length > 0) blockData.children = block.children
         return blockData
-    }),
+      }),
     })),
   }
 
@@ -1160,7 +1256,7 @@ const generateHandle = (name) => {
     .replace(/\s+/g, ' ')
     .trim()
     .split(' ')
-    .map((word, index) => index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
+    .map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
     .join('')
 }
 
@@ -1277,6 +1373,15 @@ const closeNewPageModal = () => {
       </div>
     </div>
 
+    <!-- Generating Banner -->
+    <div v-if="isGenerating" class="bg-violet-600/20 border-b border-violet-500/30 px-6 py-3">
+      <div class="flex items-center gap-3 text-violet-300">
+        <Loader2 class="w-5 h-5 animate-spin" />
+        <span class="font-medium">Pagina's worden gegenereerd...</span>
+        <span class="text-violet-400 text-sm">De inhoud wordt automatisch bijgewerkt</span>
+      </div>
+    </div>
+
     <!-- 3 Column Layout -->
     <div class="flex-1 flex overflow-hidden">
       <!-- Left Sidebar: Sections -->
@@ -1322,9 +1427,9 @@ const closeNewPageModal = () => {
                 <span
                   :class="[
                     'text-xs px-2 py-1 rounded',
-                    selectedSectionId === section.id 
-                      ? 'bg-white/20 text-white' 
-                      : section.type === 'single' 
+                    selectedSectionId === section.id
+                      ? 'bg-white/20 text-white'
+                      : section.type === 'single'
                         ? 'bg-blue-500/20 text-blue-400'
                         : section.type === 'channel'
                           ? 'bg-emerald-500/20 text-emerald-400'
@@ -1341,37 +1446,46 @@ const closeNewPageModal = () => {
           <div v-if="!sections.length && project.pages?.length" class="mb-6">
             <div class="flex items-center justify-between mb-4">
               <h3 class="font-semibold text-zinc-400">Pagina's (legacy)</h3>
-          </div>
-          <div class="space-y-2">
-            <button
-              v-for="page in project.pages"
-              :key="page.id"
-              @click="selectPage(page.id)"
-              :class="[
-                'w-full text-left px-4 py-3 rounded-xl transition-all cursor-pointer',
-                selectedPageId === page.id
-                  ? 'bg-violet-600 text-white shadow-lg'
-                  : 'hover:bg-zinc-800 text-zinc-100',
-              ]"
-            >
-              <div class="flex items-center justify-between">
-                <span class="font-medium">{{ page.name }}</span>
-                <span
-                  :class="[
-                    'text-xs',
-                    selectedPageId === page.id ? 'text-white/70' : 'text-zinc-500',
-                  ]"
-                >
-                  {{ page.blocks?.length || 0 }}
-                </span>
-              </div>
-            </button>
+            </div>
+            <div class="space-y-2">
+              <button
+                v-for="page in project.pages"
+                :key="page.id"
+                @click="selectPage(page.id)"
+                :class="[
+                  'w-full text-left px-4 py-3 rounded-xl transition-all cursor-pointer',
+                  selectedPageId === page.id
+                    ? 'bg-violet-600 text-white shadow-lg'
+                    : 'hover:bg-zinc-800 text-zinc-100',
+                ]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-medium">{{ page.name }}</span>
+                  <span
+                    :class="[
+                      'text-xs',
+                      selectedPageId === page.id ? 'text-white/70' : 'text-zinc-500',
+                    ]"
+                  >
+                    {{ page.blocks?.length || 0 }}
+                  </span>
+                </div>
+              </button>
             </div>
           </div>
 
           <!-- Selected Section Details -->
           <div v-if="selectedSection" class="border-t border-zinc-800 pt-4">
-            <h4 class="text-sm font-medium text-zinc-400 mb-3">Section Details</h4>
+            <div class="flex items-center justify-between mb-3">
+              <h4 class="text-sm font-medium text-zinc-400">Section Details</h4>
+              <button
+                @click="deleteSection(selectedSection.handle)"
+                class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all cursor-pointer"
+                title="Verwijder section"
+              >
+                <Trash2 class="w-3.5 h-3.5" />
+              </button>
+            </div>
             <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-3">
               <div>
                 <span class="text-xs text-zinc-500 block">Handle</span>
@@ -1387,7 +1501,9 @@ const closeNewPageModal = () => {
               </div>
               <div>
                 <span class="text-xs text-zinc-500 block">Template</span>
-                <span class="text-sm text-zinc-300 font-mono text-xs">{{ selectedSection.template }}</span>
+                <span class="text-sm text-zinc-300 font-mono text-xs">{{
+                  selectedSection.template
+                }}</span>
               </div>
               <div v-if="selectedSection.fetchesFrom">
                 <span class="text-xs text-zinc-500 block">Haalt entries uit</span>
@@ -1420,19 +1536,30 @@ const closeNewPageModal = () => {
                 </button>
               </div>
               <div class="space-y-1">
-                <button
+                <div
                   v-for="page in pagesForSection"
                   :key="page.id"
-                  @click="selectPage(page.id)"
-                  :class="[
-                    'w-full text-left px-3 py-2 rounded-lg transition-all cursor-pointer text-sm',
-                    selectedPageId === page.id
-                      ? 'bg-zinc-800 text-white'
-                      : 'hover:bg-zinc-800/50 text-zinc-400',
-                  ]"
+                  class="group flex items-center gap-1"
                 >
-                  {{ page.name }}
-                </button>
+                  <button
+                    @click="selectPage(page.id)"
+                    :class="[
+                      'flex-1 text-left px-3 py-2 rounded-lg transition-all cursor-pointer text-sm',
+                      selectedPageId === page.id
+                        ? 'bg-zinc-800 text-white'
+                        : 'hover:bg-zinc-800/50 text-zinc-400',
+                    ]"
+                  >
+                    {{ page.name }}
+                  </button>
+                  <button
+                    @click.stop="deletePage(page.id)"
+                    class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                    title="Verwijder pagina"
+                  >
+                    <Trash2 class="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 <p v-if="!pagesForSection.length" class="text-xs text-zinc-600 italic px-3">
                   Geen pagina's voor deze section
                 </p>
@@ -1574,11 +1701,16 @@ const closeNewPageModal = () => {
 
               <!-- Block Type (voor Grid, EntryPostSlider, etc.) -->
               <div
-                v-if="selectedBlock.component === 'Grid' || selectedBlock.component === 'EntryPostSlider' || selectedBlock.component === 'Projects' || selectedBlock.component === 'News'"
+                v-if="
+                  selectedBlock.component === 'Grid' ||
+                  selectedBlock.component === 'EntryPostSlider' ||
+                  selectedBlock.component === 'Projects' ||
+                  selectedBlock.component === 'News'
+                "
                 class="border-t border-zinc-800 pt-4"
               >
                 <h4 class="text-sm font-medium mb-4">Block Type</h4>
-                
+
                 <div class="mb-4">
                   <label class="block text-xs font-medium mb-2 text-zinc-300">Type</label>
                   <select
@@ -1592,7 +1724,9 @@ const closeNewPageModal = () => {
                 </div>
 
                 <div v-if="selectedBlock.blockType === 'entrySection'" class="mb-4">
-                  <label class="block text-xs font-medium mb-2 text-zinc-300">Haalt entries uit</label>
+                  <label class="block text-xs font-medium mb-2 text-zinc-300"
+                    >Haalt entries uit</label
+                  >
                   <select
                     :value="selectedBlock.fetchesFrom || ''"
                     @input="updateFetchesFrom($event.target.value)"
@@ -1607,7 +1741,9 @@ const closeNewPageModal = () => {
                       {{ section.name }} ({{ section.handle }})
                     </option>
                   </select>
-                  <p class="text-xs text-zinc-500 mt-1">Selecteer een channel section om entries uit op te halen</p>
+                  <p class="text-xs text-zinc-500 mt-1">
+                    Selecteer een channel section om entries uit op te halen
+                  </p>
                 </div>
               </div>
 
@@ -1785,7 +1921,9 @@ const closeNewPageModal = () => {
     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
     @click.self="closeNewSectionModal"
   >
-    <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col max-h-[90vh]">
+    <div
+      class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col max-h-[90vh]"
+    >
       <!-- Header -->
       <div class="flex items-center justify-between p-6 border-b border-zinc-800">
         <div>
@@ -1852,7 +1990,9 @@ const closeNewPageModal = () => {
             placeholder="bijv. nieuws of nieuws/{slug}"
             class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
           />
-          <p class="text-xs text-zinc-500 mt-1">Gebruik {slug} voor dynamische delen bij channels</p>
+          <p class="text-xs text-zinc-500 mt-1">
+            Gebruik {slug} voor dynamische delen bij channels
+          </p>
         </div>
 
         <!-- Template -->
@@ -1868,21 +2008,25 @@ const closeNewPageModal = () => {
 
         <!-- Fetches From (voor overview sections) -->
         <div v-if="newSectionData.type === 'single'">
-          <label class="block text-sm font-medium mb-2 text-zinc-300">Haalt entries uit (optioneel)</label>
+          <label class="block text-sm font-medium mb-2 text-zinc-300"
+            >Haalt entries uit (optioneel)</label
+          >
           <select
             v-model="newSectionData.fetchesFrom"
             class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
           >
             <option value="">- Geen -</option>
             <option
-              v-for="section in sections.filter(s => s.type === 'channel')"
+              v-for="section in sections.filter((s) => s.type === 'channel')"
               :key="section.handle"
               :value="section.handle"
             >
               {{ section.name }} ({{ section.handle }})
             </option>
           </select>
-          <p class="text-xs text-zinc-500 mt-1">Voor overview pagina's die entries uit een channel tonen</p>
+          <p class="text-xs text-zinc-500 mt-1">
+            Voor overview pagina's die entries uit een channel tonen
+          </p>
         </div>
 
         <!-- Info -->

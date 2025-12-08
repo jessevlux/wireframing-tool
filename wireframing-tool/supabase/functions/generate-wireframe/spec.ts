@@ -72,6 +72,10 @@ Wanneer een overview pagina entries moet tonen van een channel:
 - **Variatie toepassen**: kies bewust tussen Default en varianten.
 - **Elke pagina moet een \`section\` property hebben** die verwijst naar een section handle.
 
+**KRITIEK - Variant bepaalt children:**
+Kies EERST een variant, genereer dan EXACT het aantal children dat bij die variant hoort.
+Dit geldt voor ALLE componenten met varianten (Grid, Media, etc.).
+
 ## Bijzonderheden
 
 - **Projects** en **News**: alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
@@ -109,12 +113,21 @@ Wanneer een overview pagina entries moet tonen van een channel:
 
 ## Kolommen
 
-- gebruik dit blok om iets aan te tonen met tekst
+- Gebruik dit blok om iets aan te tonen met tekst naast een afbeelding.
 - **Props**:
   - \`Property 1\`: "Default" (Media links/Content rechts) of "Variant2" (Content links/Media rechts).
-- **Children**:
-  - Media (met variantkeuze)
-  - Content Kolommen Block (met Accordion list of Text Element).
+
+**Children (EXACTE structuur, GEEN variatie):**
+
+Kolommen heeft ALTIJD exact 2 children in deze volgorde:
+1. \`Media\` - voor afbeelding(en)
+2. \`Content Kolommen Block\` - voor tekst/accordion
+
+**NIET toegestaan:**
+- 2x Media
+- 2x Content Kolommen Block
+- Andere children dan Media en Content Kolommen Block
+- Meer of minder dan 2 children
 
 ---
 
@@ -172,8 +185,6 @@ Wanneer een overview pagina entries moet tonen van een channel:
 
 ## Grid
 
-Kan zowel statische content als entry sections bevatten.
-
 - **Props**:
   - \`Property 1\`:
     - "Default" (3 kaarten)
@@ -184,7 +195,12 @@ Kan zowel statische content als entry sections bevatten.
   - \`blockType\`: "staticContent" (default) of "entrySection"
   - \`fetchesFrom\`: Section handle (alleen bij \`blockType: "entrySection"\`)
 - **Children**:
-  - Inner Grid Card(s) (afhankelijk van variant) - alleen bij staticContent.
+  - Inner Grid Card(s) (afhankelijk van variant) - ALLEEN bij staticContent.
+  - Bij entrySection: GEEN children (data komt uit CMS).
+
+**NIET toegestaan:**
+- Children toevoegen bij \`blockType: "entrySection"\`
+- \`fetchesFrom\` gebruiken zonder \`blockType: "entrySection"\`
 
 ### Inner Grid Card
 
@@ -338,8 +354,24 @@ Kan zowel statische content als entry sections bevatten.
 
 ## Detail page
 
-- **Hele pagina** component (voor bijv. nieuws- of projectdetails).
-- **Volgorde & exclusiviteit**: een pagina met \`Detail page\` heeft **uitsluitend** de blokken in deze volgorde: \`Detail page\`, \`CalltoAction\`, \`Footer\` (geen extra blokken).
+- **Hele pagina** component voor channel entry detailpagina's (nieuws, projecten, locaties, etc.).
+
+**WANNEER Detail page gebruiken (VERPLICHT):**
+- De pagina hoort bij een section met type "channel"
+- De pagina toont één individuele entry (niet een overzicht)
+- Voorbeelden: "Nieuws detail", "Project detail", "Locatie detail", "Vacature detail"
+
+**Pagina structuur (EXACT, geen variatie):**
+Een pagina met Detail page bestaat uit PRECIES 3 blokken:
+1. \`Detail page\`
+2. \`CalltoAction\`
+3. \`Footer\`
+
+**NIET toegestaan:**
+- Andere blokken toevoegen (geen Hero, Grid, Kolommen, etc.)
+- Minder dan 3 blokken
+- Andere volgorde
+
 - **Belangrijke regels**:
   - **Slechts één header** mag \`true\` zijn: ofwel \`Has Project Header\` ofwel \`Has News Header\`.
   - **Altijd één header** verplicht \`true\`.

@@ -1,34 +1,125 @@
-import { supabase } from '../lib/supabase.js'
+// Wireframe Service - SSE streaming support
+
+// Get Supabase config for direct fetch
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 /**
  * Wireframe Service
- * Roept de Supabase Edge Function aan voor wireframe generatie
+ * Roept de Supabase Edge Function aan voor wireframe generatie (met SSE streaming)
  */
 export const wireframeService = {
   /**
-   * Genereer een wireframe sitemap via Anthropic AI
+   * Genereer een wireframe sitemap via Anthropic AI (met streaming)
    * @param {Object} projectData - Project data
    * @param {string} projectData.projectName - Projectnaam
    * @param {string} projectData.companyName - Bedrijfsnaam (optioneel)
    * @param {string} projectData.description - Project beschrijving (optioneel)
    * @param {number} projectData.numPages - Aantal pagina's
    * @param {string} projectData.language - Taal (Nederlands/English)
-   * @param {Array} projectData.files - Base64 encoded files voor AI context (niet opgeslagen in DB)
+   * @param {Array} projectData.files - Base64 encoded files voor AI context
    * @param {string} projectData.additionalContext - Extra context (optioneel)
+   * @param {Object} callbacks - Callback functies
+   * @param {Function} callbacks.onProgress - Callback voor progressie updates
+   * @param {Function} callbacks.onSitemapReady - Callback wanneer sitemap klaar is (sections + lege pages)
+   * @param {Function} callbacks.onPagesGenerated - Callback per batch gegenereerde pagina's
    * @returns {Promise<Object>} Wireframe data
    */
-  async generateWireframe(projectData) {
+  async generateWireframe(projectData, callbacks = {}) {
+    // Support old signature: generateWireframe(projectData, onProgress)
+    const { onProgress, onSitemapReady, onPagesGenerated } =
+      typeof callbacks === 'function' ? { onProgress: callbacks } : callbacks
+
     try {
-      // Files zijn alleen voor AI context, niet voor database storage
-      const { data, error } = await supabase.functions.invoke('generate-wireframe', {
-        body: projectData, // Bevat ook files array indien aanwezig
+      // Use direct fetch for SSE streaming support
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-wireframe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify(projectData),
       })
 
-      if (error) {
-        console.error('Edge Function error:', error)
-        throw new Error(`Fout bij genereren wireframe: ${error.message}`)
+      if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+        const errorText = await response.text()
+        try {
+          const errorJson = JSON.parse(errorText)
+          throw new Error(errorJson.message || errorJson.error || `HTTP ${response.status}`)
+        } catch {
+          throw new Error(`HTTP ${response.status}: ${errorText}`)
+        }
       }
 
+      const contentType = response.headers.get('content-type') || ''
+
+      // Handle SSE streaming response
+      if (contentType.includes('text/event-stream')) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let result = null
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+
+          // Parse SSE events from buffer
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+          let currentEvent = null
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim()
+            } else if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                console.log('SSE Event:', currentEvent, data)
+
+                if (currentEvent === 'progress' && onProgress) {
+                  onProgress(data.message)
+                } else if (currentEvent === 'heartbeat') {
+                  // Keep connection alive, optionally update UI
+                  if (onProgress) {
+                    onProgress(`Genereren... (${data.elapsed}s)`)
+                  }
+                } else if (currentEvent === 'sitemap_ready' && onSitemapReady) {
+                  // Sitemap is ready - frontend can create project and redirect
+                  onSitemapReady(data)
+                } else if (currentEvent === 'pages_generated' && onPagesGenerated) {
+                  // Pages batch generated - update in frontend
+                  onPagesGenerated(data)
+                } else if (currentEvent === 'complete' || data.success === true) {
+                  // Handle complete event (also fallback if event type is missing)
+                  result = data
+                } else if (currentEvent === 'error') {
+                  throw new Error(data.message || data.error)
+                }
+              } catch (e) {
+                if (e.message && !e.message.includes('JSON')) {
+                  throw e // Re-throw non-JSON errors
+                }
+              }
+              currentEvent = null
+            }
+          }
+        }
+
+        if (!result) {
+          throw new Error('Stream ended without result')
+        }
+
+        return result
+      }
+
+      // Fallback: JSON response (for dummy data or legacy)
+      const data = await response.json()
+      if (data.error) {
+        throw new Error(data.message || data.error)
+      }
       return data
     } catch (err) {
       console.error('Error calling edge function:', err)
@@ -47,7 +138,7 @@ export const wireframeService = {
     if (wireframeJson && typeof wireframeJson === 'object' && !Array.isArray(wireframeJson)) {
       const hasSections = Array.isArray(wireframeJson.sections)
       const hasPages = Array.isArray(wireframeJson.pages)
-      
+
       if (hasSections && hasPages) {
         // Valideer dat elke pagina 'page' en 'blocks' heeft
         return wireframeJson.pages.every((page) => {
@@ -79,7 +170,7 @@ export const wireframeService = {
   /**
    * Converteer wireframe JSON naar project format
    * Ondersteunt zowel nieuwe structuur (met sections) als legacy (array)
-   * 
+   *
    * @param {Object|Array} wireframeJson - Wireframe JSON
    * @returns {Object} Project data met sections en pages
    */
@@ -148,6 +239,26 @@ export const wireframeService = {
   },
 
   /**
+   * Converteer een enkele wireframe page naar project format
+   * Gebruikt voor live page updates
+   * @param {Object} page - Wireframe page
+   * @returns {Object} Page in project format
+   */
+  convertPageToProjectFormat(page) {
+    return {
+      id: page.id || `page-${Date.now()}`,
+      name: page.page,
+      section: page.section || '',
+      rationale: page.rationale || '',
+      status: page.status || 'complete',
+      blocks: (page.blocks || []).map((block, blockIndex) => ({
+        id: block.id || `block-${Date.now()}-${blockIndex}`,
+        ...block,
+      })),
+    }
+  },
+
+  /**
    * Legacy: Converteer wireframe JSON naar project pages format
    * @deprecated Gebruik convertToProjectFormat voor nieuwe implementaties
    * @param {Object|Array} wireframeJson - Wireframe JSON
@@ -180,7 +291,7 @@ export const wireframeService = {
       .replace(/\s+/g, ' ')
       .trim()
       .split(' ')
-      .map((word, index) => index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word, index) => (index === 0 ? word : word.charAt(0).toUpperCase() + word.slice(1)))
       .join('')
   },
 }

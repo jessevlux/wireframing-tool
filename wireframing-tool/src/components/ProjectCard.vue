@@ -1,4 +1,5 @@
 <script setup>
+import { computed } from 'vue'
 import { Trash2, FileText, Clock, ChevronRight } from 'lucide-vue-next'
 
 const props = defineProps({
@@ -23,11 +24,12 @@ const handleDelete = (e) => {
   emit('delete', props.project.id, e)
 }
 
-const card = props.darkMode ? 'bg-zinc-900' : 'bg-white'
-const border = props.darkMode ? 'border-zinc-800' : 'border-gray-200'
-const text1 = props.darkMode ? 'text-zinc-100' : 'text-gray-900'
-const text2 = props.darkMode ? 'text-zinc-400' : 'text-gray-600'
-const hover = props.darkMode ? 'hover:bg-zinc-800' : 'hover:bg-gray-100'
+// Reactive computed styles for dark/light mode
+const card = computed(() => (props.darkMode ? 'bg-zinc-900' : 'bg-white'))
+const border = computed(() => (props.darkMode ? 'border-zinc-800' : 'border-gray-200'))
+const text1 = computed(() => (props.darkMode ? 'text-zinc-100' : 'text-gray-900'))
+const text2 = computed(() => (props.darkMode ? 'text-zinc-400' : 'text-gray-600'))
+const hover = computed(() => (props.darkMode ? 'hover:bg-zinc-800' : 'hover:bg-gray-50'))
 
 const getStatusColor = (status) => {
   switch (status) {

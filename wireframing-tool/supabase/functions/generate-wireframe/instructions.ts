@@ -50,8 +50,11 @@ Analyseer welke content types nodig zijn:
 - Een one-pager alleen als er weinig content is (en leg kort uit waarom).
 - Footer is altijd verplicht als laatste blok van elke pagina.
 - **Elke pagina moet een \`section\` property hebben** die verwijst naar een section handle.
-- BELANGRIJK – Detail page component: Dit is ALLEEN voor detailpagina's (Project Detail, News Detail). Als een pagina een Detail page blok bevat, dan bestaat die pagina uit exact: Detail page, CalltoAction, Footer. Geen andere blokken.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven NIET meegenomen te worden in de sitemap en JSON.
+
+**Per channel section maak je TWEE pagina's:**
+1. **Overzichtspagina** (gekoppeld aan single section met \`fetchesFrom\`)
+2. **Detailpagina** (gekoppeld aan de channel section zelf)
 
 Geef een uitleg met:
 
@@ -62,6 +65,50 @@ Geef een uitleg met:
 - Hoe de structuur conversie en gebruikservaring ondersteunt
 
 Gebruik optioneel marketing- en gedragspsychologie modellen om de keuzes te motiveren.
+
+---
+
+## Beslislogica voor Blokken (VERPLICHT)
+
+### Wanneer entrySection gebruiken
+
+Een blok MOET \`blockType: "entrySection"\` en \`fetchesFrom\` hebben wanneer:
+- De content uit een channel section komt (nieuws, projecten, locaties, producten, etc.)
+- De items dynamisch worden beheerd in het CMS
+- Het een overzichtspagina is die entries toont
+
+Een blok is staticContent ALLEEN wanneer:
+- De content hardcoded is en niet uit het CMS komt
+- Er geen onderliggende channel entries zijn
+- De informatie niet elders hergebruikt wordt
+
+### Wanneer Detail page component gebruiken
+
+Een pagina MOET het Detail page component gebruiken wanneer:
+- De pagina-section type "channel" is
+- De pagina één individuele entry toont (niet een overzicht)
+
+Voorbeelden:
+- "Nieuws detail" → gebruikt Detail page (3 blokken: Detail page, CTA, Footer)
+- "Project detail" → gebruikt Detail page
+- "Nieuws overzicht" → gebruikt NIET Detail page (gebruikt Grid met entrySection)
+
+### Component Selectie
+
+**Voor overzichtspagina's van channels:**
+- Gebruik Grid, News, of Projects component
+- Voeg \`blockType: "entrySection"\` en \`fetchesFrom: "channelHandle"\` toe
+- GEEN handmatige cards/children toevoegen - data komt uit CMS
+
+**Voor detailpagina's van channels:**
+- Gebruik ALLEEN: Detail page, CalltoAction, Footer
+- Geen andere blokken
+
+**Voor handmatige content (geen CMS data):**
+- Gebruik componenten zonder entrySection
+- Voeg children toe waar nodig
+
+---
 
 ### Stap 4. JSON output (direct aansluitend)
 
