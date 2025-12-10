@@ -4,10 +4,11 @@ import { useRouter } from 'vue-router'
 import { Plus, Search, FileText, Moon, Sun } from 'lucide-vue-next'
 import ProjectCard from '../components/ProjectCard.vue'
 import { projectService } from '../services/projectService.js'
+import { useTheme } from '../composables/useTheme.js'
 
 const router = useRouter()
+const { darkMode, toggleDarkMode, bg, card, border, text1, text2, hover } = useTheme()
 
-const darkMode = ref(true)
 const projects = ref([])
 const searchQuery = ref('')
 const showToast = ref(false)
@@ -54,13 +55,6 @@ const filteredProjects = computed(() => {
   )
 })
 
-const bg = computed(() => (darkMode.value ? 'bg-zinc-950' : 'bg-gray-50'))
-const card = computed(() => (darkMode.value ? 'bg-zinc-900' : 'bg-white'))
-const border = computed(() => (darkMode.value ? 'border-zinc-800' : 'border-gray-200'))
-const text1 = computed(() => (darkMode.value ? 'text-zinc-100' : 'text-gray-900'))
-const text2 = computed(() => (darkMode.value ? 'text-zinc-400' : 'text-gray-600'))
-const hover = computed(() => (darkMode.value ? 'hover:bg-zinc-800' : 'hover:bg-gray-100'))
-
 // Methods
 const showNotification = (message) => {
   toastMessage.value = message
@@ -68,10 +62,6 @@ const showNotification = (message) => {
   setTimeout(() => {
     showToast.value = false
   }, 3000)
-}
-
-const toggleDarkMode = () => {
-  darkMode.value = !darkMode.value
 }
 
 const goToNewProject = () => {

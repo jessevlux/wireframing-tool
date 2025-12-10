@@ -1,5 +1,8 @@
 <script setup>
 import { GripVertical, ChevronUp, ChevronDown, Trash2 } from 'lucide-vue-next'
+import { useTheme } from '../composables/useTheme.js'
+
+const { card, border, hover, darkMode } = useTheme()
 
 const props = defineProps({
   block: {
@@ -67,6 +70,37 @@ const getBlockDescription = () => {
 
   return 'Configureer eigenschappen →'
 }
+
+// Helper om block type badge te tonen
+const getBlockTypeLabel = () => {
+  const block = props.block
+  if (block.blockType === 'entrySection' || block.fetchesFrom) {
+    return 'Entry Section'
+  }
+  if (block.component === 'Kolommen' || block.component === 'CalltoAction') {
+    return 'Column Section'
+  }
+  if (
+    block.component === 'Grid' ||
+    block.component === 'LogoSlider' ||
+    block.component === 'MediaSlider'
+  ) {
+    return 'Static Content'
+  }
+  return null
+}
+
+// Badge kleur op basis van type
+const getBlockTypeBadgeClass = () => {
+  const block = props.block
+  if (block.blockType === 'entrySection' || block.fetchesFrom) {
+    return 'bg-emerald-500/20 text-emerald-400'
+  }
+  if (block.component === 'Kolommen' || block.component === 'CalltoAction') {
+    return 'bg-blue-500/20 text-blue-400'
+  }
+  return darkMode.value ? 'bg-zinc-700/50 text-zinc-400' : 'bg-zinc-200 text-zinc-600'
+}
 </script>
 
 <template>
@@ -78,29 +112,38 @@ const getBlockDescription = () => {
     @drop.prevent="emit('drop', block.id, $event)"
     @click="emit('select', block)"
     :class="[
-      'border-2 rounded-xl p-5 cursor-pointer transition-all group',
-      isSelected
-        ? 'border-violet-500 bg-violet-500/5'
-        : isDragOver
-          ? 'border-fuchsia-500 bg-fuchsia-500/10'
-          : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
+      'border-2 rounded-xl p-5 cursor-pointer transition-all group relative',
+      isSelected ? 'border-violet-500 bg-violet-500/5' : `${border} ${card} hover:border-zinc-500`,
+      isDragOver ? 'drag-indicator' : '',
     ]"
   >
     <div class="flex items-center gap-4">
-      <div
-        class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab active:cursor-grabbing"
-      >
+      <div :class="`p-3 rounded-lg align-middle ${hover} cursor-grab active:cursor-grabbing`">
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">
         <div class="flex items-center justify-between mb-1">
-          <h3 class="font-semibold">{{ block.component || block.type }}</h3>
+          <div class="flex items-center gap-2">
+            <h3 class="font-semibold">{{ block.component || block.type }}</h3>
+            <span
+              v-if="getBlockTypeLabel()"
+              :class="['text-xs px-2 py-0.5 rounded', getBlockTypeBadgeClass()]"
+            >
+              {{ getBlockTypeLabel() }}
+            </span>
+            <span
+              v-if="block.fetchesFrom"
+              class="text-xs px-2 py-0.5 rounded bg-violet-500/20 text-violet-400"
+            >
+              → {{ block.fetchesFrom }}
+            </span>
+          </div>
           <div class="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <button
               @click.stop="emit('moveUp')"
               :disabled="isFirst"
               :class="[
-                'p-2 rounded-lg hover:bg-zinc-800',
+                `p-2 rounded-lg ${hover}`,
                 isFirst ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
               ]"
             >
@@ -129,3 +172,17 @@ const getBlockDescription = () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.drag-indicator::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #a855f7, #d946ef);
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
+}
+</style>

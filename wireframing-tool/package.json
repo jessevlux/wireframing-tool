@@ -17,6 +17,7 @@
     "@supabase/supabase-js": "^2.76.1",
     "axios": "^1.12.2",
     "lucide-vue-next": "^0.546.0",
+    "pdfjs-dist": "^5.4.449",
     "pinia": "^3.0.3",
     "vue": "^3.5.22",
     "vue-router": "^4.5.1"

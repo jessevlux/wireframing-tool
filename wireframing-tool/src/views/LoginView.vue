@@ -1,10 +1,13 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { Sun, Moon } from 'lucide-vue-next'
 import { supabase } from '../lib/supabase'
+import { useTheme } from '../composables/useTheme.js'
 
 const router = useRouter()
 const route = useRoute()
+const { darkMode, toggleDarkMode, bg, card, border, text1, hover } = useTheme()
 
 const email = ref('')
 const password = ref('')
@@ -36,8 +39,17 @@ const loginEmailPassword = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100 flex items-center justify-center px-4">
-    <div class="w-full max-w-md bg-zinc-900 border border-zinc-800 rounded-2xl p-8">
+  <div :class="`min-h-screen ${bg} ${text1} flex items-center justify-center px-4`">
+    <!-- Theme Toggle -->
+    <button
+      @click="toggleDarkMode"
+      :class="`fixed top-4 right-4 p-3 rounded-xl ${hover} cursor-pointer`"
+    >
+      <Sun v-if="darkMode" class="w-5 h-5" />
+      <Moon v-else class="w-5 h-5" />
+    </button>
+
+    <div :class="`w-full max-w-md ${card} border ${border} rounded-2xl p-8`">
       <h1 class="text-2xl font-bold mb-6">Inloggen</h1>
 
       <div v-if="errorMsg" class="mb-4 text-red-400 text-sm">{{ errorMsg }}</div>
@@ -47,13 +59,13 @@ const loginEmailPassword = async () => {
           v-model="email"
           type="email"
           placeholder="E-mail"
-          class="w-full px-4 py-3 bg-zinc-950 text-zinc-300 border border-zinc-800 rounded-xl"
+          :class="`w-full px-4 py-3 ${bg} ${text1} border ${border} rounded-xl`"
         />
         <input
           v-model="password"
           type="password"
           placeholder="Wachtwoord"
-          class="w-full px-4 py-3 bg-zinc-950 text-zinc-300 border border-zinc-800 rounded-xl"
+          :class="`w-full px-4 py-3 ${bg} ${text1} border ${border} rounded-xl`"
         />
 
         <button

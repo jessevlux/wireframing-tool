@@ -18,6 +18,7 @@ const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
 
 // Rate limit configuration
@@ -60,36 +61,101 @@ function checkRateLimit(identifier: string): { allowed: boolean; retryAfter?: nu
   return { allowed: true }
 }
 
-// Tool definition for Claude
+// Tool definitions for split AI calls
+// Phase 1: Generate sitemap (sections + page names)
+const sitemapTool = [
+  {
+    name: 'emit_sitemap',
+    description: 'Genereer de sitemap structuur met sections en pagina namen (zonder blokken).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        sitemap: {
+          type: 'object',
+          properties: {
+            sections: {
+              type: 'array',
+              description: 'Array van Craft CMS section definities',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  handle: { type: 'string' },
+                  type: { type: 'string', enum: ['single', 'channel', 'structure'] },
+                  slug: { type: 'string' },
+                  template: { type: 'string' },
+                  entryTypes: { type: 'array', items: { type: 'string' } },
+                  fetchesFrom: { type: 'string' },
+                  categories: { type: 'array', items: { type: 'string' } },
+                },
+                required: ['name', 'handle', 'type', 'slug', 'template'],
+              },
+            },
+            pages: {
+              type: 'array',
+              description: 'Array van pagina namen met rationale (zonder blokken)',
+              items: {
+                type: 'object',
+                properties: {
+                  page: { type: 'string' },
+                  section: { type: 'string' },
+                  rationale: { type: 'string' },
+                },
+                required: ['page', 'section', 'rationale'],
+              },
+            },
+          },
+          required: ['sections', 'pages'],
+        },
+      },
+      required: ['sitemap'],
+    },
+  },
+]
+
+// Phase 2: Generate blocks for specific pages
+const pageBlocksTool = [
+  {
+    name: 'emit_page_blocks',
+    description: "Genereer de blokken voor de opgegeven pagina's.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        pages: {
+          type: 'array',
+          description: "Array van pagina's met hun blokken",
+          items: {
+            type: 'object',
+            properties: {
+              page: { type: 'string' },
+              section: { type: 'string' },
+              rationale: { type: 'string' },
+              blocks: { type: 'array', description: 'Array van component blocks' },
+            },
+            required: ['page', 'section', 'blocks'],
+          },
+        },
+      },
+      required: ['pages'],
+    },
+  },
+]
+
+// Legacy tool for compatibility and auto-repair
 const wireframeTools = [
   {
     name: 'emit_wireframe',
-    description:
-      'VERPLICHT: Gebruik deze tool om de volledige wireframe JSON te retourneren. Geen tekstuele uitleg, alleen deze tool call met de JSON data.',
+    description: 'Retourneer de volledige wireframe JSON met sections en pages.',
     input_schema: {
       type: 'object',
       properties: {
         wireframe: {
-          type: 'array',
-          description: 'Array of page objects, each with page name, rationale, and blocks',
-          items: {
-            type: 'object',
-            properties: {
-              page: {
-                type: 'string',
-                description: 'Name of the page',
-              },
-              rationale: {
-                type: 'string',
-                description: 'Explanation of why this page is structured this way (2-4 sentences)',
-              },
-              blocks: {
-                type: 'array',
-                description: 'Array of component blocks for this page',
-              },
-            },
-            required: ['page', 'rationale', 'blocks'],
+          type: 'object',
+          properties: {
+            sections: { type: 'array' },
+            pages: { type: 'array' },
           },
+          required: ['sections', 'pages'],
         },
       },
       required: ['wireframe'],
@@ -136,6 +202,382 @@ Fix these errors and emit the corrected wireframe using the emit_wireframe tool.
   }
 
   throw new Error('Auto-repair did not return a valid wireframe')
+}
+
+// Phase 1: Generate sitemap (sections + page names without blocks)
+async function generateSitemap(
+  anthropic: any,
+  systemPrompt: string,
+  messageContent: any[],
+  userContext: string,
+): Promise<{ sections: any[]; pages: { page: string; section: string; rationale: string }[] }> {
+  // Extract numPages from userContext if present
+  const numPagesMatch = userContext.match(/EXACT (\d+) sections/)
+  const numPages = numPagesMatch ? parseInt(numPagesMatch[1], 10) : null
+
+  const sitemapPrompt = `${userContext}
+
+FASE 1: Genereer ALLEEN de sitemap structuur.
+- Bepaal welke sections (single/channel/structure) nodig zijn
+- Bepaal welke pagina's er moeten komen
+- Geef per pagina een korte rationale (2-3 zinnen)
+- GEEN blokken genereren in deze fase
+${numPages ? `\n**STRICT: Genereer EXACT ${numPages} pagina's.** Niet meer, niet minder.` : ''}
+
+BELANGRIJK voor channel sections:
+- Maak ALTIJD een overzichtspagina (single) die entries fetcht uit de channel
+- Maak OOK een voorbeeld detailpagina voor elke channel (bijv. "Nieuws detail", "Project detail")
+- De detailpagina krijgt de channel handle als section
+
+BELANGRIJK voor structure sections:
+- Gebruik structure voor hiërarchische content (parent-child relaties)
+- Voorbeelden: Documentatie met sub-pagina's, FAQ met categorieën, Services met sub-services
+- Maak een overzichtspagina (single) en een voorbeeld detailpagina voor de structure
+
+Gebruik de emit_sitemap tool om de sitemap te retourneren.`
+
+  const content = [...messageContent]
+  content[content.length - 1] = { type: 'text', text: sitemapPrompt }
+
+  const response = await anthropic.messages.create({
+    model: 'claude-opus-4-5-20251101',
+    max_tokens: 8000, // Smaller output = less CPU
+    temperature: 0.0,
+    system: systemPrompt,
+    tools: sitemapTool,
+    tool_choice: { type: 'tool', name: 'emit_sitemap' },
+    messages: [{ role: 'user', content }],
+  })
+
+  for (const block of response.content) {
+    if (block.type === 'tool_use' && block.name === 'emit_sitemap') {
+      return block.input.sitemap
+    }
+  }
+
+  throw new Error('Phase 1 did not return valid sitemap')
+}
+
+// Phase 2: Generate blocks for a batch of pages
+async function generatePageBlocks(
+  anthropic: any,
+  systemPrompt: string,
+  sitemap: { sections: any[]; pages: any[] },
+  pageBatch: { page: string; section: string; rationale: string }[],
+  specMd: string,
+): Promise<any[]> {
+  const pageNames = pageBatch.map((p) => p.page).join(', ')
+
+  // Build section types context
+  const sectionTypes = sitemap.sections
+    .map(
+      (s) => `- ${s.handle}: ${s.type}${s.fetchesFrom ? ` (fetches from ${s.fetchesFrom})` : ''}`,
+    )
+    .join('\n')
+
+  // Strict component examples to ensure valid output
+  const componentExamples = `
+**EXACTE COMPONENT STRUCTUUR (volg dit PRECIES):**
+
+1. Hero:
+{"component":"Hero","props":{"Has Title":true,"Hero Title":"Titel","Has Description":true,"Description":"Tekst","Has Usps":false,"Has Button Primary":true,"Has Button Secondary":false},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Knop"}}]}
+
+2. Kolommen (EXACT 2 children: Media + Content Kolommen Block):
+{"component":"Kolommen","props":{"Property 1":"Default"},"children":[{"component":"Media","props":{"Property 1":"Default"}},{"component":"Content Kolommen Block","props":{"Has Accordion":false,"Has Text":true},"children":[{"component":"Text Element","props":{"Has Primary Button":true,"Has Second Button":false,"Has List":false,"Has description":true,"Title of text Block":"Titel","Description":"Tekst"},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]}]}]}
+
+3. Grid staticContent (variant bepaalt aantal cards - Default=3):
+{"component":"Grid","props":{"Property 1":"Default","Title":"Onze diensten"},"children":[{"component":"Inner Grid Card","index":0,"props":{"Title":"Card 1","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]},{"component":"Inner Grid Card","index":1,"props":{"Title":"Card 2","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]},{"component":"Inner Grid Card","index":2,"props":{"Title":"Card 3","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]}]}
+
+4. Grid entrySection (GEEN children - data komt uit CMS):
+{"component":"Grid","blockType":"entrySection","fetchesFrom":"news","props":{"Property 1":"Default","Title":"Laatste nieuws"}}
+
+5. Detailpage (ALLEEN voor channel pagina's - EXACT 3 blokken totaal):
+{"component":"Detailpage","props":{"Has Project Header":false,"Has News Header":true,"Paragraph 1":"Intro tekst","Paragraph 2":"Meer details","Has Highlight Paragraph":true,"Highlight Title":"Uitgelicht","Highlight Paragraph":"Belangrijke info","Paragraph 3 Title":"Vervolg","Paragraph 3":"Meer content","Paragraph 4":"Afsluitende tekst","Has More Projects":false,"Has More News":true}}
+
+6. CalltoAction:
+{"component":"CalltoAction","props":{"Has Title":true,"Title":"CTA Titel","Has Description":true,"Description":"CTA tekst","Has Usps":false,"Has Button Primary":true,"Has Button Secondary":false},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Neem contact op"}}]}
+
+7. Footer:
+{"component":"Footer","props":{"Has Column 1":true,"Header 1":"Navigatie","Link1A":"Home","Link1B":"Over ons","Has Column 2":true,"Header 2":"Contact","Link2A":"info@email.com","Has Column 3":false,"Has Column 4":false,"Has Nieuwsbrief":false}}
+
+8. Contactform:
+{"component":"Contactform","props":{}}
+
+9. MediaGroot:
+{"component":"MediaGroot","props":{}}
+
+10. MediaSlider:
+{"component":"MediaSlider","props":{"Title":"Galerij"}}
+
+**KRITIEK: Gebruik EXACT deze prop namen (hoofdlettergevoelig!). Geen extra props toevoegen.**`
+
+  // Generic decision rules
+  const decisionRules = `
+**BESLISREGELS (VERPLICHT VOLGEN):**
+
+1. SECTION TYPE BEPAALT BLOKKEN:
+   - "channel" section → ALLEEN: Detailpage, CalltoAction, Footer (niets anders!)
+   - "single" section met fetchesFrom → gebruik entrySection blokken
+   - "single" section zonder fetchesFrom → normale blokken
+
+2. VARIANT BEPAALT CHILDREN:
+   Kies EERST een variant, genereer dan EXACT dat aantal children.
+   - Grid Default → 3 Inner Grid Cards
+   - Grid Variant2 → 4 Inner Grid Cards
+   - Grid Variant3 → 2 Inner Grid Cards
+
+3. COMPONENT STRUCTUUR IS EXACT:
+   - Kolommen: ALTIJD exact 2 children [Media, Content Kolommen Block]
+   - entrySection: GEEN children (data komt uit CMS)
+   - Niet meer, niet minder, niet anders
+
+4. ENTRYSECTION VOOR DYNAMISCHE CONTENT:
+   Als content uit een channel komt → blockType: "entrySection" + fetchesFrom
+   GEEN handmatige cards bij entrySection
+`
+
+  const blocksPrompt = `FASE 2: Genereer de blokken voor deze pagina's: ${pageNames}
+
+**Section types (check dit voor elke pagina):**
+${sectionTypes}
+
+${decisionRules}
+
+${componentExamples}
+
+**Pagina's om te verwerken:**
+${JSON.stringify(pageBatch, null, 2)}
+
+Genereer voor elke pagina een blocks array. Check EERST het section type, pas dan de beslisregels toe.`
+
+  const response = await anthropic.messages.create({
+    model: 'claude-opus-4-5-20251101',
+    max_tokens: 32000,
+    temperature: 0.0,
+    system:
+      'Je bent een wireframe generator. Genereer EXACT valide JSON volgens de gegeven voorbeelden. Gebruik PRECIES de prop namen uit de voorbeelden.',
+    tools: pageBlocksTool,
+    tool_choice: { type: 'tool', name: 'emit_page_blocks' },
+    messages: [{ role: 'user', content: blocksPrompt }],
+  })
+
+  for (const block of response.content) {
+    if (block.type === 'tool_use' && block.name === 'emit_page_blocks') {
+      return block.input.pages
+    }
+  }
+
+  throw new Error(`Phase 2 did not return blocks for: ${pageNames}`)
+}
+
+// Component name normalization map (common AI mistakes -> correct names)
+const COMPONENT_NAME_MAP: Record<string, string> = {
+  ButtonPrimary: 'Button Primary',
+  'Primary Button': 'Button Primary',
+  'button primary': 'Button Primary',
+  ButtonSecondary: 'Button Secondary',
+  'Secondary Button': 'Button Secondary',
+  'button secondary': 'Button Secondary',
+  InnerGridCard: 'Inner Grid Card',
+  GridCard: 'Inner Grid Card',
+  'Inner grid card': 'Inner Grid Card',
+  ContentKolommenBlock: 'Content Kolommen Block',
+  'Content kolommen block': 'Content Kolommen Block',
+  TextElement: 'Text Element',
+  'Text element': 'Text Element',
+  AccordionList: 'Accordion list',
+  'Accordion List': 'Accordion list',
+  NewsCard: 'News Card',
+  'news card': 'News Card',
+  hero: 'Hero',
+  media: 'Media',
+  footer: 'Footer',
+  grid: 'Grid',
+  form: 'Form',
+  news: 'News',
+  projects: 'Projects',
+}
+
+// Prop name normalization for specific components
+const PROP_FIXES: Record<string, Record<string, string>> = {
+  'Button Primary': {
+    'Text Secondary Button': 'Text primary button',
+    'Text secondary button': 'Text primary button',
+    'text primary button': 'Text primary button',
+  },
+  'Button Secondary': {
+    'Text primary button': 'Text Secondary Button',
+    'text secondary button': 'Text Secondary Button',
+    'Text secondary button': 'Text Secondary Button',
+  },
+}
+
+// Recursively sanitize a component/block and its children
+function sanitizeComponent(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+
+  // Normalize component name
+  if (obj.component) {
+    const normalized = COMPONENT_NAME_MAP[obj.component]
+    if (normalized) {
+      obj.component = normalized
+    }
+  }
+
+  // Fix prop names for this component
+  if (obj.component && obj.props && PROP_FIXES[obj.component]) {
+    const fixes = PROP_FIXES[obj.component]
+    const newProps: Record<string, any> = {}
+    for (const [key, value] of Object.entries(obj.props)) {
+      const fixedKey = fixes[key] || key
+      newProps[fixedKey] = value
+    }
+    obj.props = newProps
+  }
+
+  // Ensure Button Primary has correct props if secondary props are present
+  if (obj.component === 'Button Primary' && obj.props) {
+    // If it has Secondary button text but not primary, it's likely meant to be Button Secondary
+    if (obj.props['Text Secondary Button'] && !obj.props['Text primary button']) {
+      obj.component = 'Button Secondary'
+    }
+    // Remove any secondary button props from Button Primary
+    delete obj.props['Text Secondary Button']
+  }
+
+  // Ensure Button Secondary has correct props
+  if (obj.component === 'Button Secondary' && obj.props) {
+    // If it has primary button text but not secondary, it's likely meant to be Button Primary
+    if (obj.props['Text primary button'] && !obj.props['Text Secondary Button']) {
+      obj.component = 'Button Primary'
+    }
+    // Remove any primary button props from Button Secondary
+    delete obj.props['Text primary button']
+  }
+
+  // Recursively process children
+  if (Array.isArray(obj.children)) {
+    obj.children = obj.children.map((child: any) => sanitizeComponent(child))
+  }
+
+  return obj
+}
+
+// Sanitize entire wireframe (all pages and blocks)
+function sanitizeWireframe(wireframe: any): any {
+  if (!wireframe || !wireframe.pages) return wireframe
+
+  for (const page of wireframe.pages) {
+    if (Array.isArray(page.blocks)) {
+      page.blocks = page.blocks.map((block: any) => sanitizeComponent(block))
+    }
+  }
+
+  return wireframe
+}
+
+// Repair individual page blocks with detailed schema rules
+async function repairPageBlocks(
+  anthropic: any,
+  page: any,
+  errors: any[],
+  specMd: string,
+): Promise<any> {
+  // Extract unique error patterns for clearer repair instructions
+  const errorPatterns = new Set<string>()
+  const propIssues: string[] = []
+
+  for (const err of errors.slice(0, 20)) {
+    const path = err.instancePath || ''
+    const keyword = err.keyword || ''
+    const message = err.message || ''
+
+    if (keyword === 'const') {
+      // Component name mismatch
+      const expected = err.params?.allowedValue
+      if (expected) {
+        errorPatterns.add(
+          `Component name must be exactly "${expected}" (including spaces and capitalization)`,
+        )
+      }
+    } else if (keyword === 'required') {
+      const missing = err.params?.missingProperty
+      if (missing) {
+        propIssues.push(`Missing required property: "${missing}"`)
+      }
+    } else if (keyword === 'additionalProperties') {
+      const extra = err.params?.additionalProperty
+      if (extra) {
+        propIssues.push(`Remove unexpected property: "${extra}"`)
+      }
+    } else if (keyword === 'enum') {
+      const allowed = err.params?.allowedValues?.join(', ')
+      if (allowed) {
+        errorPatterns.add(`Value must be one of: ${allowed}`)
+      }
+    }
+  }
+
+  const schemaRules = `
+EXACT COMPONENT NAMES (case-sensitive with spaces):
+- "Hero" (not "hero")
+- "Button Primary" (not "ButtonPrimary" or "Primary Button")
+- "Button Secondary" (not "ButtonSecondary" or "Secondary Button")
+- "Inner Grid Card" (not "InnerGridCard" or "GridCard")
+- "Content Kolommen Block" (not "ContentKolommenBlock")
+- "Text Element" (not "TextElement")
+- "Accordion list" (not "AccordionList")
+- "News Card" (not "NewsCard")
+- "Media" (not "media")
+
+EXACT PROP NAMES (case-sensitive):
+- For Button Primary: "Property 1": "Default", "Text primary button": "..."
+- For Button Secondary: "Property 1": "Default", "Text Secondary Button": "..."
+- Boolean props: "Has Title", "Has Description", "Has Usps", "Has Button Primary", "Has Button Secondary"
+- Do NOT add props that aren't defined for a component`
+
+  const repairPrompt = `Fix the validation errors in this page JSON and return the corrected version.
+
+**Issues Found:**
+${Array.from(errorPatterns).slice(0, 5).join('\n')}
+${propIssues.slice(0, 5).join('\n')}
+
+**Schema Rules:**
+${schemaRules}
+
+**Current Page JSON:**
+${JSON.stringify(page, null, 2)}
+
+Fix all component names to match EXACTLY as specified (with correct spaces and capitalization).
+Fix all prop names to match EXACTLY as specified.
+Remove any properties not defined in the schema.
+Add any missing required properties.
+
+Return the fixed page using emit_page_blocks tool.`
+
+  const response = await anthropic.messages.create({
+    model: 'claude-opus-4-5-20251101',
+    max_tokens: 16000,
+    temperature: 0.0,
+    system:
+      'You are a JSON validation specialist. Fix schema validation errors precisely. Pay close attention to exact string matching for component names and property names.',
+    tools: pageBlocksTool,
+    tool_choice: { type: 'tool', name: 'emit_page_blocks' },
+    messages: [{ role: 'user', content: repairPrompt }],
+  })
+
+  for (const block of response.content) {
+    if (block.type === 'tool_use' && block.name === 'emit_page_blocks') {
+      const repairedPages = block.input.pages
+      if (repairedPages && repairedPages.length > 0) {
+        return repairedPages[0]
+      }
+    }
+  }
+
+  // Return original if repair fails
+  console.warn(`Repair failed for page: ${page.page}`)
+  return page
 }
 
 interface ProjectFile {
@@ -214,8 +656,8 @@ serve(async (req) => {
     const returnDummyData = () => {
       console.log('Returning dummy data (demo account or no API key)')
 
-      // Load dummy data and replace placeholders
-      const dummyWireframe = JSON.parse(JSON.stringify(dummyDataTemplate))
+      // Load dummy data (already in correct format with sections and pages)
+      const dummyData = JSON.parse(JSON.stringify(dummyDataTemplate))
 
       // Replace placeholders in the dummy data
       const replaceInObject = (obj: any): any => {
@@ -238,12 +680,12 @@ serve(async (req) => {
         return obj
       }
 
-      const processedDummyData = replaceInObject(dummyWireframe)
+      const processedDummyData = replaceInObject(dummyData)
 
       return new Response(
         JSON.stringify({
           success: true,
-          sitemapProposal: `# Dummy Sitemap voor ${projectName}\n\n${useDummyData ? '**DEMO ACCOUNT:** Dit is demo data om onnodige API calls te voorkomen.\n\n' : '**LET OP:** Dit is dummy data omdat er geen Anthropic API key is geconfigureerd.\n\n'}## Homepage\n- Hero sectie met title en USPs\n- Grid met 3 diensten\n- Call to Action\n- Footer\n\n## Contact\n- Hero met contacttitel\n- Kolommen met formulier\n- Footer\n${useDummyData ? '' : '\nConfigureer ANTHROPIC_API_KEY voor echte AI-gegenereerde wireframes.'}`,
+          sitemapProposal: `# Dummy Sitemap voor ${projectName}\n\n${useDummyData ? '**DEMO ACCOUNT:** Dit is demo data om onnodige API calls te voorkomen.\n\n' : '**LET OP:** Dit is dummy data omdat er geen Anthropic API key is geconfigureerd.\n\n'}## Homepage\n- Hero sectie met title en USPs\n- Grid met 3 diensten\n- Entry section met nieuws\n- Call to Action\n- Footer\n\n## Nieuws Overzicht\n- Hero\n- Entry section met alle nieuws\n- Footer\n\n## Contact\n- Hero met contacttitel\n- Kolommen met formulier\n- Footer\n${useDummyData ? '' : '\nConfigureer ANTHROPIC_API_KEY voor echte AI-gegenereerde wireframes.'}`,
           wireframeJson: processedDummyData,
           fullResponse: useDummyData
             ? 'Demo data - geen AI gebruikt'
@@ -297,8 +739,6 @@ serve(async (req) => {
       instructionsMd,
       '\n# Spec\n',
       specMd,
-      '\n# Components Schema (JSON Schema)\n',
-      JSON.stringify(componentsSchemaJson, null, 2),
     ].join('\n')
 
     const userPromptText = `Genereer een wireframe voor het volgende project:
@@ -310,7 +750,7 @@ ${description ? `**Beschrijving:** ${description}` : ''}
 ${additionalContext ? `**Extra context:** ${additionalContext}` : ''}
 ${files && files.length > 0 ? `\n**Aantal bijgevoegde bestanden:** ${files.length} (zie bijgevoegde documenten voor extra context)` : ''}
 
-${numPages ? `**Gevraagd aantal pagina's:** ${numPages} (gebruik dit als richtlijn, maar pas aan indien nodig)` : "**Bepaal zelf het optimale aantal pagina's** op basis van de projectbeschrijving en best practices"}
+${numPages ? `**STRICT: Genereer EXACT ${numPages} sections (pagina's).** Niet meer, niet minder. Combineer content als nodig om aan dit aantal te voldoen.` : "**Bepaal zelf het optimale aantal pagina's** op basis van de projectbeschrijving, best practices en/of bijgevoegd document."}
 
 KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLEEN een tool call met de volledige JSON. Start direct met de tool call, geen uitleg vooraf.`
 
@@ -348,315 +788,276 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
       text: userPromptText,
     })
 
-    console.log('Calling Anthropic API...')
+    console.log('Starting split AI calls...')
     const callStart = Date.now()
 
-    // Call Anthropic API with tools (opt for faster model / fewer tokens for large inputs)
-    const isLargeInput = (description?.length || 0) > 500 || (files && files.length > 0)
-    const selectedModel = 'claude-opus-4-5-20251101'
-    const maxTokens = 64000
+    // Create a TransformStream for SSE
+    const { readable, writable } = new TransformStream()
+    const writer = writable.getWriter()
+    const encoder = new TextEncoder()
 
-    // Retry logic for Anthropic API overload errors (529) and empty tool calls
-    const maxRetries = 3
-    const baseDelay = 1000 // 1 second
-    let message: any = null
-    let lastError: any = null
-    let wireframeJson: any = null
+    // Helper to send SSE event
+    const sendEvent = async (event: string, data: any) => {
+      await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+    }
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // Start async processing with split calls
+    ;(async () => {
       try {
-        message = await anthropic.messages.create({
-          model: selectedModel,
-          max_tokens: maxTokens,
-          temperature: 0.0, // Lower temperature for more deterministic tool use
-          system: systemPrompt,
-          tools: wireframeTools,
-          tool_choice: { type: 'tool', name: 'emit_wireframe' }, // Force tool use
-          messages: [
-            {
-              role: 'user',
-              content: messageContent,
-            },
-          ],
+        await sendEvent('progress', { message: 'Sitemap structuur genereren...' })
+
+        // Phase 1: Generate sitemap
+        console.log('Phase 1: Generating sitemap...')
+        const sitemap = await generateSitemap(
+          anthropic,
+          systemPrompt,
+          messageContent,
+          userPromptText,
+        )
+        console.log(
+          `Sitemap generated: ${sitemap.sections.length} sections, ${sitemap.pages.length} pages`,
+        )
+
+        // Send sitemap_ready event - frontend can create project and redirect
+        const emptyPages = sitemap.pages.map((p: any, idx: number) => ({
+          id: `temp-${idx}`,
+          page: p.page,
+          section: p.section,
+          rationale: p.rationale,
+          blocks: [],
+          status: 'pending', // Will be updated when generated
+        }))
+
+        await sendEvent('sitemap_ready', {
+          sections: sitemap.sections,
+          pages: emptyPages,
         })
 
-        // Check if tool call has valid data
-        wireframeJson = null
-        for (const content of message.content) {
-          if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
-            wireframeJson = content.input?.wireframe
-            break
-          }
-        }
+        await sendEvent('progress', {
+          message: `Sitemap gereed: ${sitemap.pages.length} pagina's gevonden`,
+        })
 
-        // If we have valid wireframe JSON, success - break out of retry loop
-        if (wireframeJson && Array.isArray(wireframeJson) && wireframeJson.length > 0) {
-          if (attempt > 0) {
-            console.log(`Anthropic API call succeeded on attempt ${attempt + 1}`)
-          }
-          break
-        }
+        // Phase 2: Generate blocks in batches
+        const BATCH_SIZE = 4 // Process 4 pages at a time for speed
+        const allPages: any[] = []
+        const totalBatches = Math.ceil(sitemap.pages.length / BATCH_SIZE)
 
-        // Empty or invalid tool call - retry if we have attempts left
-        if (attempt < maxRetries) {
-          const delay = baseDelay * Math.pow(2, attempt) // Exponential backoff: 1s, 2s, 4s
-          console.warn(
-            `Empty or invalid tool call, retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`,
+        for (let i = 0; i < sitemap.pages.length; i += BATCH_SIZE) {
+          const batch = sitemap.pages.slice(i, i + BATCH_SIZE)
+          const batchNum = Math.floor(i / BATCH_SIZE) + 1
+          const pageNames = batch.map((p: any) => p.page).join(', ')
+          const percentage = Math.round((batchNum / totalBatches) * 100)
+
+          await sendEvent('progress', {
+            message: `Pagina's genereren (${percentage}%): ${pageNames}...`,
+          })
+
+          console.log(
+            `Phase 2: Generating blocks for batch ${batchNum}/${totalBatches}: ${pageNames}`,
           )
-          await new Promise((resolve) => setTimeout(resolve, delay))
-          continue
+
+          try {
+            const pagesWithBlocks = await generatePageBlocks(
+              anthropic,
+              systemPrompt,
+              sitemap,
+              batch,
+              specMd,
+            )
+
+            // Mark pages as complete and add to allPages
+            const completedPages = pagesWithBlocks.map((p: any) => ({
+              ...p,
+              status: 'complete',
+            }))
+            allPages.push(...completedPages)
+
+            // Send pages_generated event for live updates
+            await sendEvent('pages_generated', {
+              pages: completedPages,
+              batchNum,
+              totalBatches,
+              percentage,
+            })
+          } catch (batchError: any) {
+            console.error(`Batch ${batchNum} failed:`, batchError)
+            // Continue with other batches, but mark this one as failed
+            const failedPages = batch.map((page: any) => ({
+              ...page,
+              blocks: [],
+              status: 'error',
+              error: batchError.message,
+            }))
+            allPages.push(...failedPages)
+
+            // Send pages_generated with error status
+            await sendEvent('pages_generated', {
+              pages: failedPages,
+              batchNum,
+              totalBatches,
+              percentage,
+            })
+          }
         }
 
-        // Max retries reached with empty tool call
-        throw new Error('AI returned empty or invalid wireframe after all retries')
+        // Combine sitemap sections with pages
+        // Remove status/error properties before validation (schema has additionalProperties: false)
+        const cleanedPages = allPages.map((page: any) => {
+          const { status, error, ...cleanPage } = page
+          return cleanPage
+        })
+
+        const wireframeJson: any = {
+          sections: sitemap.sections,
+          pages: cleanedPages,
+        }
+
+        await sendEvent('progress', { message: "Pagina's valideren en repareren..." })
+
+        // First, sanitize common issues programmatically (faster and more reliable than AI)
+        sanitizeWireframe(wireframeJson)
+        console.log('Wireframe sanitized (component names and prop names normalized)')
+
+        // Validate full wireframe with complete schema (has all $ref definitions)
+        const ajv = new Ajv({ allErrors: true, strict: false })
+        const validate = ajv.compile(componentsSchemaJson)
+        const valid = validate(wireframeJson)
+
+        if (!valid && validate.errors && validate.errors.length > 0) {
+          // Log first few errors to identify common issues
+          console.log(`Validation found ${validate.errors.length} errors`)
+          console.log('First 3 errors:', JSON.stringify(validate.errors.slice(0, 3), null, 2))
+
+          // Repair loop (max 2 attempts)
+          const MAX_REPAIR_ATTEMPTS = 2
+          for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+            // Re-validate to get current errors
+            const currentValid = validate(wireframeJson)
+            if (currentValid) break
+
+            const currentErrors = validate.errors || []
+            if (currentErrors.length === 0) break
+
+            // Group errors by page index
+            const errorsByPage: Map<number, any[]> = new Map()
+            for (const error of currentErrors) {
+              // Error path looks like "/pages/0/blocks/1/..."
+              const match = error.instancePath?.match(/^\/pages\/(\d+)/)
+              if (match) {
+                const pageIndex = parseInt(match[1], 10)
+                if (!errorsByPage.has(pageIndex)) {
+                  errorsByPage.set(pageIndex, [])
+                }
+                errorsByPage.get(pageIndex)!.push(error)
+              }
+            }
+
+            if (errorsByPage.size === 0) break
+
+            console.log(
+              `Repair attempt ${attempt}: ${currentErrors.length} errors in ${errorsByPage.size} pages`,
+            )
+
+            // Repair each page with errors
+            let repairedCount = 0
+            for (const [pageIndex, pageErrors] of errorsByPage) {
+              const page = wireframeJson.pages[pageIndex]
+              if (!page) continue
+
+              console.log(
+                `Page "${page.page}" has ${pageErrors.length} errors:`,
+                pageErrors[0]?.message || pageErrors[0]?.keyword,
+              )
+              try {
+                const repairedPage = await repairPageBlocks(anthropic, page, pageErrors, specMd)
+                wireframeJson.pages[pageIndex] = repairedPage
+                repairedCount++
+                await sendEvent('progress', {
+                  message: `Pagina gerepareerd: ${page.page} (poging ${attempt}, ${repairedCount}/${errorsByPage.size})`,
+                })
+              } catch (repairError) {
+                console.error(`Failed to repair page ${page.page}:`, repairError)
+              }
+            }
+
+            if (repairedCount > 0) {
+              console.log(`Repair attempt ${attempt}: fixed ${repairedCount} pages`)
+            }
+          }
+        } else {
+          console.log('Validation passed, no repairs needed')
+        }
+
+        // Final validation check
+        const finalValidation = validate(wireframeJson)
+        const isFullyValidated = finalValidation === true
+        const remainingErrors = validate.errors?.length || 0
+
+        if (isFullyValidated) {
+          await sendEvent('progress', { message: '✓ Wireframe 100% gevalideerd!' })
+        } else {
+          await sendEvent('progress', {
+            message: `⚠ ${remainingErrors} validatiefouten overgebleven`,
+          })
+        }
+
+        // Log completion
+        const elapsed = Math.round((Date.now() - callStart) / 1000)
+        console.log(
+          `Complete: ${wireframeJson.sections.length} sections, ${wireframeJson.pages.length} pages in ${elapsed}s (validated: ${isFullyValidated})`,
+        )
+
+        // Send success event with validation status
+        await sendEvent('complete', {
+          success: true,
+          validated: isFullyValidated,
+          validationErrors: remainingErrors,
+          sitemapProposal: '',
+          wireframeJson,
+          usage: {
+            inputTokens: 0,
+            outputTokens: 0,
+          },
+        })
+
+        await writer.close()
       } catch (error: any) {
-        lastError = error
+        console.error('Split call error:', error)
+
         const status = error?.status || error?.response?.status
         const isOverloaded = status === 529 || error?.error?.type === 'overloaded_error'
 
-        // Only retry on 529 overloaded errors
-        if (isOverloaded && attempt < maxRetries) {
-          const delay = baseDelay * Math.pow(2, attempt) // Exponential backoff: 1s, 2s, 4s
-          console.warn(
-            `Anthropic API overloaded (529), retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`,
-          )
-          await new Promise((resolve) => setTimeout(resolve, delay))
-          continue
-        }
-
-        // Not a retryable error or max retries reached - throw
-        throw error
-      }
-    }
-
-    // If we exhausted retries and still no message, throw last error
-    if (!message) {
-      throw lastError || new Error('Failed to get response from Anthropic API after retries')
-    }
-
-    // Save full communication to Supabase Storage for inspection (skip for large input; add short timeout)
-    let logFilePath: string | null = null
-    try {
-      if (!isLargeInput) {
-        const supabaseUrl = Deno.env.get('SUPABASE_URL')
-        const supabaseServiceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-
-        if (supabaseUrl && supabaseServiceRoleKey) {
-          const supabase = createClient(supabaseUrl, supabaseServiceRoleKey)
-          const bucket = 'ai-logs'
-
-          try {
-            await supabase.storage.createBucket(bucket, { public: false })
-          } catch (_) {}
-
-          const safeProject = projectName.replace(/[^a-z0-9_-]+/gi, '-').toLowerCase()
-          const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-          const fileName = `full-log/${timestamp}_${safeProject}.json`
-
-          const fullLog = {
-            timestamp: new Date().toISOString(),
-            project: {
-              name: projectName,
-              company: companyName,
-              description,
-              numPages,
-              language,
-              additionalContext,
-            },
-            request: {
-              systemPrompt,
-              userPrompt: userPromptText,
-              model: selectedModel,
-              temperature: 0.2,
-              maxTokens,
-              tools: wireframeTools,
-              hasAttachments: !!(files && files.length > 0),
-              attachmentCount: files?.length || 0,
-            },
-            response: {
-              full: message,
-              contentBlocks: message.content.map((block: any) => ({
-                type: block.type,
-                ...(block.type === 'text'
-                  ? { text: block.text, length: block.text.length }
-                  : block.type === 'tool_use'
-                    ? { tool: block.name, hasData: !!block.input }
-                    : {}),
-              })),
-            },
-            metadata: {
-              id: message.id,
-              model: message.model,
-              usage: message.usage,
-              stopReason: message.stop_reason,
-            },
-          }
-
-          const fileBody = new Blob([JSON.stringify(fullLog, null, 2)], {
-            type: 'application/json',
-          })
-
-          const abort = new AbortController()
-          const t = setTimeout(() => abort.abort(), 5000)
-          const { error: uploadError } = await supabase.storage
-            .from(bucket)
-            .upload(fileName, fileBody, {
-              upsert: true,
-              contentType: 'application/json',
-              signal: abort.signal,
-            })
-          clearTimeout(t)
-          if (!uploadError) {
-            logFilePath = `${bucket}/${fileName}`
-            console.log('Log saved to Storage:', fileName)
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Error saving log file:', e)
-    }
-
-    console.log('Response received')
-
-    // Extract wireframe JSON and sitemap proposal
-    // wireframeJson is already set from retry loop if valid, otherwise parse again
-    let sitemapProposal = ''
-    let responseText = ''
-
-    // Parse response: prioritize tool_use, fallback to text + code block
-    // Only parse if wireframeJson wasn't already set in retry loop
-    if (!wireframeJson || !Array.isArray(wireframeJson) || wireframeJson.length === 0) {
-      wireframeJson = null
-      for (const content of message.content) {
-        if (content.type === 'text') {
-          responseText += content.text
-        } else if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
-          wireframeJson = content.input?.wireframe
-        }
-      }
-    } else {
-      // Extract text for sitemap proposal if we already have wireframeJson
-      for (const content of message.content) {
-        if (content.type === 'text') {
-          responseText += content.text
-        }
-      }
-    }
-
-    // Fallback: if no tool_use, try to extract JSON from text (code blocks or raw JSON)
-    if (!wireframeJson && responseText) {
-      // Try code block first
-      const jsonMatch = responseText.match(/```json\s*([\s\S]*?)\s*```/)
-      if (jsonMatch) {
         try {
-          wireframeJson = JSON.parse(jsonMatch[1])
-        } catch (e) {
-          console.error('Failed to parse JSON from code block:', e)
+          await sendEvent('error', {
+            error: isOverloaded
+              ? 'Anthropic API is temporarily overloaded'
+              : error?.message || 'Unknown error',
+            message: isOverloaded
+              ? 'De AI service is momenteel overbelast. Probeer het later opnieuw.'
+              : `Er is een fout opgetreden: ${error?.message}`,
+            retryable: isOverloaded,
+          })
+        } catch {
+          // Ignore write errors
+        }
+
+        try {
+          await writer.close()
+        } catch {
+          // Ignore close errors
         }
       }
+    })()
 
-      // If still no JSON, try to find raw JSON array in text
-      if (!wireframeJson) {
-        const arrayMatch = responseText.match(/\[\s*\{[\s\S]*\}\s*\]/)
-        if (arrayMatch) {
-          try {
-            wireframeJson = JSON.parse(arrayMatch[0])
-          } catch (e) {
-            console.error('Failed to parse JSON from raw text:', e)
-          }
-        }
-      }
-    }
-
-    // Extract sitemap proposal
-    if (responseText) {
-      const jsonStart = responseText.indexOf('```json')
-      sitemapProposal =
-        jsonStart > 0 ? responseText.substring(0, jsonStart).trim() : responseText.trim()
-    }
-
-    // Validate wireframe JSON with schema
-    if (wireframeJson) {
-      const ajv = new Ajv({ allErrors: true, strict: false })
-      const validate = ajv.compile(componentsSchemaJson)
-      const valid = validate(wireframeJson)
-
-      if (!valid) {
-        const elapsedMs = Date.now() - callStart
-        const skipRepair = elapsedMs > 45000 || isLargeInput
-        console.warn('Validation failed', {
-          elapsedMs,
-          skipRepair,
-          errors: validate.errors?.length,
-        })
-        if (!skipRepair) {
-          try {
-            wireframeJson = await attemptAutoRepair(
-              anthropic,
-              wireframeJson,
-              validate.errors,
-              systemPrompt,
-            )
-            console.log('Auto-repair successful')
-          } catch (repairError) {
-            console.error('Auto-repair failed:', repairError)
-          }
-        } else {
-          console.log(
-            'Skipping auto-repair due to time/size constraints; returning best-effort result',
-          )
-        }
-      }
-    } else {
-      console.error('No wireframe JSON in response')
-    }
-
-    console.log(
-      `Complete: ${wireframeJson?.length || 0} pages, ${message.usage.input_tokens}/${message.usage.output_tokens} tokens`,
-    )
-
-    // Hard guard: als er geen bruikbare array is, error met 502 (niet "success")
-    if (!Array.isArray(wireframeJson) || wireframeJson.length === 0) {
-      console.error('No valid wireframe JSON returned from model', {
-        hasWireframeJson: !!wireframeJson,
-        isArray: Array.isArray(wireframeJson),
-        length: wireframeJson?.length,
-        responseText: responseText?.substring(0, 500), // First 500 chars for debugging
-      })
-      return new Response(
-        JSON.stringify({
-          error: 'AI did not return valid wireframe JSON',
-          message:
-            'De AI heeft geen geldig wireframe geretourneerd. Probeer het opnieuw met een kortere beschrijving of zonder bijlagen.',
-          hint: 'Probeer kortere beschrijving of zonder bijlagen; of probeer opnieuw.',
-          fullResponse: responseText || null,
-          details: {
-            hasWireframeJson: !!wireframeJson,
-            isArray: Array.isArray(wireframeJson),
-            length: wireframeJson?.length,
-          },
-        }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-      )
-    }
-
-    // Return response
-    return new Response(
-      JSON.stringify({
-        success: true,
-        sitemapProposal,
-        wireframeJson,
-        fullResponse: responseText,
-        logFilePath, // Path to detailed log file in storage
-        usage: {
-          inputTokens: message.usage.input_tokens,
-          outputTokens: message.usage.output_tokens,
-        },
-      }),
-      {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    // Return SSE stream immediately
+    return new Response(readable, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
       },
-    )
+    })
   } catch (error: any) {
     console.error('Error:', error)
 

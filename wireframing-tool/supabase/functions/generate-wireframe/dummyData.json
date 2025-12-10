@@ -1,1219 +1,941 @@
-[
-  {
-    "page": "Homepage (DUMMY)",
-    "rationale": "De homepage fungeert als segmentatie-hub met een sterke hero die AUGA's kernboodschap presenteert, gevolgd door drie duidelijk gescheiden segment-kaarten met USPs. Dit ondersteunt de customer journey door bezoekers direct naar hun relevante markt te leiden en conversie-intent op te bouwen.",
-    "blocks": [
-      {
-        "component": "Hero",
-        "props": {
-          "Has Title": true,
-          "Hero Title": "Pompen voor elke markt",
-          "Has Description": true,
-          "Description": "AUGA levert innovatieve pompoplossingen voor vijvers, tuinen en industrie. Kies uw segment en ontdek de perfecte oplossing.",
-          "Has Usps": true,
-          "Usp 1": "Meer dan 20 jaar expertise",
-          "Usp 2": "Duurzame en efficiënte oplossingen",
-          "Usp 3": "Persoonlijk advies en support",
-          "Has Button Primary": true,
-          "Has Button Secondary": false
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Ontdek uw segment"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Grid",
-        "props": {
-          "Property 1": "Default",
-          "Title": "Onze drie marktsegmenten"
-        },
-        "children": [
-          {
-            "component": "Inner Grid Card",
-            "index": 0,
-            "props": {
-              "Title": "Blauwe Markt",
-              "Description": "Vijvers, waterfeatures en decoratieve wateroplossingen voor particulieren en professionals.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Naar blauwe markt"
-                }
-              }
-            ]
+{
+  "sections": [
+    {
+      "name": "Home",
+      "handle": "homePage",
+      "type": "single",
+      "slug": "home",
+      "template": "_pages/home/entry.twig",
+      "entryTypes": ["homePage"]
+    },
+    {
+      "name": "Agenda overzicht",
+      "handle": "agendaOverview",
+      "type": "single",
+      "slug": "agenda",
+      "template": "_pages/agenda/index.twig",
+      "entryTypes": ["agendaOverview"],
+      "fetchesFrom": "events"
+    },
+    {
+      "name": "Events",
+      "handle": "events",
+      "type": "channel",
+      "slug": "agenda/{slug}",
+      "template": "_pages/agenda/entry.twig",
+      "entryTypes": ["events"],
+      "categories": ["Feesten", "Live muziek", "Specials"]
+    },
+    {
+      "name": "Werken bij overzicht",
+      "handle": "werkenBijOverview",
+      "type": "single",
+      "slug": "werken-bij",
+      "template": "_pages/werken-bij/index.twig",
+      "entryTypes": ["werkenBijOverview"],
+      "fetchesFrom": "vacatures"
+    },
+    {
+      "name": "Vacatures",
+      "handle": "vacatures",
+      "type": "structure",
+      "slug": "werken-bij/{slug}",
+      "template": "_pages/werken-bij/entry.twig",
+      "entryTypes": ["vacatures"],
+      "categories": ["Parttime", "Fulltime"]
+    },
+    {
+      "name": "Contact",
+      "handle": "contact",
+      "type": "single",
+      "slug": "contact",
+      "template": "_pages/contact/entry.twig",
+      "entryTypes": ["contact"]
+    }
+  ],
+  "pages": [
+    {
+      "page": "Home",
+      "section": "homePage",
+      "rationale": "De homepage volgt de landing page formule: Hero met video trekt direct de aandacht, gevolgd door een agenda-sectie voor urgentie en FOMO. Daarna introduceren we de club met tekst en beeld, tonen we sfeerimpressies voor social proof, en sluiten we af met een werken-bij sectie en contactformulier voor conversie.",
+      "blocks": [
+        {
+          "component": "Hero",
+          "props": {
+            "Usp 1": "Unieke sfeer",
+            "Usp 2": "Top DJ's & live acts",
+            "Usp 3": "Elke week nieuwe events",
+            "Has Usps": true,
+            "Has Title": true,
+            "Hero Title": "Welkom bij Test",
+            "Description": "Dé club voor onvergetelijke avonden. Bekijk onze agenda en scoor je tickets.",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": true
           },
-          {
-            "component": "Inner Grid Card",
-            "index": 1,
-            "props": {
-              "Title": "Groene Markt",
-              "Description": "Tuinpompen, irrigatiesystemen en landschapsarchitectuur-oplossingen.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Naar groene markt"
-                }
-              }
-            ]
-          },
-          {
-            "component": "Inner Grid Card",
-            "index": 2,
-            "props": {
-              "Title": "Grijze Markt",
-              "Description": "Industriële pompen en technische oplossingen voor professionele toepassingen.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Naar grijze markt"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "component": "MediaGroot",
-        "props": {}
-      },
-      {
-        "component": "CalltoAction",
-        "props": {
-          "Has Title": true,
-          "Title": "Klaar voor uw volgende stap?",
-          "Has Description": true,
-          "Description": "Neem contact met ons op voor persoonlijk advies en een op maat gemaakte offerte.",
-          "Has Usps": false,
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
-            }
-          },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Meer informatie"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Footer",
-        "props": {
-          "Has Column 1": true,
-          "Header 1": "Over AUGA",
-          "Link1A": "Over ons",
-          "Link1B": "Onze missie",
-          "Link1C": "Duurzaamheid",
-          "Link1D": "Carrières",
-          "Link1E": "Pers",
-          "Link1F": "",
-          "Link1G": "",
-          "Has Column 2": true,
-          "Header 2": "Producten",
-          "Link2A": "Blauwe markt",
-          "Link2B": "Groene markt",
-          "Link2C": "Grijze markt",
-          "Link2D": "Configurator",
-          "Link2E": "Downloads",
-          "Link2F": "",
-          "Link2G": "",
-          "Has Column 3": true,
-          "Header 3": "Support",
-          "Link3A": "Contact",
-          "Link3B": "FAQ",
-          "Link3C": "Handleidingen",
-          "Link3D": "Garantie",
-          "Link3E": "Onderhoud",
-          "Link3F": "",
-          "Link3G": "",
-          "Has Column 4": true,
-          "Header 4": "Juridisch",
-          "Link4A": "Privacy policy",
-          "Link4B": "Algemene voorwaarden",
-          "Link4C": "Cookies",
-          "Link4D": "Disclaimer",
-          "Link4E": "",
-          "Link4F": "",
-          "Link4G": "",
-          "Has Nieuwsbrief": true
-        }
-      }
-    ]
-  },
-  {
-    "page": "Blauwe Markt",
-    "rationale": "Deze segment-pagina is geoptimaliseerd voor vijver- en waterfeature-klanten met een duidelijke product-hiërarchie, case studies, en een segment-specifiek offerteformulier. De structuur volgt de landing page-formule: problem-solution-social proof-CTA, ondersteund door kolommen-layout voor flexibiliteit.",
-    "blocks": [
-      {
-        "component": "Hero",
-        "props": {
-          "Has Title": true,
-          "Hero Title": "Vijvers & Waterfeatures",
-          "Has Description": true,
-          "Description": "Creëer de perfecte wateromgeving met AUGA's betrouwbare en duurzame pompoplossingen.",
-          "Has Usps": true,
-          "Usp 1": "Stille en energiezuinige pompen",
-          "Usp 2": "Geschikt voor alle vijvergroottes",
-          "Usp 3": "Eenvoudige installatie en onderhoud",
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
-            }
-          },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Brochure downloaden"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Kolommen",
-        "props": {
-          "Property 1": "Default"
-        },
-        "children": [
-          {
-            "component": "Media",
-            "props": {
-              "Property 1": "Default"
-            }
-          },
-          {
-            "component": "Content Kolommen Block",
-            "props": {
-              "Has Accordion": true,
-              "Has Text": true
-            },
-            "children": [
-              {
-                "component": "Text Element",
-                "props": {
-                  "Has Primary Button": false,
-                  "Has Second Button": false,
-                  "Has List": true,
-                  "Has description": true,
-                  "Title of text Block": "Waarom kiezen voor AUGA?",
-                  "Description": "Onze vijverpompen zijn speciaal ontworpen voor langdurige prestaties en minimaal energieverbruik.",
-                  "Usp Text 1": "Gepatenteerde technologie voor optimale wateromloop",
-                  "Usp text 2": "Milieuvriendelijk en kosteneffectief",
-                  "Usp Text 3": "Uitstekende klantenservice en garantie"
-                },
-                "children": []
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Bekijk tickets"
               },
-              {
-                "component": "Accordion list",
-                "props": {
-                  "Has Title": true,
-                  "Title": "Veelgestelde vragen",
-                  "Text": "Welke pompgrootte heb ik nodig?",
-                  "Text 2": "Hoe onderhoud ik mijn pomp?",
-                  "Text 3": "Wat is de levensduur van een AUGA-pomp?",
-                  "Text 4": "Biedt AUGA installatie-ondersteuning?"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "component": "Projects",
-        "props": {
-          "Title": "Succesvolle projecten",
-          "Example category": "Vijver",
-          "Example header": "Privé vijver Amsterdam",
-          "Example description": "Een prachtige 5000L vijver met waterval en fontein.",
-          "Has example project": true,
-          "Has description": true,
-          "Description": "Bekijk hoe AUGA-pompen in echte projecten worden toegepast."
-        },
-        "children": [
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Vijver",
-              "Project header": "Privé vijver Amsterdam",
-              "Description": "5000L vijver met waterval en fontein"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Waterfeature",
-              "Project header": "Bedrijfstuin Rotterdam",
-              "Description": "Decoratieve waterfeature voor kantoor"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Vijver",
-              "Project header": "Koivijver Utrecht",
-              "Description": "Professionele koivijver met filtersysteem"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Waterfeature",
-              "Project header": "Demonstratievijver",
-              "Description": "Showroom vijver voor klantendemonstraties"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Vijver",
-              "Project header": "Landgoed Friesland",
-              "Description": "Grote vijver met natuurlijke wateromloop"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Waterfeature",
-              "Project header": "Hotel Limburg",
-              "Description": "Luxe waterfeature in hoteluin"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Vijver",
-              "Project header": "Particuliere tuin Brabant",
-              "Description": "Kleine vijver met fontein"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Waterfeature",
-              "Project header": "Gemeentelijk park",
-              "Description": "Openbare waterfeature in stadspark"
-            }
-          }
-        ]
-      },
-      {
-        "component": "CalltoAction",
-        "props": {
-          "Has Title": true,
-          "Title": "Klaar om uw vijver te realiseren?",
-          "Has Description": true,
-          "Description": "Onze experts helpen u graag met het kiezen van de juiste pomp en installatie.",
-          "Has Usps": false,
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
-            }
-          },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Bel ons: 06 10 80 63 77"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Footer",
-        "props": {
-          "Has Column 1": true,
-          "Header 1": "Over AUGA",
-          "Link1A": "Over ons",
-          "Link1B": "Onze missie",
-          "Link1C": "Duurzaamheid",
-          "Link1D": "Carrières",
-          "Link1E": "Pers",
-          "Link1F": "",
-          "Link1G": "",
-          "Has Column 2": true,
-          "Header 2": "Producten",
-          "Link2A": "Blauwe markt",
-          "Link2B": "Groene markt",
-          "Link2C": "Grijze markt",
-          "Link2D": "Configurator",
-          "Link2E": "Downloads",
-          "Link2F": "",
-          "Link2G": "",
-          "Has Column 3": true,
-          "Header 3": "Support",
-          "Link3A": "Contact",
-          "Link3B": "FAQ",
-          "Link3C": "Handleidingen",
-          "Link3D": "Garantie",
-          "Link3E": "Onderhoud",
-          "Link3F": "",
-          "Link3G": "",
-          "Has Column 4": true,
-          "Header 4": "Juridisch",
-          "Link4A": "Privacy policy",
-          "Link4B": "Algemene voorwaarden",
-          "Link4C": "Cookies",
-          "Link4D": "Disclaimer",
-          "Link4E": "",
-          "Link4F": "",
-          "Link4G": "",
-          "Has Nieuwsbrief": true
-        }
-      }
-    ]
-  },
-  {
-    "page": "Groene Markt",
-    "rationale": "Deze segment-pagina richt zich op tuinprofessionals en landschapsarchitecten met focus op irrigatiesystemen en integratieoplossingen. De layout combineert product-informatie met praktische use-cases en een professioneel offerteformulier.",
-    "blocks": [
-      {
-        "component": "Hero",
-        "props": {
-          "Has Title": true,
-          "Hero Title": "Tuinpompen & Irrigatie",
-          "Has Description": true,
-          "Description": "Professionele pompoplossingen voor tuinontwerp, irrigatie en landschapsarchitectuur.",
-          "Has Usps": true,
-          "Usp 1": "Betrouwbare prestaties in alle weersomstandigheden",
-          "Usp 2": "Geïntegreerde irrigatieoplossingen",
-          "Usp 3": "Technische ondersteuning voor professionals",
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
-            }
-          },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Technische specs"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Kolommen",
-        "props": {
-          "Property 1": "Variant2"
-        },
-        "children": [
-          {
-            "component": "Content Kolommen Block",
-            "props": {
-              "Has Accordion": true,
-              "Has Text": true
+              "component": "Button Primary"
             },
-            "children": [
-              {
-                "component": "Text Element",
-                "props": {
-                  "Has Primary Button": false,
-                  "Has Second Button": false,
-                  "Has List": true,
-                  "Has description": true,
-                  "Title of text Block": "Oplossingen voor tuinprofessionals",
-                  "Description": "Van kleine tuinen tot grote landschapsprojecten, AUGA heeft de juiste pomp.",
-                  "Usp Text 1": "Modulaire systemen voor flexibel ontwerp",
-                  "Usp text 2": "Energiezuinige en duurzame technologie",
-                  "Usp Text 3": "Eenvoudige integratie met bestaande systemen"
-                },
-                "children": []
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text Secondary Button": "Bekijk agenda"
               },
-              {
-                "component": "Accordion list",
-                "props": {
-                  "Has Title": true,
-                  "Title": "Technische ondersteuning",
-                  "Text": "Hoe kies ik de juiste pompgrootte?",
-                  "Text 2": "Welke materialen zijn beschikbaar?",
-                  "Text 3": "Hoe integreer ik met automatisering?",
-                  "Text 4": "Wat zijn de onderhoudsintervallen?"
-                }
-              }
-            ]
-          },
-          {
-            "component": "Media",
-            "props": {
-              "Property 1": "Variant2"
+              "component": "Button Secondary"
             }
-          }
-        ]
-      },
-      {
-        "component": "Grid",
-        "props": {
-          "Property 1": "Variant2",
-          "Title": "Productcategorieën"
+          ]
         },
-        "children": [
-          {
-            "component": "Inner Grid Card",
-            "index": 0,
-            "props": {
-              "Title": "Tuinpompen",
-              "Description": "Betrouwbare pompen voor watervoorziening en decoratieve elementen.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Bekijk producten"
-                }
-              }
-            ]
+        {
+          "component": "Grid",
+          "props": {
+            "Title": "Aankomende events",
+            "Property 1": "Default"
           },
-          {
-            "component": "Inner Grid Card",
-            "index": 1,
-            "props": {
-              "Title": "Irrigatiesystemen",
-              "Description": "Geautomatiseerde irrigatieoplossingen voor efficiënt waterbeheer.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Bekijk producten"
-                }
-              }
-            ]
-          },
-          {
-            "component": "Inner Grid Card",
-            "index": 2,
-            "props": {
-              "Title": "Accessoires",
-              "Description": "Filters, regelaars en andere componenten voor complete systemen.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Bekijk producten"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "component": "Projects",
-        "props": {
-          "Title": "Referentieprojecten",
-          "Example category": "Landschapsarchitectuur",
-          "Example header": "Tuinontwerp Amsterdam",
-          "Example description": "Professioneel tuinontwerp met geïntegreerd irrigatiesysteem.",
-          "Has example project": true,
-          "Has description": true,
-          "Description": "Bekijk hoe AUGA-pompen in professionele tuinprojecten worden ingezet."
-        },
-        "children": [
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Landschapsarchitectuur",
-              "Project header": "Tuinontwerp Amsterdam",
-              "Description": "Professioneel tuinontwerp met irrigatie"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Bedrijfstuin",
-              "Project header": "Kantooruin Rotterdam",
-              "Description": "Groene werkplek met automatische irrigatie"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Openbare ruimte",
-              "Project header": "Stadspark Utrecht",
-              "Description": "Groot irrigatieproject voor openbare groenvoorziening"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Particuliere tuin",
-              "Project header": "Privétuin Groningen",
-              "Description": "Luxe tuinontwerp met waterfeatures"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Sportfaciliteit",
-              "Project header": "Golfbaan Friesland",
-              "Description": "Professioneel irrigatiesysteem voor golfbaan"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Horecaomgeving",
-              "Project header": "Terras Limburg",
-              "Description": "Tuinontwerp voor restaurant met waterfeature"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Schooltuin",
-              "Project header": "Educatieve tuin Brabant",
-              "Description": "Onderwijsproject met duurzame irrigatie"
-            }
-          },
-          {
-            "component": "Project Card",
-            "props": {
-              "Category": "Tuincentrum",
-              "Project header": "Tuincentrum Noord",
-              "Description": "Demonstratietuinen met AUGA-systemen"
-            }
-          }
-        ]
-      },
-      {
-        "component": "CalltoAction",
-        "props": {
-          "Has Title": true,
-          "Title": "Professioneel advies nodig?",
-          "Has Description": true,
-          "Description": "Onze technische experts ondersteunen u bij het ontwerp en de implementatie van uw project.",
-          "Has Usps": false,
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
-            }
-          },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Technisch overleg"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Footer",
-        "props": {
-          "Has Column 1": true,
-          "Header 1": "Over AUGA",
-          "Link1A": "Over ons",
-          "Link1B": "Onze missie",
-          "Link1C": "Duurzaamheid",
-          "Link1D": "Carrières",
-          "Link1E": "Pers",
-          "Link1F": "",
-          "Link1G": "",
-          "Has Column 2": true,
-          "Header 2": "Producten",
-          "Link2A": "Blauwe markt",
-          "Link2B": "Groene markt",
-          "Link2C": "Grijze markt",
-          "Link2D": "Configurator",
-          "Link2E": "Downloads",
-          "Link2F": "",
-          "Link2G": "",
-          "Has Column 3": true,
-          "Header 3": "Support",
-          "Link3A": "Contact",
-          "Link3B": "FAQ",
-          "Link3C": "Handleidingen",
-          "Link3D": "Garantie",
-          "Link3E": "Onderhoud",
-          "Link3F": "",
-          "Link3G": "",
-          "Has Column 4": true,
-          "Header 4": "Juridisch",
-          "Link4A": "Privacy policy",
-          "Link4B": "Algemene voorwaarden",
-          "Link4C": "Cookies",
-          "Link4D": "Disclaimer",
-          "Link4E": "",
-          "Link4F": "",
-          "Link4G": "",
-          "Has Nieuwsbrief": true
-        }
-      }
-    ]
-  },
-  {
-    "page": "Grijze Markt",
-    "rationale": "Deze B2B-segment pagina richt zich op industriële klanten en engineers met focus op technische specificaties, configuratoren, en professionele documentatie. De layout benadrukt efficiency, ROI, en technische ondersteuning met een zakelijke tone-of-voice.",
-    "blocks": [
-      {
-        "component": "Hero",
-        "props": {
-          "Has Title": true,
-          "Hero Title": "Industriële Pompoplossingen",
-          "Has Description": true,
-          "Description": "Betrouwbare, schaalbare en kosteneffectieve pompoplossingen voor industriële toepassingen.",
-          "Has Usps": true,
-          "Usp 1": "Geverifieerde prestaties en betrouwbaarheid",
-          "Usp 2": "Configureerbare systemen voor specifieke behoeften",
-          "Usp 3": "24/7 technische ondersteuning",
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
-            }
-          },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Configurator starten"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Kolommen",
-        "props": {
-          "Property 1": "Default"
-        },
-        "children": [
-          {
-            "component": "Media",
-            "props": {
-              "Property 1": "Default"
-            }
-          },
-          {
-            "component": "Content Kolommen Block",
-            "props": {
-              "Has Accordion": true,
-              "Has Text": true
-            },
-            "children": [
-              {
-                "component": "Text Element",
-                "props": {
-                  "Has Primary Button": false,
-                  "Has Second Button": false,
-                  "Has List": true,
-                  "Has description": true,
-                  "Title of text Block": "Waarom AUGA voor industrie?",
-                  "Description": "Onze industriële pompen zijn ontworpen voor maximale uptime en minimale TCO.",
-                  "Usp Text 1": "Geverifieerde ISO-certificering en compliance",
-                  "Usp text 2": "Predictive maintenance en monitoring",
-                  "Usp Text 3": "Snelle delivery en lokale support"
-                },
-                "children": []
+          "blockType": "entrySection",
+          "fetchesFrom": "events",
+          "children": [
+            {
+              "index": 0,
+              "props": {
+                "Title": "Card 1",
+                "Has button": false,
+                "Description": "Beschrijving"
               },
-              {
-                "component": "Accordion list",
-                "props": {
-                  "Has Title": true,
-                  "Title": "Technische vragen",
-                  "Text": "Welke materialen zijn beschikbaar?",
-                  "Text 2": "Hoe configureer ik een systeem?",
-                  "Text 3": "Wat zijn de certificeringen?",
-                  "Text 4": "Hoe zit het met onderhoud en service?"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "component": "Grid",
-        "props": {
-          "Property 1": "Variant3",
-          "Title": "Industriële productlijn"
-        },
-        "children": [
-          {
-            "component": "Inner Grid Card",
-            "index": 0,
-            "props": {
-              "Title": "Standaard pompen",
-              "Description": "Betrouwbare pompen voor standaard industriële toepassingen.",
-              "Has button": true
+              "children": [],
+              "component": "Inner Grid Card"
             },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Specs downloaden"
-                }
-              }
-            ]
-          },
-          {
-            "component": "Inner Grid Card",
-            "index": 1,
-            "props": {
-              "Title": "Aangepaste oplossingen",
-              "Description": "Maatwerk pompoplossingen voor specifieke industriële processen.",
-              "Has button": true
+            {
+              "index": 1,
+              "props": {
+                "Title": "Card 2",
+                "Has button": false,
+                "Description": "Beschrijving"
+              },
+              "children": [],
+              "component": "Inner Grid Card"
             },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Specs downloaden"
-                }
-              }
-            ]
-          },
-          {
-            "component": "Inner Grid Card",
-            "index": 2,
-            "props": {
-              "Title": "Onderdelen & service",
-              "Description": "Vervangingsonderdelen en professionele servicecontracten.",
-              "Has button": true
-            },
-            "children": [
-              {
-                "component": "Button Primary",
-                "props": {
-                  "Property 1": "Default",
-                  "Text primary button": "Specs downloaden"
-                }
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "component": "CalltoAction",
-        "props": {
-          "Has Title": true,
-          "Title": "Klaar voor een technisch overleg?",
-          "Has Description": true,
-          "Description": "Onze engineers helpen u graag met het ontwerp van uw industriële pompoplossing.",
-          "Has Usps": false,
-          "Has Button Primary": true,
-          "Has Button Secondary": true
-        },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Offerte aanvragen"
+            {
+              "index": 2,
+              "props": {
+                "Title": "Card 3",
+                "Has button": false,
+                "Description": "Beschrijving"
+              },
+              "children": [],
+              "component": "Inner Grid Card"
             }
+          ]
+        },
+        {
+          "component": "Kolommen",
+          "props": {
+            "Property 1": "Default"
           },
-          {
-            "component": "Button Secondary",
-            "props": {
-              "Property 1": "Default",
-              "Text Secondary Button": "Technisch overleg"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Footer",
-        "props": {
-          "Has Column 1": true,
-          "Header 1": "Over AUGA",
-          "Link1A": "Over ons",
-          "Link1B": "Onze missie",
-          "Link1C": "Duurzaamheid",
-          "Link1D": "Carrières",
-          "Link1E": "Pers",
-          "Link1F": "",
-          "Link1G": "",
-          "Has Column 2": true,
-          "Header 2": "Producten",
-          "Link2A": "Blauwe markt",
-          "Link2B": "Groene markt",
-          "Link2C": "Grijze markt",
-          "Link2D": "Configurator",
-          "Link2E": "Downloads",
-          "Link2F": "",
-          "Link2G": "",
-          "Has Column 3": true,
-          "Header 3": "Support",
-          "Link3A": "Contact",
-          "Link3B": "FAQ",
-          "Link3C": "Handleidingen",
-          "Link3D": "Garantie",
-          "Link3E": "Onderhoud",
-          "Link3F": "",
-          "Link3G": "",
-          "Has Column 4": true,
-          "Header 4": "Juridisch",
-          "Link4A": "Privacy policy",
-          "Link4B": "Algemene voorwaarden",
-          "Link4C": "Cookies",
-          "Link4D": "Disclaimer",
-          "Link4E": "",
-          "Link4F": "",
-          "Link4G": "",
-          "Has Nieuwsbrief": true
-        }
-      }
-    ]
-  },
-  {
-    "page": "Contact & Offerte",
-    "rationale": "Deze centrale contactpagina ondersteunt lead-capture met segment-specifieke formulieren, verkooppunten, en downloadbare content. De pagina combineert tekstuele informatie met interactieve elementen (formulieren, accordions) om conversie te maximaliseren en gebruikersvragen te beantwoorden.",
-    "blocks": [
-      {
-        "component": "Hero",
-        "props": {
-          "Has Title": true,
-          "Hero Title": "Contact & Offerte",
-          "Has Description": true,
-          "Description": "Neem contact met ons op voor persoonlijk advies, technische ondersteuning of een offerte.",
-          "Has Usps": true,
-          "Usp 1": "Snelle respons op werkdagen",
-          "Usp 2": "Deskundige adviseurs beschikbaar",
-          "Usp 3": "Gratis offerte en adviesgesprek",
-          "Has Button Primary": false,
-          "Has Button Secondary": false
-        },
-        "children": []
-      },
-      {
-        "component": "Kolommen",
-        "props": {
-          "Property 1": "Default"
-        },
-        "children": [
-          {
-            "component": "Content Kolommen Block",
-            "props": {
-              "Has Accordion": false,
-              "Has Text": true
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default"
+              },
+              "component": "Media"
             },
-            "children": [
-              {
-                "component": "Text Element",
-                "props": {
-                  "Has Primary Button": true,
-                  "Has Second Button": false,
-                  "Has List": true,
-                  "Has description": true,
-                  "Title of text Block": "Contactgegevens",
-                  "Description": "Bereik ons via telefoon, e-mail of het contactformulier.",
-                  "Usp Text 1": "Telefoon: 06 10 80 63 77",
-                  "Usp text 2": "E-mail: info@auga.nl",
-                  "Usp Text 3": "Kantoor: 's-Hertogenbosch"
-                },
-                "children": [
-                  {
-                    "component": "Button Primary",
-                    "props": {
-                      "Property 1": "Default",
-                      "Text primary button": "Bel ons nu"
+            {
+              "props": {
+                "Has Text": true,
+                "Has Accordion": true
+              },
+              "children": [
+                {
+                  "props": {
+                    "Has List": false,
+                    "Description": "Al jaren zijn wij het kloppend hart van het nachtleven. Met een unieke mix van muziek, sfeer en gastvrijheid zorgen we voor avonden die je niet snel vergeet.",
+                    "Has description": true,
+                    "Has Second Button": false,
+                    "Has Primary Button": true,
+                    "Title of text Block": "Over onze club"
+                  },
+                  "children": [
+                    {
+                      "props": {
+                        "Property 1": "Default",
+                        "Text primary button": "Meer over ons"
+                      },
+                      "component": "Button Primary"
                     }
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "component": "Media",
-            "props": {
-              "Property 1": "Default"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Grid",
-        "props": {
-          "Property 1": "Default",
-          "Title": "Verkooppunten"
-        },
-        "children": [
-          {
-            "component": "Inner Grid Card",
-            "index": 0,
-            "props": {
-              "Title": "Hoofdkantoor",
-              "Description": "AUGA B.V., 's-Hertogenbosch. Bezoek ons voor een persoonlijk overleg.",
-              "Has button": false
-            },
-            "children": []
-          },
-          {
-            "component": "Inner Grid Card",
-            "index": 1,
-            "props": {
-              "Title": "Distributeur Noord",
-              "Description": "Erkende distributeur voor Noord-Nederland met volledige productlijn.",
-              "Has button": false
-            },
-            "children": []
-          },
-          {
-            "component": "Inner Grid Card",
-            "index": 2,
-            "props": {
-              "Title": "Distributeur Zuid",
-              "Description": "Erkende distributeur voor Zuid-Nederland met technische ondersteuning.",
-              "Has button": false
-            },
-            "children": []
-          }
-        ]
-      },
-      {
-        "component": "Kolommen",
-        "props": {
-          "Property 1": "Variant2"
-        },
-        "children": [
-          {
-            "component": "Content Kolommen Block",
-            "props": {
-              "Has Accordion": true,
-              "Has Text": true
-            },
-            "children": [
-              {
-                "component": "Text Element",
-                "props": {
-                  "Has Primary Button": false,
-                  "Has Second Button": false,
-                  "Has List": false,
-                  "Has description": true,
-                  "Title of text Block": "Veelgestelde vragen",
-                  "Description": "Vind antwoorden op veelgestelde vragen over onze producten en services."
+                  ],
+                  "component": "Text Element"
                 },
-                "children": []
-              },
-              {
-                "component": "Accordion list",
-                "props": {
-                  "Has Title": true,
-                  "Title": "FAQ",
-                  "Text": "Hoe lang duurt het om een offerte te ontvangen?",
-                  "Text 2": "Biedt AUGA installatie-ondersteuning?",
-                  "Text 3": "Wat zijn de betalingscondities?",
-                  "Text 4": "Hoe zit het met garantie en onderhoud?"
+                {
+                  "props": {
+                    "Text": "Accordion tekst",
+                    "Title": "Accordion titel",
+                    "Text 2": "Tekst 2",
+                    "Text 3": "Tekst 3",
+                    "Text 4": "Tekst 4",
+                    "Has Title": true,
+                    "Text open item": "Open item tekst"
+                  },
+                  "component": "Accordion list"
                 }
-              }
-            ]
-          },
-          {
-            "component": "Media",
-            "props": {
-              "Property 1": "Variant2"
+              ],
+              "component": "Content Kolommen Block"
             }
+          ]
+        },
+        {
+          "component": "MediaSlider",
+          "props": {
+            "Title": "Sfeerimpressie"
           }
-        ]
-      },
-      {
-        "component": "CalltoAction",
-        "props": {
-          "Has Title": true,
-          "Title": "Offerte aanvragen",
-          "Has Description": true,
-          "Description": "Vul het formulier in en ontvang binnen 24 uur een persoonlijke offerte.",
-          "Has Usps": false,
-          "Has Button Primary": true,
-          "Has Button Secondary": false
         },
-        "children": [
-          {
-            "component": "Button Primary",
-            "props": {
-              "Property 1": "Default",
-              "Text primary button": "Naar offerteformulier"
-            }
-          }
-        ]
-      },
-      {
-        "component": "Footer",
-        "props": {
-          "Has Column 1": true,
-          "Header 1": "Over AUGA",
-          "Link1A": "Over ons",
-          "Link1B": "Onze missie",
-          "Link1C": "Duurzaamheid",
-          "Link1D": "Carrières",
-          "Link1E": "Pers",
-          "Link1F": "",
-          "Link1G": "",
-          "Has Column 2": true,
-          "Header 2": "Producten",
-          "Link2A": "Blauwe markt",
-          "Link2B": "Groene markt",
-          "Link2C": "Grijze markt",
-          "Link2D": "Configurator",
-          "Link2E": "Downloads",
-          "Link2F": "",
-          "Link2G": "",
-          "Has Column 3": true,
-          "Header 3": "Support",
-          "Link3A": "Contact",
-          "Link3B": "FAQ",
-          "Link3C": "Handleidingen",
-          "Link3D": "Garantie",
-          "Link3E": "Onderhoud",
-          "Link3F": "",
-          "Link3G": "",
-          "Has Column 4": true,
-          "Header 4": "Juridisch",
-          "Link4A": "Privacy policy",
-          "Link4B": "Algemene voorwaarden",
-          "Link4C": "Cookies",
-          "Link4D": "Disclaimer",
-          "Link4E": "",
-          "Link4F": "",
-          "Link4G": "",
-          "Has Nieuwsbrief": true
-        }
-      }
-    ]
-  },
-  {
-    "page": "Contact",
-    "rationale": "Deze centrale contactpagina ondersteunt lead-capture met segment-specifieke formulieren, verkooppunten, en downloadbare content. De pagina combineert tekstuele informatie met interactieve elementen (formulieren, accordions) om conversie te maximaliseren en gebruikersvragen te beantwoorden.",
-    "blocks": [
-      {
-        "component": "Hero",
-        "props": {
-          "Has Title": true,
-          "Hero Title": "Neem contact op",
-          "Has Description": true,
-          "Description": "We helpen je graag verder",
-          "Has Usps": false,
-          "Has Button Primary": false,
-          "Has Button Secondary": false
-        },
-        "children": []
-      },
-      {
-        "component": "Kolommen",
-        "props": {
-          "Property 1": "Default"
-        },
-        "children": [
-          {
-            "component": "Media",
-            "props": {
-              "Property 1": "Default"
-            }
+        {
+          "component": "Kolommen",
+          "props": {
+            "Property 1": "Variant2"
           },
-          {
-            "component": "Content Kolommen Block",
-            "props": {
-              "Has Accordion": false,
-              "Has Text": true
+          "children": [
+            {
+              "props": {
+                "Property 1": "Variant2"
+              },
+              "component": "Media"
             },
-            "children": [
-              {
-                "component": "Text Element",
-                "props": {
-                  "Has Primary Button": true,
-                  "Has Second Button": false,
-                  "Has List": false,
-                  "Has description": true,
-                  "Title of text Block": "Contacteer ons",
-                  "Description": "Vul het formulier in en we nemen snel contact op"
-                },
-                "children": [
-                  {
-                    "component": "Button Primary",
-                    "props": {
-                      "Property 1": "Default",
-                      "Text primary button": "Verstuur bericht"
+            {
+              "props": {
+                "Has Text": true,
+                "Has Accordion": false
+              },
+              "children": [
+                {
+                  "props": {
+                    "Has List": true,
+                    "Usp Text 1": "Flexibele werktijden",
+                    "Usp Text 3": "Goede vergoeding",
+                    "Usp text 2": "Leuk en jong team",
+                    "Description": "Word onderdeel van ons team! Wij zoeken enthousiaste mensen die samen met ons onvergetelijke avonden willen creëren.",
+                    "Has description": true,
+                    "Has Second Button": false,
+                    "Has Primary Button": true,
+                    "Title of text Block": "Werken bij Test"
+                  },
+                  "children": [
+                    {
+                      "props": {
+                        "Property 1": "Default",
+                        "Text primary button": "Bekijk vacatures"
+                      },
+                      "component": "Button Primary"
                     }
-                  }
-                ]
-              }
-            ]
+                  ],
+                  "component": "Text Element"
+                }
+              ],
+              "component": "Content Kolommen Block"
+            }
+          ]
+        },
+        {
+          "component": "Form",
+          "props": {
+            "Field 3": "Je bericht",
+            "Has Name": true,
+            "Has Email": true,
+            "Has Field 1": false,
+            "Has Field 2": false,
+            "Has Field 3": true,
+            "Has Dropdown": false,
+            "Has Checkboxes": false,
+            "Has Date Timed": false,
+            "Has Phone number": true,
+            "Has Radio Buttons": false
           }
-        ]
-      },
-      {
-        "component": "Footer",
-        "props": {
-          "Has Column 1": true,
-          "Header 1": "Over ons",
-          "Link1A": "Wie zijn wij",
-          "Link1B": "Ons team",
-          "Link1C": "Carrière",
-          "Has Column 2": true,
-          "Header 2": "Diensten",
-          "Link2A": "Dienst 1",
-          "Link2B": "Dienst 2",
-          "Link2C": "Dienst 3",
-          "Has Column 3": true,
-          "Header 3": "Contact",
-          "Link3A": "Email ons",
-          "Link3B": "Bel ons",
-          "Link3C": "Locatie",
-          "Has Column 4": false,
-          "Has Nieuwsbrief": true
+        },
+        {
+          "component": "Footer",
+          "props": {
+            "Link1A": "Home",
+            "Link1B": "Agenda",
+            "Link1C": "Werken bij",
+            "Link1D": "Contact",
+            "Link2A": "info@test.nl",
+            "Link2B": "020-1234567",
+            "Link2C": "Clubstraat 1, Amsterdam",
+            "Link3A": "Instagram",
+            "Link3B": "Facebook",
+            "Link3C": "TikTok",
+            "Header 1": "Menu",
+            "Header 2": "Contact",
+            "Header 3": "Volg ons",
+            "Has Column 1": true,
+            "Has Column 2": true,
+            "Has Column 3": true,
+            "Has Column 4": false,
+            "Has Nieuwsbrief": true
+          }
         }
-      }
-    ]
-  }
-]
+      ]
+    },
+    {
+      "page": "Agenda overzicht",
+      "section": "agendaOverview",
+      "rationale": "De agenda overzichtspagina toont alle events in een overzichtelijk grid. De Hero introduceert de pagina, gevolgd door een News-component die alle events toont met datum, categorie en beschrijving. Dit creëert urgentie en stimuleert ticketverkoop.",
+      "blocks": [
+        {
+          "component": "Hero",
+          "props": {
+            "Has Usps": false,
+            "Has Title": true,
+            "Hero Title": "Onze Agenda",
+            "Description": "Bekijk alle aankomende events en scoor je tickets voordat ze uitverkocht zijn.",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": false
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Direct naar tickets"
+              },
+              "component": "Button Primary"
+            }
+          ]
+        },
+        {
+          "component": "News",
+          "props": {
+            "Title": "Alle events",
+            "Description": "Filter op maand en vind jouw perfecte avond uit."
+          },
+          "fetchesFrom": "events",
+          "children": [
+            {
+              "props": {
+                "Date": "15 januari 2025",
+                "Category": "Feest",
+                "Description": "Nieuwjaarsparty met de beste DJ's"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "22 januari 2025",
+                "Category": "Live muziek",
+                "Description": "Live band night met lokale artiesten"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "29 januari 2025",
+                "Category": "Special",
+                "Description": "Thema-avond: Back to the 90s"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "5 februari 2025",
+                "Category": "Feest",
+                "Description": "Valentijnsparty voor singles"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "12 februari 2025",
+                "Category": "Live muziek",
+                "Description": "Acoustic sessions"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "19 februari 2025",
+                "Category": "Special",
+                "Description": "Carnaval editie"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "26 februari 2025",
+                "Category": "Feest",
+                "Description": "House classics night"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "5 maart 2025",
+                "Category": "Live muziek",
+                "Description": "Open mic night"
+              },
+              "component": "News Card"
+            },
+            {
+              "props": {
+                "Date": "12 maart 2025",
+                "Category": "Special",
+                "Description": "Ladies night special"
+              },
+              "component": "News Card"
+            }
+          ]
+        },
+        {
+          "component": "CalltoAction",
+          "props": {
+            "Title": "Mis geen enkel event",
+            "Has Usps": false,
+            "Has Title": true,
+            "Description": "Schrijf je in voor onze nieuwsbrief en ontvang als eerste updates over nieuwe events.",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": false
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Aanmelden nieuwsbrief"
+              },
+              "component": "Button Primary"
+            }
+          ]
+        },
+        {
+          "component": "Footer",
+          "props": {
+            "Link1A": "Home",
+            "Link1B": "Agenda",
+            "Link1C": "Werken bij",
+            "Link1D": "Contact",
+            "Link2A": "info@test.nl",
+            "Link2B": "020-1234567",
+            "Link2C": "Clubstraat 1, Amsterdam",
+            "Link3A": "Instagram",
+            "Link3B": "Facebook",
+            "Link3C": "TikTok",
+            "Header 1": "Menu",
+            "Header 2": "Contact",
+            "Header 3": "Volg ons",
+            "Has Column 1": true,
+            "Has Column 2": true,
+            "Has Column 3": true,
+            "Has Column 4": false,
+            "Has Nieuwsbrief": true
+          }
+        }
+      ]
+    },
+    {
+      "page": "Event detail",
+      "section": "events",
+      "rationale": "De event detailpagina is een long-form content pagina met focus op conversie (ticketverkoop). De Detailpage component toont alle event-informatie, gevolgd door een sterke CTA voor tickets.",
+      "blocks": [
+        {
+          "component": "Detailpage",
+          "props": {
+            "Paragraph 1": "Maak je klaar voor een onvergetelijke avond! Dit event belooft een mix van de beste muziek, geweldige sfeer en een nacht om nooit te vergeten.",
+            "Paragraph 2": "Onze line-up bestaat uit top DJ's en artiesten die je de hele nacht aan het dansen houden. De deuren openen om 22:00 en we gaan door tot de vroege uurtjes.",
+            "Paragraph 3": "Een avond vol energie, de beste beats en een publiek dat net zo enthousiast is als jij. Onze bar serveert de lekkerste cocktails en drankjes.",
+            "Paragraph 4": "Heb je vragen over dit event? Neem gerust contact met ons op via het onderstaande formulier of bel ons direct.",
+            "Has More News": true,
+            "Has News Header": true,
+            "Highlight Title": "Praktische informatie",
+            "Has More Projects": false,
+            "Paragraph 3 Title": "Wat kun je verwachten?",
+            "Has Project Header": false,
+            "Highlight Paragraph": "Tickets zijn beperkt beschikbaar. Zorg dat je op tijd bent om teleurstelling te voorkomen. Dresscode: smart casual. Minimumleeftijd: 18+.",
+            "Has Highlight Paragraph": true
+          }
+        },
+        {
+          "component": "CalltoAction",
+          "props": {
+            "Title": "Scoor je tickets nu",
+            "Usp 1": "Direct e-ticket",
+            "Usp 2": "Veilig betalen",
+            "Usp 3": "100% garantie",
+            "Has Usps": true,
+            "Has Title": true,
+            "Description": "Wacht niet te lang, tickets zijn beperkt beschikbaar!",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": true
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Koop tickets"
+              },
+              "component": "Button Primary"
+            },
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text Secondary Button": "Stel een vraag"
+              },
+              "component": "Button Secondary"
+            }
+          ]
+        },
+        {
+          "component": "Footer",
+          "props": {
+            "Link1A": "Home",
+            "Link1B": "Agenda",
+            "Link1C": "Werken bij",
+            "Link1D": "Contact",
+            "Link2A": "info@test.nl",
+            "Link2B": "020-1234567",
+            "Link2C": "Clubstraat 1, Amsterdam",
+            "Link3A": "Instagram",
+            "Link3B": "Facebook",
+            "Link3C": "TikTok",
+            "Header 1": "Menu",
+            "Header 2": "Contact",
+            "Header 3": "Volg ons",
+            "Has Column 1": true,
+            "Has Column 2": true,
+            "Has Column 3": true,
+            "Has Column 4": false,
+            "Has Nieuwsbrief": true
+          }
+        }
+      ]
+    },
+    {
+      "page": "Werken bij overzicht",
+      "section": "werkenBijOverview",
+      "rationale": "Deze pagina overtuigt potentiële medewerkers met meerdere content blokken die de voordelen van werken bij de club benadrukken. Het vacature-overzicht in grid-formaat maakt het makkelijk om openstaande functies te bekijken.",
+      "blocks": [
+        {
+          "component": "Hero",
+          "props": {
+            "Usp 1": "Flexibele uren",
+            "Usp 2": "Leuk team",
+            "Usp 3": "Goede vergoeding",
+            "Has Usps": true,
+            "Has Title": true,
+            "Hero Title": "Werken bij Test",
+            "Description": "Word onderdeel van het beste team in het nachtleven. Wij zoeken enthousiaste collega's!",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": false
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Bekijk vacatures"
+              },
+              "component": "Button Primary"
+            }
+          ]
+        },
+        {
+          "component": "Kolommen",
+          "props": {
+            "Property 1": "Default"
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Variant3"
+              },
+              "component": "Media"
+            },
+            {
+              "props": {
+                "Has Text": true,
+                "Has Accordion": false
+              },
+              "children": [
+                {
+                  "props": {
+                    "Has List": true,
+                    "Usp Text 1": "Doorgroeimogelijkheden",
+                    "Usp Text 3": "Personeelskorting",
+                    "Usp text 2": "Gezellige teamuitjes",
+                    "Description": "Bij Test draait alles om passie voor het nachtleven en gastvrijheid. Wij bieden een werkomgeving waar je jezelf kunt zijn en kunt groeien.",
+                    "Has description": true,
+                    "Has Second Button": false,
+                    "Has Primary Button": false,
+                    "Title of text Block": "Waarom werken bij ons?"
+                  },
+                  "children": [],
+                  "component": "Text Element"
+                }
+              ],
+              "component": "Content Kolommen Block"
+            }
+          ]
+        },
+        {
+          "component": "Kolommen",
+          "props": {
+            "Property 1": "Variant2"
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default"
+              },
+              "component": "Media"
+            },
+            {
+              "props": {
+                "Has Text": false,
+                "Has Accordion": true
+              },
+              "children": [
+                {
+                  "props": {
+                    "Text": "Wat zijn de werktijden?",
+                    "Title": "Veelgestelde vragen",
+                    "Text 2": "Hoe ziet het sollicitatieproces eruit?",
+                    "Text 3": "Is ervaring vereist?",
+                    "Text 4": "Wat is het salaris?",
+                    "Has Title": true,
+                    "Text open item": "Onze werktijden zijn flexibel en worden in overleg bepaald. We werken voornamelijk in de avond en nacht, van donderdag tot en met zondag."
+                  },
+                  "component": "Accordion list"
+                }
+              ],
+              "component": "Content Kolommen Block"
+            }
+          ]
+        },
+        {
+          "component": "MediaSlider",
+          "props": {
+            "Title": "Ons team in actie"
+          }
+        },
+        {
+          "component": "Grid",
+          "props": {
+            "Title": "Openstaande vacatures",
+            "Property 1": "Default"
+          },
+          "blockType": "entrySection",
+          "fetchesFrom": "vacatures"
+        },
+        {
+          "component": "CalltoAction",
+          "props": {
+            "Title": "Geen passende vacature?",
+            "Has Usps": false,
+            "Has Title": true,
+            "Description": "Stuur ons een open sollicitatie! We zijn altijd op zoek naar talent.",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": true
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Open sollicitatie"
+              },
+              "component": "Button Primary"
+            },
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text Secondary Button": "Neem contact op"
+              },
+              "component": "Button Secondary"
+            }
+          ]
+        },
+        {
+          "component": "Footer",
+          "props": {
+            "Link1A": "Home",
+            "Link1B": "Agenda",
+            "Link1C": "Werken bij",
+            "Link1D": "Contact",
+            "Link2A": "info@test.nl",
+            "Link2B": "020-1234567",
+            "Link2C": "Clubstraat 1, Amsterdam",
+            "Link3A": "Instagram",
+            "Link3B": "Facebook",
+            "Link3C": "TikTok",
+            "Header 1": "Menu",
+            "Header 2": "Contact",
+            "Header 3": "Volg ons",
+            "Has Column 1": true,
+            "Has Column 2": true,
+            "Has Column 3": true,
+            "Has Column 4": false,
+            "Has Nieuwsbrief": true
+          }
+        }
+      ]
+    },
+    {
+      "page": "Vacature detail",
+      "section": "vacatures",
+      "rationale": "De vacature detailpagina biedt uitgebreide informatie over de functie in long-form formaat. Het sollicitatieformulier met CV-upload staat centraal voor directe conversie.",
+      "blocks": [
+        {
+          "component": "Detailpage",
+          "props": {
+            "Paragraph 1": "Ben jij op zoek naar een dynamische baan in het nachtleven? Dan is deze functie misschien wel perfect voor jou! Lees hieronder meer over wat we zoeken.",
+            "Paragraph 2": "Als onderdeel van ons team werk je in een energieke omgeving waar geen dag hetzelfde is. Je krijgt de kans om te groeien en jezelf te ontwikkelen.",
+            "Paragraph 3": "Enthousiasme, betrouwbaarheid en een passie voor gastvrijheid. Ervaring is een plus, maar geen vereiste - wij leiden je graag op!",
+            "Paragraph 4": "Interesse? Solliciteer direct via onderstaand formulier of neem contact met ons op voor meer informatie.",
+            "Has More News": false,
+            "Has News Header": false,
+            "Highlight Title": "Wat bieden wij?",
+            "Has More Projects": true,
+            "Paragraph 3 Title": "Wat verwachten wij?",
+            "Has Project Header": true,
+            "Highlight Paragraph": "Competitief salaris, flexibele werktijden, een fantastisch team en doorgroeimogelijkheden. Plus: personeelskorting en toegang tot al onze events!",
+            "Has Highlight Paragraph": true
+          }
+        },
+        {
+          "component": "CalltoAction",
+          "props": {
+            "Title": "Direct solliciteren",
+            "Usp 1": "Reactie binnen 3 dagen",
+            "Usp 2": "Persoonlijk gesprek",
+            "Usp 3": "Snel aan de slag",
+            "Has Usps": true,
+            "Has Title": true,
+            "Description": "Bel ons op 020-1234567 of mail naar jobs@test.nl",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": true
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Solliciteer nu"
+              },
+              "component": "Button Primary"
+            },
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text Secondary Button": "Bel ons"
+              },
+              "component": "Button Secondary"
+            }
+          ]
+        },
+        {
+          "component": "Footer",
+          "props": {
+            "Link1A": "Home",
+            "Link1B": "Agenda",
+            "Link1C": "Werken bij",
+            "Link1D": "Contact",
+            "Link2A": "info@test.nl",
+            "Link2B": "020-1234567",
+            "Link2C": "Clubstraat 1, Amsterdam",
+            "Link3A": "Instagram",
+            "Link3B": "Facebook",
+            "Link3C": "TikTok",
+            "Header 1": "Menu",
+            "Header 2": "Contact",
+            "Header 3": "Volg ons",
+            "Has Column 1": true,
+            "Has Column 2": true,
+            "Has Column 3": true,
+            "Has Column 4": false,
+            "Has Nieuwsbrief": true
+          }
+        }
+      ]
+    },
+    {
+      "page": "Contact",
+      "section": "contact",
+      "rationale": "De contactpagina combineert alle contactmogelijkheden: een duidelijk formulier, locatie-informatie en social media links. De korte intro tekst maakt de pagina persoonlijk en uitnodigend.",
+      "blocks": [
+        {
+          "component": "Hero",
+          "props": {
+            "Usp 1": "Snelle reactie",
+            "Usp 2": "Persoonlijk contact",
+            "Usp 3": "Altijd bereikbaar",
+            "Has Usps": true,
+            "Has Title": true,
+            "Hero Title": "Neem contact op",
+            "Description": "Heb je een vraag, wil je een tafel reserveren of heb je andere opmerkingen? We horen graag van je!",
+            "Has Description": true,
+            "Has Button Primary": false,
+            "Has Button Secondary": false
+          }
+        },
+        {
+          "component": "Kolommen",
+          "props": {
+            "Property 1": "Default"
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default"
+              },
+              "component": "Media"
+            },
+            {
+              "props": {
+                "Has Text": true,
+                "Has Accordion": false
+              },
+              "children": [
+                {
+                  "props": {
+                    "Has List": true,
+                    "Usp Text 1": "Clubstraat 1, Amsterdam",
+                    "Usp Text 3": "info@test.nl",
+                    "Usp text 2": "020-1234567",
+                    "Description": "Je kunt ons bereiken via onderstaande contactgegevens of kom langs in onze club.",
+                    "Has description": true,
+                    "Has Second Button": false,
+                    "Has Primary Button": false,
+                    "Title of text Block": "Onze gegevens"
+                  },
+                  "children": [],
+                  "component": "Text Element"
+                }
+              ],
+              "component": "Content Kolommen Block"
+            }
+          ]
+        },
+        {
+          "component": "Contactform",
+          "props": {}
+        },
+        {
+          "component": "Grid",
+          "props": {
+            "Title": "Volg ons op social media",
+            "Property 1": "Default"
+          },
+          "children": [
+            {
+              "index": 0,
+              "props": {
+                "Title": "Instagram",
+                "Has button": true,
+                "Description": "Bekijk onze laatste foto's en stories"
+              },
+              "children": [
+                {
+                  "props": {
+                    "Property 1": "Default",
+                    "Text primary button": "Volg ons"
+                  },
+                  "component": "Button Primary"
+                }
+              ],
+              "component": "Inner Grid Card"
+            },
+            {
+              "index": 1,
+              "props": {
+                "Title": "Facebook",
+                "Has button": true,
+                "Description": "Blijf op de hoogte van events en nieuws"
+              },
+              "children": [
+                {
+                  "props": {
+                    "Property 1": "Default",
+                    "Text primary button": "Like ons"
+                  },
+                  "component": "Button Primary"
+                }
+              ],
+              "component": "Inner Grid Card"
+            },
+            {
+              "index": 2,
+              "props": {
+                "Title": "TikTok",
+                "Has button": true,
+                "Description": "Bekijk onze video's en behind the scenes"
+              },
+              "children": [
+                {
+                  "props": {
+                    "Property 1": "Default",
+                    "Text primary button": "Volg ons"
+                  },
+                  "component": "Button Primary"
+                }
+              ],
+              "component": "Inner Grid Card"
+            }
+          ]
+        },
+        {
+          "component": "CalltoAction",
+          "props": {
+            "Title": "Kom langs!",
+            "Has Usps": false,
+            "Has Title": true,
+            "Description": "We verwelkomen je graag in onze club. Check onze agenda voor de volgende events.",
+            "Has Description": true,
+            "Has Button Primary": true,
+            "Has Button Secondary": true
+          },
+          "children": [
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text primary button": "Bekijk agenda"
+              },
+              "component": "Button Primary"
+            },
+            {
+              "props": {
+                "Property 1": "Default",
+                "Text Secondary Button": "Route plannen"
+              },
+              "component": "Button Secondary"
+            }
+          ]
+        },
+        {
+          "component": "Footer",
+          "props": {
+            "Link1A": "Home",
+            "Link1B": "Agenda",
+            "Link1C": "Werken bij",
+            "Link1D": "Contact",
+            "Link2A": "info@test.nl",
+            "Link2B": "020-1234567",
+            "Link2C": "Clubstraat 1, Amsterdam",
+            "Link3A": "Instagram",
+            "Link3B": "Facebook",
+            "Link3C": "TikTok",
+            "Header 1": "Menu",
+            "Header 2": "Contact",
+            "Header 3": "Volg ons",
+            "Has Column 1": true,
+            "Has Column 2": true,
+            "Has Column 3": true,
+            "Has Column 4": false,
+            "Has Nieuwsbrief": true
+          }
+        }
+      ]
+    }
+  ]
+}
