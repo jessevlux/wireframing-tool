@@ -181,7 +181,7 @@ ${JSON.stringify(invalidJson, null, 2)}
 Fix these errors and emit the corrected wireframe using the emit_wireframe tool.`
 
   const repairMessage = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 64000, // Increased to handle large wireframe responses
     temperature: 0.1,
     system: systemPrompt,
@@ -229,13 +229,18 @@ BELANGRIJK voor channel sections:
 - Maak OOK een voorbeeld detailpagina voor elke channel (bijv. "Nieuws detail", "Project detail")
 - De detailpagina krijgt de channel handle als section
 
+BELANGRIJK voor structure sections:
+- Gebruik structure voor hiërarchische content (parent-child relaties)
+- Voorbeelden: Documentatie met sub-pagina's, FAQ met categorieën, Services met sub-services
+- Maak een overzichtspagina (single) en een voorbeeld detailpagina voor de structure
+
 Gebruik de emit_sitemap tool om de sitemap te retourneren.`
 
   const content = [...messageContent]
   content[content.length - 1] = { type: 'text', text: sitemapPrompt }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 8000, // Smaller output = less CPU
     temperature: 0.0,
     system: systemPrompt,
@@ -286,8 +291,8 @@ async function generatePageBlocks(
 4. Grid entrySection (GEEN children - data komt uit CMS):
 {"component":"Grid","blockType":"entrySection","fetchesFrom":"news","props":{"Property 1":"Default","Title":"Laatste nieuws"}}
 
-5. Detail page (ALLEEN voor channel pagina's - EXACT 3 blokken totaal):
-{"component":"Detail page","props":{"Has Project Header":false,"Has News Header":true,"Paragraph 1":"Intro tekst","Paragraph 2":"Meer details","Has Highlight Paragraph":true,"Highlight Title":"Uitgelicht","Highlight Paragraph":"Belangrijke info","Paragraph 3 Title":"Vervolg","Paragraph 3":"Meer content","Paragraph 4":"Afsluitende tekst","Has More Projects":false,"Has More News":true}}
+5. Detailpage (ALLEEN voor channel pagina's - EXACT 3 blokken totaal):
+{"component":"Detailpage","props":{"Has Project Header":false,"Has News Header":true,"Paragraph 1":"Intro tekst","Paragraph 2":"Meer details","Has Highlight Paragraph":true,"Highlight Title":"Uitgelicht","Highlight Paragraph":"Belangrijke info","Paragraph 3 Title":"Vervolg","Paragraph 3":"Meer content","Paragraph 4":"Afsluitende tekst","Has More Projects":false,"Has More News":true}}
 
 6. CalltoAction:
 {"component":"CalltoAction","props":{"Has Title":true,"Title":"CTA Titel","Has Description":true,"Description":"CTA tekst","Has Usps":false,"Has Button Primary":true,"Has Button Secondary":false},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Neem contact op"}}]}
@@ -311,7 +316,7 @@ async function generatePageBlocks(
 **BESLISREGELS (VERPLICHT VOLGEN):**
 
 1. SECTION TYPE BEPAALT BLOKKEN:
-   - "channel" section → ALLEEN: Detail page, CalltoAction, Footer (niets anders!)
+   - "channel" section → ALLEEN: Detailpage, CalltoAction, Footer (niets anders!)
    - "single" section met fetchesFrom → gebruik entrySection blokken
    - "single" section zonder fetchesFrom → normale blokken
 
@@ -346,7 +351,7 @@ ${JSON.stringify(pageBatch, null, 2)}
 Genereer voor elke pagina een blocks array. Check EERST het section type, pas dan de beslisregels toe.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 32000,
     temperature: 0.0,
     system:
@@ -365,31 +370,197 @@ Genereer voor elke pagina een blocks array. Check EERST het section type, pas da
   throw new Error(`Phase 2 did not return blocks for: ${pageNames}`)
 }
 
-// Repair individual page blocks (smaller token footprint)
+// Component name normalization map (common AI mistakes -> correct names)
+const COMPONENT_NAME_MAP: Record<string, string> = {
+  ButtonPrimary: 'Button Primary',
+  'Primary Button': 'Button Primary',
+  'button primary': 'Button Primary',
+  ButtonSecondary: 'Button Secondary',
+  'Secondary Button': 'Button Secondary',
+  'button secondary': 'Button Secondary',
+  InnerGridCard: 'Inner Grid Card',
+  GridCard: 'Inner Grid Card',
+  'Inner grid card': 'Inner Grid Card',
+  ContentKolommenBlock: 'Content Kolommen Block',
+  'Content kolommen block': 'Content Kolommen Block',
+  TextElement: 'Text Element',
+  'Text element': 'Text Element',
+  AccordionList: 'Accordion list',
+  'Accordion List': 'Accordion list',
+  NewsCard: 'News Card',
+  'news card': 'News Card',
+  hero: 'Hero',
+  media: 'Media',
+  footer: 'Footer',
+  grid: 'Grid',
+  form: 'Form',
+  news: 'News',
+  projects: 'Projects',
+}
+
+// Prop name normalization for specific components
+const PROP_FIXES: Record<string, Record<string, string>> = {
+  'Button Primary': {
+    'Text Secondary Button': 'Text primary button',
+    'Text secondary button': 'Text primary button',
+    'text primary button': 'Text primary button',
+  },
+  'Button Secondary': {
+    'Text primary button': 'Text Secondary Button',
+    'text secondary button': 'Text Secondary Button',
+    'Text secondary button': 'Text Secondary Button',
+  },
+}
+
+// Recursively sanitize a component/block and its children
+function sanitizeComponent(obj: any): any {
+  if (!obj || typeof obj !== 'object') return obj
+
+  // Normalize component name
+  if (obj.component) {
+    const normalized = COMPONENT_NAME_MAP[obj.component]
+    if (normalized) {
+      obj.component = normalized
+    }
+  }
+
+  // Fix prop names for this component
+  if (obj.component && obj.props && PROP_FIXES[obj.component]) {
+    const fixes = PROP_FIXES[obj.component]
+    const newProps: Record<string, any> = {}
+    for (const [key, value] of Object.entries(obj.props)) {
+      const fixedKey = fixes[key] || key
+      newProps[fixedKey] = value
+    }
+    obj.props = newProps
+  }
+
+  // Ensure Button Primary has correct props if secondary props are present
+  if (obj.component === 'Button Primary' && obj.props) {
+    // If it has Secondary button text but not primary, it's likely meant to be Button Secondary
+    if (obj.props['Text Secondary Button'] && !obj.props['Text primary button']) {
+      obj.component = 'Button Secondary'
+    }
+    // Remove any secondary button props from Button Primary
+    delete obj.props['Text Secondary Button']
+  }
+
+  // Ensure Button Secondary has correct props
+  if (obj.component === 'Button Secondary' && obj.props) {
+    // If it has primary button text but not secondary, it's likely meant to be Button Primary
+    if (obj.props['Text primary button'] && !obj.props['Text Secondary Button']) {
+      obj.component = 'Button Primary'
+    }
+    // Remove any primary button props from Button Secondary
+    delete obj.props['Text primary button']
+  }
+
+  // Recursively process children
+  if (Array.isArray(obj.children)) {
+    obj.children = obj.children.map((child: any) => sanitizeComponent(child))
+  }
+
+  return obj
+}
+
+// Sanitize entire wireframe (all pages and blocks)
+function sanitizeWireframe(wireframe: any): any {
+  if (!wireframe || !wireframe.pages) return wireframe
+
+  for (const page of wireframe.pages) {
+    if (Array.isArray(page.blocks)) {
+      page.blocks = page.blocks.map((block: any) => sanitizeComponent(block))
+    }
+  }
+
+  return wireframe
+}
+
+// Repair individual page blocks with detailed schema rules
 async function repairPageBlocks(
   anthropic: any,
   page: any,
   errors: any[],
   specMd: string,
 ): Promise<any> {
-  const repairPrompt = `De pagina "${page.page}" heeft validatie fouten. Fix deze en retourneer de gerepareerde pagina.
+  // Extract unique error patterns for clearer repair instructions
+  const errorPatterns = new Set<string>()
+  const propIssues: string[] = []
 
-**Validation Errors:**
-${JSON.stringify(errors.slice(0, 10), null, 2)}
+  for (const err of errors.slice(0, 20)) {
+    const path = err.instancePath || ''
+    const keyword = err.keyword || ''
+    const message = err.message || ''
 
-**Huidige pagina:**
+    if (keyword === 'const') {
+      // Component name mismatch
+      const expected = err.params?.allowedValue
+      if (expected) {
+        errorPatterns.add(
+          `Component name must be exactly "${expected}" (including spaces and capitalization)`,
+        )
+      }
+    } else if (keyword === 'required') {
+      const missing = err.params?.missingProperty
+      if (missing) {
+        propIssues.push(`Missing required property: "${missing}"`)
+      }
+    } else if (keyword === 'additionalProperties') {
+      const extra = err.params?.additionalProperty
+      if (extra) {
+        propIssues.push(`Remove unexpected property: "${extra}"`)
+      }
+    } else if (keyword === 'enum') {
+      const allowed = err.params?.allowedValues?.join(', ')
+      if (allowed) {
+        errorPatterns.add(`Value must be one of: ${allowed}`)
+      }
+    }
+  }
+
+  const schemaRules = `
+EXACT COMPONENT NAMES (case-sensitive with spaces):
+- "Hero" (not "hero")
+- "Button Primary" (not "ButtonPrimary" or "Primary Button")
+- "Button Secondary" (not "ButtonSecondary" or "Secondary Button")
+- "Inner Grid Card" (not "InnerGridCard" or "GridCard")
+- "Content Kolommen Block" (not "ContentKolommenBlock")
+- "Text Element" (not "TextElement")
+- "Accordion list" (not "AccordionList")
+- "News Card" (not "NewsCard")
+- "Media" (not "media")
+
+EXACT PROP NAMES (case-sensitive):
+- For Button Primary: "Property 1": "Default", "Text primary button": "..."
+- For Button Secondary: "Property 1": "Default", "Text Secondary Button": "..."
+- Boolean props: "Has Title", "Has Description", "Has Usps", "Has Button Primary", "Has Button Secondary"
+- Do NOT add props that aren't defined for a component`
+
+  const repairPrompt = `Fix the validation errors in this page JSON and return the corrected version.
+
+**Issues Found:**
+${Array.from(errorPatterns).slice(0, 5).join('\n')}
+${propIssues.slice(0, 5).join('\n')}
+
+**Schema Rules:**
+${schemaRules}
+
+**Current Page JSON:**
 ${JSON.stringify(page, null, 2)}
 
-**Component Specificaties (kort):**
-Beschikbare componenten: hero, text, grid, entry, columns, newsletter, footer, gallery, form, cta, faq, video, teaserHome, navigation, breadcrumbs, banner
+Fix all component names to match EXACTLY as specified (with correct spaces and capitalization).
+Fix all prop names to match EXACTLY as specified.
+Remove any properties not defined in the schema.
+Add any missing required properties.
 
-Fix de fouten en retourneer de gerepareerde pagina met emit_page_blocks tool.`
+Return the fixed page using emit_page_blocks tool.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 16000,
     temperature: 0.0,
-    system: 'Je bent een JSON repair specialist. Fix validatie fouten en retourneer valide JSON.',
+    system:
+      'You are a JSON validation specialist. Fix schema validation errors precisely. Pay close attention to exact string matching for component names and property names.',
     tools: pageBlocksTool,
     tool_choice: { type: 'tool', name: 'emit_page_blocks' },
     messages: [{ role: 'user', content: repairPrompt }],
@@ -743,6 +914,10 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
 
         await sendEvent('progress', { message: "Pagina's valideren en repareren..." })
 
+        // First, sanitize common issues programmatically (faster and more reliable than AI)
+        sanitizeWireframe(wireframeJson)
+        console.log('Wireframe sanitized (component names and prop names normalized)')
+
         // Validate full wireframe with complete schema (has all $ref definitions)
         const ajv = new Ajv({ allErrors: true, strict: false })
         const validate = ajv.compile(componentsSchemaJson)
@@ -753,48 +928,61 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           console.log(`Validation found ${validate.errors.length} errors`)
           console.log('First 3 errors:', JSON.stringify(validate.errors.slice(0, 3), null, 2))
 
-          // Group errors by page index
-          const errorsByPage: Map<number, any[]> = new Map()
-          for (const error of validate.errors) {
-            // Error path looks like "/pages/0/blocks/1/..."
-            const match = error.instancePath?.match(/^\/pages\/(\d+)/)
-            if (match) {
-              const pageIndex = parseInt(match[1], 10)
-              if (!errorsByPage.has(pageIndex)) {
-                errorsByPage.set(pageIndex, [])
+          // Repair loop (max 2 attempts)
+          const MAX_REPAIR_ATTEMPTS = 2
+          for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
+            // Re-validate to get current errors
+            const currentValid = validate(wireframeJson)
+            if (currentValid) break
+
+            const currentErrors = validate.errors || []
+            if (currentErrors.length === 0) break
+
+            // Group errors by page index
+            const errorsByPage: Map<number, any[]> = new Map()
+            for (const error of currentErrors) {
+              // Error path looks like "/pages/0/blocks/1/..."
+              const match = error.instancePath?.match(/^\/pages\/(\d+)/)
+              if (match) {
+                const pageIndex = parseInt(match[1], 10)
+                if (!errorsByPage.has(pageIndex)) {
+                  errorsByPage.set(pageIndex, [])
+                }
+                errorsByPage.get(pageIndex)!.push(error)
               }
-              errorsByPage.get(pageIndex)!.push(error)
             }
-          }
 
-          console.log(
-            `Errors affect ${errorsByPage.size} pages out of ${wireframeJson.pages.length}`,
-          )
-
-          // Repair each page with errors
-          let repairedCount = 0
-          for (const [pageIndex, pageErrors] of errorsByPage) {
-            const page = wireframeJson.pages[pageIndex]
-            if (!page) continue
+            if (errorsByPage.size === 0) break
 
             console.log(
-              `Page "${page.page}" has ${pageErrors.length} errors:`,
-              pageErrors[0]?.message || pageErrors[0]?.keyword,
+              `Repair attempt ${attempt}: ${currentErrors.length} errors in ${errorsByPage.size} pages`,
             )
-            try {
-              const repairedPage = await repairPageBlocks(anthropic, page, pageErrors, specMd)
-              wireframeJson.pages[pageIndex] = repairedPage
-              repairedCount++
-              await sendEvent('progress', {
-                message: `Pagina gerepareerd: ${page.page} (${repairedCount}/${errorsByPage.size})`,
-              })
-            } catch (repairError) {
-              console.error(`Failed to repair page ${page.page}:`, repairError)
-            }
-          }
 
-          if (repairedCount > 0) {
-            console.log(`Repaired ${repairedCount} pages`)
+            // Repair each page with errors
+            let repairedCount = 0
+            for (const [pageIndex, pageErrors] of errorsByPage) {
+              const page = wireframeJson.pages[pageIndex]
+              if (!page) continue
+
+              console.log(
+                `Page "${page.page}" has ${pageErrors.length} errors:`,
+                pageErrors[0]?.message || pageErrors[0]?.keyword,
+              )
+              try {
+                const repairedPage = await repairPageBlocks(anthropic, page, pageErrors, specMd)
+                wireframeJson.pages[pageIndex] = repairedPage
+                repairedCount++
+                await sendEvent('progress', {
+                  message: `Pagina gerepareerd: ${page.page} (poging ${attempt}, ${repairedCount}/${errorsByPage.size})`,
+                })
+              } catch (repairError) {
+                console.error(`Failed to repair page ${page.page}:`, repairError)
+              }
+            }
+
+            if (repairedCount > 0) {
+              console.log(`Repair attempt ${attempt}: fixed ${repairedCount} pages`)
+            }
           }
         } else {
           console.log('Validation passed, no repairs needed')

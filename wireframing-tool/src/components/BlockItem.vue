@@ -1,5 +1,8 @@
 <script setup>
 import { GripVertical, ChevronUp, ChevronDown, Trash2 } from 'lucide-vue-next'
+import { useTheme } from '../composables/useTheme.js'
+
+const { card, border, hover, darkMode } = useTheme()
 
 const props = defineProps({
   block: {
@@ -96,7 +99,7 @@ const getBlockTypeBadgeClass = () => {
   if (block.component === 'Kolommen' || block.component === 'CalltoAction') {
     return 'bg-blue-500/20 text-blue-400'
   }
-  return 'bg-zinc-700/50 text-zinc-400'
+  return darkMode.value ? 'bg-zinc-700/50 text-zinc-400' : 'bg-zinc-200 text-zinc-600'
 }
 </script>
 
@@ -110,16 +113,12 @@ const getBlockTypeBadgeClass = () => {
     @click="emit('select', block)"
     :class="[
       'border-2 rounded-xl p-5 cursor-pointer transition-all group relative',
-      isSelected
-        ? 'border-violet-500 bg-violet-500/5'
-        : 'border-zinc-800 bg-zinc-900 hover:border-zinc-700',
+      isSelected ? 'border-violet-500 bg-violet-500/5' : `${border} ${card} hover:border-zinc-500`,
       isDragOver ? 'drag-indicator' : '',
     ]"
   >
     <div class="flex items-center gap-4">
-      <div
-        class="p-3 rounded-lg align-middle bg-zinc-800 hover:bg-zinc-700 cursor-grab active:cursor-grabbing"
-      >
+      <div :class="`p-3 rounded-lg align-middle ${hover} cursor-grab active:cursor-grabbing`">
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">
@@ -144,7 +143,7 @@ const getBlockTypeBadgeClass = () => {
               @click.stop="emit('moveUp')"
               :disabled="isFirst"
               :class="[
-                'p-2 rounded-lg hover:bg-zinc-800',
+                `p-2 rounded-lg ${hover}`,
                 isFirst ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer',
               ]"
             >

@@ -1,13 +1,15 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { X, Zap, Upload, Trash2, ChevronDown } from 'lucide-vue-next'
+import { X, Zap, Upload, Trash2, ChevronDown, Sun, Moon } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
 import { isDemoAccount } from '../utils/auth.js'
 import { compressFilesForAI, getTotalSize } from '../utils/fileCompression.js'
+import { useTheme } from '../composables/useTheme.js'
 
 const router = useRouter()
+const { darkMode, toggleDarkMode, bg, card, border, text1, text2, hover, inputBg } = useTheme()
 
 const formData = ref({
   projectName: '',
@@ -163,10 +165,11 @@ const createProject = async () => {
             pages: sitemapData.pages,
           })
 
-          // Mark pages as pending (will be updated as they're generated)
+          // Mark pages as pending ONLY if they don't have blocks yet
+          // (For dummy data, pages already have blocks and status: 'complete')
           projectData.pages = projectData.pages.map((page) => ({
             ...page,
-            status: 'pending',
+            status: page.status || (page.blocks?.length > 0 ? 'complete' : 'pending'),
           }))
 
           // Create project with status 'generating'
@@ -177,7 +180,10 @@ const createProject = async () => {
             sections: projectData.sections,
             pages: projectData.pages,
             date: new Date().toLocaleDateString('nl-NL'),
-            status: 'generating', // Project is still being generated
+            // If all pages already have blocks (dummy data), mark as complete
+            status: projectData.pages.every((p) => p.status === 'complete')
+              ? 'complete'
+              : 'generating',
             language: formData.value.language,
             created_at: new Date().toISOString(),
           }
@@ -272,24 +278,30 @@ const createProject = async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-zinc-950 text-zinc-100">
+  <div :class="`min-h-screen ${bg} ${text1}`">
     <!-- Header -->
-    <div class="bg-zinc-900 border-b justify-between border-zinc-800">
+    <div :class="`${card} border-b justify-between ${border}`">
       <div class="max-w-4xl mx-auto px-8 py-6">
-        <button
-          @click="goBack"
-          class="flex items-center gap-2 text-zinc-400 hover:text-zinc-100 mb-4 cursor-pointer"
-        >
-          <X class="w-5 h-5" />
-          Terug naar Dashboard
-        </button>
+        <div class="flex items-center justify-between mb-4">
+          <button
+            @click="goBack"
+            :class="`flex items-center gap-2 ${text2} hover:${text1} cursor-pointer`"
+          >
+            <X class="w-5 h-5" />
+            Terug naar Dashboard
+          </button>
+          <button @click="toggleDarkMode" :class="`p-3 rounded-xl ${hover} cursor-pointer`">
+            <Sun v-if="darkMode" class="w-5 h-5" />
+            <Moon v-else class="w-5 h-5" />
+          </button>
+        </div>
         <h1 class="text-3xl font-bold">Nieuw Project Aanmaken</h1>
       </div>
     </div>
 
     <!-- Form -->
     <div class="max-w-4xl mx-auto px-8 py-12">
-      <div class="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 shadow-xl">
+      <div :class="`${card} border ${border} rounded-2xl p-8 shadow-xl`">
         <div class="space-y-6">
           <!-- Project Name -->
           <div>
@@ -298,7 +310,7 @@ const createProject = async () => {
               v-model="formData.projectName"
               type="text"
               placeholder="E-commerce Platform"
-              class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+              :class="`w-full px-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
             />
           </div>
 
@@ -309,7 +321,7 @@ const createProject = async () => {
               v-model="formData.companyName"
               type="text"
               placeholder="TechShop BV"
-              class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+              :class="`w-full px-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
             />
           </div>
 
@@ -321,7 +333,7 @@ const createProject = async () => {
                 v-model="formData.description"
                 :rows="expandedDescription ? 12 : 4"
                 placeholder="Beschrijf je project..."
-                class="w-full px-4 py-3 pr-10 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none resize-none transition-all"
+                :class="`w-full px-4 py-3 pr-10 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none resize-none transition-all`"
               />
               <button
                 type="button"
@@ -344,7 +356,7 @@ const createProject = async () => {
               <label class="block text-sm font-medium mb-2">Taal</label>
               <select
                 v-model="formData.language"
-                class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+                :class="`w-full px-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
               >
                 <option>Nederlands</option>
                 <option>English</option>
@@ -356,7 +368,7 @@ const createProject = async () => {
               <label class="block text-sm font-medium mb-2">Aantal pagina's</label>
               <select
                 v-model="numPagesMode"
-                class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+                :class="`w-full px-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
               >
                 <option value="auto">Automatisch</option>
                 <option value="manual">Handmatig</option>
@@ -367,7 +379,7 @@ const createProject = async () => {
                   type="number"
                   min="1"
                   max="20"
-                  class="w-full px-4 py-3 bg-zinc-950 text-zinc-400 border border-zinc-800 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none"
+                  :class="`w-full px-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
                 />
               </div>
             </div>
@@ -382,7 +394,7 @@ const createProject = async () => {
               @dragleave="handleDragLeave"
               :class="[
                 'border-2 border-dashed rounded-xl p-8 text-center transition-colors',
-                isDragging ? 'border-violet-500 bg-violet-500/10' : 'border-zinc-800 bg-zinc-950',
+                isDragging ? 'border-violet-500 bg-violet-500/10' : `border ${border} ${inputBg}`,
               ]"
             >
               <input
@@ -394,9 +406,9 @@ const createProject = async () => {
                 accept="image/*,.pdf,.doc,.docx"
               />
               <label for="file-upload" class="cursor-pointer">
-                <Upload class="w-12 h-12 mx-auto mb-4 text-zinc-400" />
-                <p class="text-zinc-300 mb-2">Voeg bestanden toe of sleep ze hierheen</p>
-                <p class="text-sm text-zinc-500">Alleen PDF</p>
+                <Upload :class="`w-12 h-12 mx-auto mb-4 ${text2}`" />
+                <p :class="`${text1} mb-2`">Voeg bestanden toe of sleep ze hierheen</p>
+                <p :class="`text-sm ${text2}`">Alleen PDF</p>
               </label>
             </div>
 
@@ -405,17 +417,17 @@ const createProject = async () => {
               <div
                 v-for="(file, index) in uploadedFiles"
                 :key="index"
-                class="flex items-center justify-between p-3 bg-zinc-900 border border-zinc-800 rounded-lg"
+                :class="`flex items-center justify-between p-3 ${card} border ${border} rounded-lg`"
               >
                 <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-zinc-100 truncate">
+                  <p :class="`text-sm font-medium ${text1} truncate`">
                     {{ file.name }}
                   </p>
-                  <p class="text-xs text-zinc-500">{{ formatFileSize(file.size) }}</p>
+                  <p :class="`text-xs ${text2}`">{{ formatFileSize(file.size) }}</p>
                 </div>
                 <button
                   @click="removeFile(index)"
-                  class="ml-4 p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                  :class="`ml-4 p-2 hover:${hover} rounded-lg transition-colors cursor-pointer`"
                 >
                   <Trash2 class="w-4 h-4 text-red-400" />
                 </button>
@@ -428,7 +440,7 @@ const createProject = async () => {
         <div class="flex gap-4 mt-8">
           <button
             @click="goBack"
-            class="flex-1 px-6 py-3 border border-zinc-800 rounded-xl font-medium hover:bg-zinc-800 cursor-pointer"
+            :class="`flex-1 px-6 py-3 border ${border} rounded-xl font-medium hover:${hover} cursor-pointer`"
           >
             Annuleren
           </button>

@@ -120,6 +120,21 @@ export const wireframeService = {
       if (data.error) {
         throw new Error(data.message || data.error)
       }
+
+      // For dummy/legacy data, trigger onSitemapReady with the wireframe data
+      // so the frontend can create the project properly
+      if (data.wireframeJson && onSitemapReady) {
+        console.log('JSON response - triggering onSitemapReady with wireframe data')
+        onSitemapReady({
+          sections: data.wireframeJson.sections || [],
+          pages: (data.wireframeJson.pages || []).map((p, idx) => ({
+            ...p,
+            id: `page-${Date.now()}-${idx}`,
+            status: 'complete',
+          })),
+        })
+      }
+
       return data
     } catch (err) {
       console.error('Error calling edge function:', err)
@@ -195,6 +210,7 @@ export const wireframeService = {
             name: page.page,
             section: page.section || '',
             rationale: page.rationale || '',
+            status: page.status || undefined,
             blocks: page.blocks.map((block, blockIndex) => ({
               id: `block-${Date.now()}-${index}-${blockIndex}`,
               ...block,

@@ -38,7 +38,7 @@
     {
       "name": "Vacatures",
       "handle": "vacatures",
-      "type": "channel",
+      "type": "structure",
       "slug": "werken-bij/{slug}",
       "template": "_pages/werken-bij/entry.twig",
       "entryTypes": ["vacatures"],
@@ -936,12 +936,6 @@
           }
         }
       ]
-    },
-    {
-      "page": "test",
-      "section": "events",
-      "rationale": "",
-      "blocks": []
     }
   ]
 }

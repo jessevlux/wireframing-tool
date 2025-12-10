@@ -60,6 +60,39 @@ Wanneer een overview pagina entries moet tonen van een channel:
 }
 \`\`\`
 
+### Structure Sections
+
+Gebruik \`structure\` voor hiërarchische content met parent-child relaties:
+
+**Voorbeelden wanneer structure te gebruiken:**
+- Documentatie met sub-pagina's en secties
+- FAQ met categorieën en vragen
+- Services met hoofd- en sub-services
+- Kennisbank met onderwerpen en artikelen
+
+**Voorbeeld structure section:**
+\`\`\`json
+{
+  "sections": [
+    {
+      "name": "Diensten overzicht",
+      "handle": "servicesOverview",
+      "type": "single",
+      "slug": "diensten",
+      "template": "_pages/services/index.twig",
+      "fetchesFrom": "services"
+    },
+    {
+      "name": "Diensten",
+      "handle": "services",
+      "type": "structure",
+      "slug": "diensten/{slug}",
+      "template": "_pages/services/entry.twig"
+    }
+  ]
+}
+\`\`\`
+
 ---
 
 ## Algemene regels
@@ -147,7 +180,7 @@ Kolommen heeft ALTIJD exact 2 children in deze volgorde:
   - \`Has Accordion\` (bool)
   - \`Has Text\` (bool)
 - **Children**:
-  - Accordion list en/of Text Element.
+  - Accordion list OF Text Element.
 
 ---
 

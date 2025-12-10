@@ -14,12 +14,28 @@ import {
   Redo2,
   Loader2,
   Trash2,
+  Sun,
+  Moon,
 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import BlockItem from '../components/BlockItem.vue'
+import { useTheme } from '../composables/useTheme.js'
 
 const router = useRouter()
 const route = useRoute()
+const {
+  darkMode,
+  toggleDarkMode,
+  bg,
+  card,
+  border,
+  text1,
+  text2,
+  hover,
+  inputBg,
+  divider,
+  dividerBg,
+} = useTheme()
 
 // State
 const project = ref(null)
@@ -200,6 +216,22 @@ const loadFromLocalStorage = (projectId) => {
 // Check if project is still generating
 const isGenerating = computed(() => project.value?.status === 'generating')
 
+// Track generation progress
+const generationProgress = computed(() => {
+  if (!project.value?.pages) return { total: 0, complete: 0, pending: [], percentage: 0 }
+
+  const pages = project.value.pages
+  const complete = pages.filter((p) => p.status === 'complete' || (p.blocks && p.blocks.length > 0))
+  const pending = pages.filter((p) => p.status === 'pending' || !p.blocks || p.blocks.length === 0)
+
+  return {
+    total: pages.length,
+    complete: complete.length,
+    pending: pending.map((p) => p.name),
+    percentage: pages.length > 0 ? Math.round((complete.length / pages.length) * 100) : 0,
+  }
+})
+
 // Polling interval for live updates
 let pollInterval = null
 
@@ -276,7 +308,7 @@ const blocks = computed(() => {
 // Get available sections for entry section dropdown
 const availableSectionsForEntrySection = computed(() => {
   if (!project.value?.sections) return []
-  return project.value.sections.filter((s) => s.type === 'channel')
+  return project.value.sections.filter((s) => s.type === 'channel' || s.type === 'structure')
 })
 
 // Methods
@@ -1305,9 +1337,9 @@ const closeNewPageModal = () => {
 </script>
 
 <template>
-  <div v-if="project" class="h-screen flex flex-col bg-zinc-950 text-zinc-100">
+  <div v-if="project" :class="`h-screen flex flex-col ${bg} ${text1}`">
     <!-- Header -->
-    <div class="bg-zinc-900 border-b border-zinc-800 px-6 py-4">
+    <div :class="`${card} border-b ${border} px-6 py-4`">
       <div class="flex items-center justify-between">
         <div class="flex items-center gap-6">
           <button
@@ -1317,11 +1349,17 @@ const closeNewPageModal = () => {
             <ChevronRight class="w-5 h-5 rotate-180" />
             Projecten
           </button>
-          <div class="h-6 w-px bg-zinc-800" />
+          <div :class="`h-6 w-px ${dividerBg}`" />
           <h1 class="text-lg font-semibold">{{ project.name }}</h1>
         </div>
 
         <div class="flex items-center gap-3">
+          <!-- Theme Toggle -->
+          <button @click="toggleDarkMode" :class="`p-2 rounded-lg ${hover} cursor-pointer`">
+            <Sun v-if="darkMode" class="w-4 h-4" />
+            <Moon v-else class="w-4 h-4" />
+          </button>
+
           <!-- Undo/Redo buttons -->
           <div class="flex items-center gap-1">
             <button
@@ -1351,7 +1389,7 @@ const closeNewPageModal = () => {
               <Redo2 class="w-4 h-4" />
             </button>
           </div>
-          <div class="h-6 w-px bg-zinc-800" />
+          <div :class="`h-6 w-px ${dividerBg}`" />
           <div
             :class="[
               'flex items-center gap-2 px-3 py-2 rounded-lg text-sm',
@@ -1361,7 +1399,7 @@ const closeNewPageModal = () => {
             <Save class="w-4 h-4" />
             {{ isSaving ? 'Opslaan...' : 'Opgeslagen' }}
           </div>
-          <div class="h-6 w-px bg-zinc-800" />
+          <div :class="`h-6 w-px ${dividerBg}`" />
           <button
             @click="exportJSON"
             class="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-medium shadow-lg cursor-pointer"
@@ -1378,14 +1416,24 @@ const closeNewPageModal = () => {
       <div class="flex items-center gap-3 text-violet-300">
         <Loader2 class="w-5 h-5 animate-spin" />
         <span class="font-medium">Pagina's worden gegenereerd...</span>
-        <span class="text-violet-400 text-sm">De inhoud wordt automatisch bijgewerkt</span>
+        <span class="text-violet-400 text-sm">
+          {{ generationProgress.complete }}/{{ generationProgress.total }} gereed ({{
+            generationProgress.percentage
+          }}%)
+        </span>
+        <span v-if="generationProgress.pending.length > 0" class="text-violet-400/70 text-xs">
+          — Wachten op: {{ generationProgress.pending.slice(0, 3).join(', ')
+          }}<span v-if="generationProgress.pending.length > 3">
+            en {{ generationProgress.pending.length - 3 }} meer</span
+          >
+        </span>
       </div>
     </div>
 
     <!-- 3 Column Layout -->
     <div class="flex-1 flex overflow-hidden">
       <!-- Left Sidebar: Sections -->
-      <div class="w-80 bg-zinc-900 border-r border-zinc-800 overflow-y-auto">
+      <div :class="`w-80 ${card} border-r ${border} overflow-y-auto`">
         <div class="p-6">
           <!-- Sections Header -->
           <div class="flex items-center justify-between mb-4">
@@ -1399,53 +1447,164 @@ const closeNewPageModal = () => {
             </button>
           </div>
 
-          <!-- Sections List -->
+          <!-- Sections List with Inline Details -->
           <div class="space-y-2 mb-6">
-            <button
-              v-for="section in sections"
-              :key="section.id"
-              @click="selectSection(section.id)"
-              :class="[
-                'w-full text-left px-4 py-3 rounded-xl transition-all cursor-pointer',
-                selectedSectionId === section.id
-                  ? 'bg-violet-600 text-white shadow-lg'
-                  : 'hover:bg-zinc-800 text-zinc-100',
-              ]"
-            >
-              <div class="flex items-center justify-between">
-                <div>
-                  <span class="font-medium block">{{ section.name }}</span>
-                  <span
-                    :class="[
-                      'text-xs',
-                      selectedSectionId === section.id ? 'text-white/60' : 'text-zinc-500',
-                    ]"
-                  >
-                    {{ section.handle }}
-                  </span>
+            <div v-for="section in sections" :key="section.id">
+              <!-- Section Header Button -->
+              <button
+                @click="selectSection(section.id)"
+                :class="[
+                  'w-full text-left px-4 py-3 transition-all cursor-pointer',
+                  selectedSectionId === section.id
+                    ? 'bg-violet-600 text-white shadow-lg rounded-t-xl'
+                    : `${hover} ${text1} rounded-xl`,
+                ]"
+              >
+                <div class="flex items-center justify-between">
+                  <div>
+                    <span class="font-medium block">{{ section.name }}</span>
+                    <span
+                      :class="[
+                        'text-xs',
+                        selectedSectionId === section.id ? 'text-white/60' : text2,
+                      ]"
+                    >
+                      {{ section.handle }}
+                    </span>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <span
+                      :class="[
+                        'text-xs px-2 py-1 rounded',
+                        selectedSectionId === section.id
+                          ? 'bg-white/20 text-white'
+                          : section.type === 'single'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : section.type === 'channel'
+                              ? 'bg-emerald-500/20 text-emerald-400'
+                              : 'bg-amber-500/20 text-amber-400',
+                      ]"
+                    >
+                      {{ section.type }}
+                    </span>
+                  </div>
                 </div>
-                <span
-                  :class="[
-                    'text-xs px-2 py-1 rounded',
-                    selectedSectionId === section.id
-                      ? 'bg-white/20 text-white'
-                      : section.type === 'single'
-                        ? 'bg-blue-500/20 text-blue-400'
-                        : section.type === 'channel'
-                          ? 'bg-emerald-500/20 text-emerald-400'
-                          : 'bg-amber-500/20 text-amber-400',
-                  ]"
+              </button>
+
+              <!-- Inline Section Details Dropdown -->
+              <Transition
+                enter-active-class="transition-all duration-200 ease-out"
+                leave-active-class="transition-all duration-150 ease-in"
+                enter-from-class="opacity-0 max-h-0"
+                enter-to-class="opacity-100 max-h-[800px]"
+                leave-from-class="opacity-100 max-h-[800px]"
+                leave-to-class="opacity-0 max-h-0"
+              >
+                <div
+                  v-if="selectedSectionId === section.id"
+                  :class="`bg-zinc-50 dark:bg-zinc-950 rounded-b-xl p-4 space-y-4 overflow-hidden border-x border-b ${border}`"
                 >
-                  {{ section.type }}
-                </span>
-              </div>
-            </button>
+                  <!-- Section Details -->
+                  <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-sm font-medium text-zinc-400">Section Details</span>
+                      <button
+                        @click.stop="deleteSection(section.handle)"
+                        class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all cursor-pointer"
+                        title="Verwijder section"
+                      >
+                        <Trash2 class="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <div :class="`${inputBg} border ${border} rounded-lg p-4 space-y-3`">
+                      <div>
+                        <span class="text-xs text-zinc-500 block">Handle</span>
+                        <span :class="`text-sm ${text1}`">{{ section.handle }}</span>
+                      </div>
+                      <div>
+                        <span class="text-xs text-zinc-500 block">Type</span>
+                        <span :class="`text-sm ${text1} capitalize`">{{ section.type }}</span>
+                      </div>
+                      <div>
+                        <span class="text-xs text-zinc-500 block">Slug</span>
+                        <span :class="`text-sm ${text1}`">{{ section.slug }}</span>
+                      </div>
+                      <div>
+                        <span class="text-xs text-zinc-500 block">Template</span>
+                        <span :class="`text-sm ${text1} font-mono text-xs`">{{
+                          section.template
+                        }}</span>
+                      </div>
+                      <div v-if="section.fetchesFrom">
+                        <span :class="`text-xs ${text2} block`">Haalt entries uit</span>
+                        <span class="text-sm text-emerald-400">{{ section.fetchesFrom }}</span>
+                      </div>
+                      <div v-if="section.categories?.length">
+                        <span :class="`text-xs ${text2} block`">Categorieën</span>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                          <span
+                            v-for="cat in section.categories"
+                            :key="cat"
+                            :class="`text-xs ${inputBg} ${text2} border ${divider} px-2 py-0.5 rounded`"
+                          >
+                            {{ cat }}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Pages for this section -->
+                  <div>
+                    <div class="flex items-center justify-between mb-2">
+                      <h4 :class="`text-xs font-medium ${text2}`">Pagina's</h4>
+                      <button
+                        @click="addNewPage"
+                        :class="`p-1 rounded ${inputBg} ${text2} hover:${text1} border ${divider} cursor-pointer`"
+                        title="Nieuwe pagina"
+                      >
+                        <Plus class="w-3 h-3" />
+                      </button>
+                    </div>
+                    <div class="space-y-1">
+                      <div
+                        v-for="page in pagesForSection"
+                        :key="page.id"
+                        class="group flex items-center gap-1"
+                      >
+                        <button
+                          @click="selectPage(page.id)"
+                          :class="[
+                            'flex-1 text-left px-3 py-2 rounded-lg transition-all cursor-pointer text-sm',
+                            selectedPageId === page.id
+                              ? 'bg-zinc-200 dark:bg-zinc-800 font-medium text-zinc-900 dark:text-zinc-100'
+                              : `${hover} ${text2}`,
+                          ]"
+                        >
+                          {{ page.name }}
+                        </button>
+                        <button
+                          @click.stop="deletePage(page.id)"
+                          class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
+                          title="Verwijder pagina"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <p v-if="!pagesForSection.length" :class="`text-xs ${text2} italic px-3`">
+                        Geen pagina's voor deze section
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </Transition>
+            </div>
           </div>
 
           <!-- Fallback: Pages without sections (backward compatibility) -->
           <div v-if="!sections.length && project.pages?.length" class="mb-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="font-semibold text-zinc-400">Pagina's (legacy)</h3>
+              <h3 :class="`font-semibold ${text2}`">Pagina's (legacy)</h3>
             </div>
             <div class="space-y-2">
               <button
@@ -1455,8 +1614,8 @@ const closeNewPageModal = () => {
                 :class="[
                   'w-full text-left px-4 py-3 rounded-xl transition-all cursor-pointer',
                   selectedPageId === page.id
-                    ? 'bg-violet-600 text-white shadow-lg'
-                    : 'hover:bg-zinc-800 text-zinc-100',
+                    ? 'bg-zinc-200 dark:bg-zinc-800 font-medium text-zinc-900 dark:text-zinc-100 shadow-sm'
+                    : `${hover} ${text1}`,
                 ]"
               >
                 <div class="flex items-center justify-between">
@@ -1464,7 +1623,7 @@ const closeNewPageModal = () => {
                   <span
                     :class="[
                       'text-xs',
-                      selectedPageId === page.id ? 'text-white/70' : 'text-zinc-500',
+                      selectedPageId === page.id ? 'text-zinc-500 dark:text-zinc-400' : text2,
                     ]"
                   >
                     {{ page.blocks?.length || 0 }}
@@ -1474,109 +1633,16 @@ const closeNewPageModal = () => {
             </div>
           </div>
 
-          <!-- Selected Section Details -->
-          <div v-if="selectedSection" class="border-t border-zinc-800 pt-4">
-            <div class="flex items-center justify-between mb-3">
-              <h4 class="text-sm font-medium text-zinc-400">Section Details</h4>
-              <button
-                @click="deleteSection(selectedSection.handle)"
-                class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all cursor-pointer"
-                title="Verwijder section"
-              >
-                <Trash2 class="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4 space-y-3">
-              <div>
-                <span class="text-xs text-zinc-500 block">Handle</span>
-                <span class="text-sm text-zinc-300">{{ selectedSection.handle }}</span>
-              </div>
-              <div>
-                <span class="text-xs text-zinc-500 block">Type</span>
-                <span class="text-sm text-zinc-300 capitalize">{{ selectedSection.type }}</span>
-              </div>
-              <div>
-                <span class="text-xs text-zinc-500 block">Slug</span>
-                <span class="text-sm text-zinc-300">{{ selectedSection.slug }}</span>
-              </div>
-              <div>
-                <span class="text-xs text-zinc-500 block">Template</span>
-                <span class="text-sm text-zinc-300 font-mono text-xs">{{
-                  selectedSection.template
-                }}</span>
-              </div>
-              <div v-if="selectedSection.fetchesFrom">
-                <span class="text-xs text-zinc-500 block">Haalt entries uit</span>
-                <span class="text-sm text-emerald-400">{{ selectedSection.fetchesFrom }}</span>
-              </div>
-              <div v-if="selectedSection.categories?.length">
-                <span class="text-xs text-zinc-500 block">Categorieën</span>
-                <div class="flex flex-wrap gap-1 mt-1">
-                  <span
-                    v-for="cat in selectedSection.categories"
-                    :key="cat"
-                    class="text-xs bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded"
-                  >
-                    {{ cat }}
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <!-- Pages for this section -->
-            <div class="mt-4">
-              <div class="flex items-center justify-between mb-2">
-                <h4 class="text-sm font-medium text-zinc-400">Pagina's</h4>
-                <button
-                  @click="addNewPage"
-                  class="p-1 rounded bg-zinc-800 text-zinc-400 hover:text-zinc-200 cursor-pointer"
-                  title="Nieuwe pagina"
-                >
-                  <Plus class="w-3 h-3" />
-                </button>
-              </div>
-              <div class="space-y-1">
-                <div
-                  v-for="page in pagesForSection"
-                  :key="page.id"
-                  class="group flex items-center gap-1"
-                >
-                  <button
-                    @click="selectPage(page.id)"
-                    :class="[
-                      'flex-1 text-left px-3 py-2 rounded-lg transition-all cursor-pointer text-sm',
-                      selectedPageId === page.id
-                        ? 'bg-zinc-800 text-white'
-                        : 'hover:bg-zinc-800/50 text-zinc-400',
-                    ]"
-                  >
-                    {{ page.name }}
-                  </button>
-                  <button
-                    @click.stop="deletePage(page.id)"
-                    class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all cursor-pointer"
-                    title="Verwijder pagina"
-                  >
-                    <Trash2 class="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <p v-if="!pagesForSection.length" class="text-xs text-zinc-600 italic px-3">
-                  Geen pagina's voor deze section
-                </p>
-              </div>
-            </div>
-          </div>
-
           <!-- AI Rationale -->
-          <div v-if="selectedPage && !selectedSection" class="mt-6 pt-6 border-t border-zinc-800">
-            <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
+          <div v-if="selectedPage && !selectedSection" :class="`mt-6 pt-6 border-t ${divider}`">
+            <div :class="`${inputBg} border ${divider} rounded-lg p-4`">
               <p
                 v-if="selectedPage.rationale"
-                class="text-sm text-zinc-400 leading-relaxed whitespace-pre-wrap"
+                :class="`text-sm ${text2} leading-relaxed whitespace-pre-wrap`"
               >
                 {{ selectedPage.rationale }}
               </p>
-              <p v-else class="text-sm text-zinc-500 italic">
+              <p v-else :class="`text-sm ${text2} italic`">
                 Geen AI rationale beschikbaar voor deze pagina.
               </p>
             </div>
@@ -1590,7 +1656,7 @@ const closeNewPageModal = () => {
           <div class="flex items-center justify-between mb-6">
             <div>
               <button
-                class="text-xs text-zinc-500 hover:text-zinc-300 flex items-center gap-1 mb-1 cursor-pointer"
+                :class="`text-xs ${text2} hover:${text1} flex items-center gap-1 mb-1 cursor-pointer`"
               >
                 Regenerate
               </button>
@@ -1610,16 +1676,16 @@ const closeNewPageModal = () => {
               <!-- Dropdown menu -->
               <div
                 v-if="showBlockTypeMenu"
-                class="absolute right-0 mt-2 w-64 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto"
+                :class="`absolute right-0 mt-2 w-64 ${card} border ${divider} rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto`"
               >
                 <button
                   v-for="component in availableComponents"
                   :key="component.value"
                   @click="addBlock(component.value)"
-                  class="w-full text-left px-4 py-3 hover:bg-zinc-700 transition-colors flex items-center gap-3 border-b border-zinc-700/50 last:border-b-0 cursor-pointer"
+                  :class="`w-full text-left px-4 py-3 hover:${hover} transition-colors flex items-center gap-3 border-b ${divider} last:border-b-0 cursor-pointer`"
                 >
                   <span class="text-2xl">{{ component.icon }}</span>
-                  <span class="text-sm font-medium text-zinc-100">{{ component.label }}</span>
+                  <span :class="`text-sm font-medium ${text1}`">{{ component.label }}</span>
                 </button>
               </div>
             </div>
@@ -1660,11 +1726,11 @@ const closeNewPageModal = () => {
       </div>
 
       <!-- Right Sidebar: Properties -->
-      <div class="w-80 bg-zinc-900 border-l border-zinc-800 overflow-y-auto">
+      <div :class="`w-80 ${card} border-l ${border} overflow-y-auto`">
         <div class="p-6">
           <div v-if="selectedBlock">
             <!-- Breadcrumb navigatie -->
-            <div v-if="selectedChildInfo" class="mb-4 pb-4 border-b border-zinc-800">
+            <div v-if="selectedChildInfo" :class="`mb-4 pb-4 border-b ${divider}`">
               <div class="flex items-center gap-2 text-sm mb-3">
                 <button
                   @click="goBackToParent"
@@ -1695,7 +1761,7 @@ const closeNewPageModal = () => {
                 <input
                   :value="selectedBlock.component || selectedBlock.type"
                   disabled
-                  class="w-full px-3 py-2 bg-zinc-800 border border-zinc-700 rounded-lg text-sm text-zinc-400 cursor-not-allowed"
+                  :class="`w-full px-3 py-2 ${hover} border ${divider} rounded-lg text-sm text-zinc-400 cursor-not-allowed`"
                 />
               </div>
 
@@ -1707,16 +1773,16 @@ const closeNewPageModal = () => {
                   selectedBlock.component === 'Projects' ||
                   selectedBlock.component === 'News'
                 "
-                class="border-t border-zinc-800 pt-4"
+                :class="`border-t ${divider} pt-4`"
               >
                 <h4 class="text-sm font-medium mb-4">Block Type</h4>
 
                 <div class="mb-4">
-                  <label class="block text-xs font-medium mb-2 text-zinc-300">Type</label>
+                  <label :class="`block text-xs font-medium mb-2 ${text2}`">Type</label>
                   <select
                     :value="selectedBlock.blockType || 'staticContent'"
                     @input="updateBlockType($event.target.value)"
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+                    :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer ${text1}`"
                   >
                     <option value="staticContent">Static Content</option>
                     <option value="entrySection">Entry Section</option>
@@ -1724,13 +1790,13 @@ const closeNewPageModal = () => {
                 </div>
 
                 <div v-if="selectedBlock.blockType === 'entrySection'" class="mb-4">
-                  <label class="block text-xs font-medium mb-2 text-zinc-300"
+                  <label :class="`block text-xs font-medium mb-2 ${text2}`"
                     >Haalt entries uit</label
                   >
                   <select
                     :value="selectedBlock.fetchesFrom || ''"
                     @input="updateFetchesFrom($event.target.value)"
-                    class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+                    :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer ${text1}`"
                   >
                     <option value="">- Selecteer section -</option>
                     <option
@@ -1749,7 +1815,7 @@ const closeNewPageModal = () => {
 
               <div
                 v-if="selectedBlock.props && Object.keys(selectedBlock.props).length > 0"
-                class="border-t border-zinc-800 pt-4"
+                :class="`border-t ${divider} pt-4`"
               >
                 <h4 class="text-sm font-medium mb-4">Properties</h4>
 
@@ -1757,7 +1823,7 @@ const closeNewPageModal = () => {
                 <template v-for="(value, key) in selectedBlock.props" :key="key">
                   <!-- Alleen tonen als het een "Has X" veld is, of als de bijbehorende "Has X" true is -->
                   <div v-if="shouldShowProperty(key, selectedBlock.props)" class="mb-4">
-                    <label class="block text-xs font-medium mb-2 text-zinc-300">
+                    <label :class="`block text-xs font-medium mb-2 ${text2}`">
                       {{ key }}
                     </label>
 
@@ -1767,9 +1833,9 @@ const closeNewPageModal = () => {
                         type="checkbox"
                         :checked="value"
                         @input="updateBlockProp(key, $event.target.checked)"
-                        class="w-4 h-4 bg-zinc-950 border-zinc-700 rounded text-violet-600 focus:ring-2 focus:ring-violet-500"
+                        :class="`w-4 h-4 ${inputBg} border-zinc-700 rounded text-violet-600 focus:ring-2 focus:ring-violet-500`"
                       />
-                      <span class="ml-2 text-sm text-zinc-400">
+                      <span :class="`ml-2 text-sm ${text2}`">
                         {{ value ? 'Ja' : 'Nee' }}
                       </span>
                     </div>
@@ -1779,7 +1845,7 @@ const closeNewPageModal = () => {
                       v-else-if="key === 'Property 1'"
                       :value="value"
                       @input="updateBlockProp(key, $event.target.value)"
-                      class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+                      :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer ${text1}`"
                     >
                       <option
                         v-for="variant in getVariantOptions(selectedBlock.component)"
@@ -1795,7 +1861,7 @@ const closeNewPageModal = () => {
                       v-else
                       :value="value"
                       @input="updateBlockProp(key, $event.target.value)"
-                      class="w-full px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none"
+                      :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none ${text1}`"
                     />
                   </div>
                 </template>
@@ -1803,7 +1869,7 @@ const closeNewPageModal = () => {
 
               <div
                 v-if="selectedBlock.children && selectedBlock.children.length > 0"
-                class="border-t border-zinc-800 pt-4"
+                :class="`border-t ${divider} pt-4`"
               >
                 <h4 class="text-sm font-medium mb-4">
                   Children ({{ selectedBlock.children.length }})
@@ -1813,7 +1879,7 @@ const closeNewPageModal = () => {
                     v-for="(child, idx) in selectedBlock.children"
                     :key="idx"
                     @click="selectChild(child, getParentBlock(selectedBlock))"
-                    class="w-full text-left p-3 bg-zinc-950 rounded-lg border border-zinc-800 hover:border-violet-500 hover:bg-violet-500/5 transition-all cursor-pointer"
+                    :class="`w-full text-left p-3 ${inputBg} rounded-lg border ${divider} hover:border-violet-500 hover:bg-violet-500/5 transition-all cursor-pointer`"
                   >
                     <div class="text-xs font-medium text-violet-400">
                       {{ child.component }}
@@ -1868,10 +1934,10 @@ const closeNewPageModal = () => {
       class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-4xl max-h-[80vh] flex flex-col"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-zinc-800">
+      <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
         <div>
-          <h2 class="text-xl font-bold text-zinc-100">Exporteer JSON</h2>
-          <p class="text-sm text-zinc-400 mt-1">Plak deze JSON in de Figma plugin</p>
+          <h2 :class="`text-xl font-bold ${text1}`">Exporteer JSON</h2>
+          <p :class="`text-sm ${text2} mt-1`">Plak deze JSON in de Figma plugin</p>
         </div>
         <button
           @click="closeJsonModal"
@@ -1884,14 +1950,14 @@ const closeNewPageModal = () => {
       <!-- JSON Content -->
       <div class="flex-1 overflow-auto p-6">
         <pre
-          class="bg-zinc-950 border border-zinc-800 rounded-lg p-4 text-sm text-zinc-300 font-mono overflow-x-auto"
+          :class="`${inputBg} border ${divider} rounded-lg p-4 text-sm text-zinc-300 font-mono overflow-x-auto`"
           >{{ exportedJson }}</pre
         >
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-between p-6 border-t border-zinc-800">
-        <p class="text-xs text-zinc-500">
+      <div :class="`flex items-center justify-between p-6 border-t ${divider}`">
+        <p :class="`text-xs ${text2}`">
           {{ project?.pages?.length || 0 }} pagina's • {{ exportedJson.length }} characters
         </p>
         <div class="flex gap-3">
@@ -1925,10 +1991,10 @@ const closeNewPageModal = () => {
       class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col max-h-[90vh]"
     >
       <!-- Header -->
-      <div class="flex items-center justify-between p-6 border-b border-zinc-800">
+      <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
         <div>
-          <h2 class="text-xl font-bold text-zinc-100">Nieuwe Section</h2>
-          <p class="text-sm text-zinc-400 mt-1">Maak een nieuwe CMS section aan</p>
+          <h2 :class="`text-xl font-bold ${text1}`">Nieuwe Section</h2>
+          <p :class="`text-sm ${text2} mt-1`">Maak een nieuwe CMS section aan</p>
         </div>
         <button
           @click="closeNewSectionModal"
@@ -1942,7 +2008,7 @@ const closeNewPageModal = () => {
       <div class="p-6 space-y-5 overflow-y-auto">
         <!-- Section Naam -->
         <div>
-          <label class="block text-sm font-medium mb-2 text-zinc-300">
+          <label :class="`block text-sm font-medium mb-2 ${text2}`">
             Section Naam<span class="text-red-400 ml-1">*</span>
           </label>
           <input
@@ -1950,30 +2016,30 @@ const closeNewPageModal = () => {
             @input="onSectionNameChange"
             type="text"
             placeholder="Bijv. Nieuws, Projecten, Over ons..."
-            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none`"
           />
         </div>
 
         <!-- Handle -->
         <div>
-          <label class="block text-sm font-medium mb-2 text-zinc-300">
+          <label :class="`block text-sm font-medium mb-2 ${text2}`">
             Handle<span class="text-red-400 ml-1">*</span>
           </label>
           <input
             v-model="newSectionData.handle"
             type="text"
             placeholder="bijv. news, projects, aboutUs..."
-            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
           />
           <p class="text-xs text-zinc-500 mt-1">Technische identifier in camelCase</p>
         </div>
 
         <!-- Type -->
         <div>
-          <label class="block text-sm font-medium mb-2 text-zinc-300">Type</label>
+          <label :class="`block text-sm font-medium mb-2 ${text2}`">Type</label>
           <select
             v-model="newSectionData.type"
-            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer`"
           >
             <option value="single">Single (unieke pagina)</option>
             <option value="channel">Channel (meerdere entries)</option>
@@ -1988,7 +2054,7 @@ const closeNewPageModal = () => {
             v-model="newSectionData.slug"
             type="text"
             placeholder="bijv. nieuws of nieuws/{slug}"
-            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
           />
           <p class="text-xs text-zinc-500 mt-1">
             Gebruik {slug} voor dynamische delen bij channels
@@ -2002,7 +2068,7 @@ const closeNewPageModal = () => {
             v-model="newSectionData.template"
             type="text"
             placeholder="_pages/news/entry.twig"
-            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
           />
         </div>
 

@@ -27,14 +27,14 @@ Analyseer welke content types nodig zijn:
    - Over ons (vaak)
    - Andere unieke pagina's
 
-2. **Channel sections** - Collecties van entries:
+2. **Channel & Structure sections** - Collecties van entries:
    - Nieuws/Blog (als er nieuwsberichten zijn)
    - Projecten/Cases (als er portfolio items zijn)
    - Producten (als er producten zijn)
    - Team (als er teamleden zijn)
 
 3. **Overview/Detail koppelingen**:
-   - Als je een channel hebt, maak dan ook een overview single
+   - Als je een channel of structure hebt, maak dan ook een overview single
    - Bijv: \`newsOverview\` (single) haalt entries op uit \`news\` (channel)
    - Gebruik \`fetchesFrom\` om de koppeling te maken
 
@@ -52,9 +52,9 @@ Analyseer welke content types nodig zijn:
 - **Elke pagina moet een \`section\` property hebben** die verwijst naar een section handle.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven NIET meegenomen te worden in de sitemap en JSON.
 
-**Per channel section maak je TWEE pagina's:**
+**Per channel/structure section maak je TWEE pagina's:**
 1. **Overzichtspagina** (gekoppeld aan single section met \`fetchesFrom\`)
-2. **Detailpagina** (gekoppeld aan de channel section zelf)
+2. **Detailpagina** (gekoppeld aan de channel/structure section zelf)
 
 Geef een uitleg met:
 
@@ -73,7 +73,7 @@ Gebruik optioneel marketing- en gedragspsychologie modellen om de keuzes te moti
 ### Wanneer entrySection gebruiken
 
 Een blok MOET \`blockType: "entrySection"\` en \`fetchesFrom\` hebben wanneer:
-- De content uit een channel section komt (nieuws, projecten, locaties, producten, etc.)
+- De content uit een channel/structure section komt (nieuws, projecten, locaties, producten, etc.)
 - De items dynamisch worden beheerd in het CMS
 - Het een overzichtspagina is die entries toont
 
@@ -82,16 +82,16 @@ Een blok is staticContent ALLEEN wanneer:
 - Er geen onderliggende channel entries zijn
 - De informatie niet elders hergebruikt wordt
 
-### Wanneer Detail page component gebruiken
+### Wanneer Detailpage component gebruiken
 
-Een pagina MOET het Detail page component gebruiken wanneer:
-- De pagina-section type "channel" is
+Een pagina MOET het Detailpage component gebruiken wanneer:
+- De pagina-section type "channel" of "structure" is
 - De pagina één individuele entry toont (niet een overzicht)
 
 Voorbeelden:
-- "Nieuws detail" → gebruikt Detail page (3 blokken: Detail page, CTA, Footer)
-- "Project detail" → gebruikt Detail page
-- "Nieuws overzicht" → gebruikt NIET Detail page (gebruikt Grid met entrySection)
+- "Nieuws detail" → gebruikt Detailpage (3 blokken: Detailpage, CTA, Footer)
+- "Project detail" → gebruikt Detailpage
+- "Nieuws overzicht" → gebruikt NIET Detailpage (gebruikt Grid met entrySection)
 
 ### Component Selectie
 
@@ -100,8 +100,8 @@ Voorbeelden:
 - Voeg \`blockType: "entrySection"\` en \`fetchesFrom: "channelHandle"\` toe
 - GEEN handmatige cards/children toevoegen - data komt uit CMS
 
-**Voor detailpagina's van channels:**
-- Gebruik ALLEEN: Detail page, CalltoAction, Footer
+**Voor detailpagina's van channels en structures:**
+- Gebruik ALLEEN: Detailpage, CalltoAction, Footer
 - Geen andere blokken
 
 **Voor handmatige content (geen CMS data):**
