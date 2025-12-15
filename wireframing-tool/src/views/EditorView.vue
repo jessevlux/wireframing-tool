@@ -16,8 +16,11 @@ import {
   Trash2,
   Sun,
   Moon,
+  Sparkles,
+  RefreshCw,
 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
+import { wireframeService } from '../services/wireframeService.js'
 import BlockItem from '../components/BlockItem.vue'
 import { useTheme } from '../composables/useTheme.js'
 
@@ -63,6 +66,20 @@ const newSectionData = ref({
   fetchesFrom: '',
   categories: [],
 })
+
+// Regenerate page state
+const showRegenerateModal = ref(false)
+const regeneratePrompt = ref('')
+const isRegenerating = ref(false)
+const regenerateProgress = ref('')
+const regenerateError = ref('')
+
+// AI Section generation state (AI mode is default)
+const useAIForSection = ref(true)
+const sectionPrompt = ref('')
+const isGeneratingSection = ref(false)
+const sectionProgress = ref('')
+const sectionError = ref('')
 
 // Drag and drop state
 const draggedBlockId = ref(null)
@@ -303,6 +320,17 @@ const selectedPage = computed(() => {
 
 const blocks = computed(() => {
   return selectedPage.value?.blocks || []
+})
+
+// Check if selected page is from a channel or structure section (no regenerate allowed)
+const canRegeneratePage = computed(() => {
+  if (!selectedPage.value || !project.value?.sections) return true
+  const pageSection = project.value.sections.find((s) => s.handle === selectedPage.value.section)
+  // Hide regenerate for channel and structure sections
+  if (pageSection && (pageSection.type === 'channel' || pageSection.type === 'structure')) {
+    return false
+  }
+  return true
 })
 
 // Get available sections for entry section dropdown
@@ -1334,6 +1362,162 @@ const closeNewPageModal = () => {
     description: '',
   }
 }
+
+// Regenerate page functions
+const openRegenerateModal = () => {
+  regeneratePrompt.value = ''
+  regenerateError.value = ''
+  regenerateProgress.value = ''
+  showRegenerateModal.value = true
+}
+
+const closeRegenerateModal = () => {
+  showRegenerateModal.value = false
+  regeneratePrompt.value = ''
+  regenerateError.value = ''
+  regenerateProgress.value = ''
+}
+
+const regeneratePage = async () => {
+  if (!selectedPage.value || !regeneratePrompt.value.trim()) return
+
+  isRegenerating.value = true
+  regenerateError.value = ''
+  regenerateProgress.value = 'Bezig met regenereren...'
+
+  try {
+    const pageContext = {
+      page: selectedPage.value.name,
+      section: selectedPage.value.section || '',
+      rationale: selectedPage.value.rationale || '',
+      currentBlocks: selectedPage.value.blocks || [],
+    }
+
+    const result = await wireframeService.regeneratePage(
+      pageContext,
+      regeneratePrompt.value,
+      project.value.sections || [],
+      'Nederlands',
+      {
+        onProgress: (message) => {
+          regenerateProgress.value = message
+        },
+        onPageRegenerated: (page) => {
+          console.log('Page regenerated:', page)
+        },
+      },
+    )
+
+    if (result.success && result.page) {
+      // Update page blocks with regenerated content
+      const pageIndex = project.value.pages.findIndex((p) => p.id === selectedPage.value.id)
+      if (pageIndex !== -1) {
+        // Give each block a new ID
+        const newBlocks = (result.page.blocks || []).map((block, idx) => ({
+          id: `block-${Date.now()}-${idx}`,
+          ...block,
+        }))
+        project.value.pages[pageIndex].blocks = newBlocks
+        if (result.page.rationale) {
+          project.value.pages[pageIndex].rationale = result.page.rationale
+        }
+        saveProject()
+      }
+      closeRegenerateModal()
+    }
+  } catch (err) {
+    console.error('Error regenerating page:', err)
+    regenerateError.value = err.message || 'Er is een fout opgetreden'
+  } finally {
+    isRegenerating.value = false
+  }
+}
+
+// AI Section generation functions
+const toggleAISectionMode = () => {
+  useAIForSection.value = !useAIForSection.value
+  sectionError.value = ''
+  sectionProgress.value = ''
+  if (useAIForSection.value) {
+    sectionPrompt.value = ''
+  }
+}
+
+const generateSectionWithAI = async () => {
+  if (!sectionPrompt.value.trim()) return
+
+  isGeneratingSection.value = true
+  sectionError.value = ''
+  sectionProgress.value = 'Section genereren met AI...'
+
+  try {
+    const result = await wireframeService.generateSection(
+      sectionPrompt.value,
+      project.value.sections || [],
+      'Nederlands',
+      {
+        onProgress: (message) => {
+          sectionProgress.value = message
+        },
+        onSectionGenerated: (data) => {
+          console.log('Section generated:', data)
+        },
+      },
+    )
+
+    if (result.success && result.section) {
+      // Ensure sections array exists
+      if (!project.value.sections) {
+        project.value.sections = []
+      }
+
+      // Create section with unique ID
+      const newSection = {
+        id: `section-${Date.now()}`,
+        name: result.section.name,
+        handle: result.section.handle,
+        type: result.section.type,
+        slug: result.section.slug || result.section.handle,
+        template: result.section.template || `_pages/${result.section.handle}/entry.twig`,
+        entryTypes: result.section.entryTypes || [result.section.handle],
+        fetchesFrom: result.section.fetchesFrom || undefined,
+        categories: result.section.categories || [],
+      }
+
+      project.value.sections.push(newSection)
+      selectedSectionId.value = newSection.id
+
+      // Add pages if returned
+      if (result.pages && result.pages.length > 0) {
+        if (!project.value.pages) {
+          project.value.pages = []
+        }
+        for (const page of result.pages) {
+          const newPage = {
+            id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            name: page.page,
+            section: page.section || newSection.handle,
+            rationale: page.rationale || '',
+            blocks: (page.blocks || []).map((block, idx) => ({
+              id: `block-${Date.now()}-${idx}`,
+              ...block,
+            })),
+          }
+          project.value.pages.push(newPage)
+          selectedPageId.value = newPage.id
+        }
+      }
+
+      saveProject()
+      closeNewSectionModal()
+    }
+  } catch (err) {
+    console.error('Error generating section:', err)
+    sectionError.value = err.message || 'Er is een fout opgetreden'
+  } finally {
+    isGeneratingSection.value = false
+  }
+}
 </script>
 
 <template>
@@ -1656,9 +1840,12 @@ const closeNewPageModal = () => {
           <div class="flex items-center justify-between mb-6">
             <div>
               <button
-                :class="`text-xs ${text2} hover:${text1} flex items-center gap-1 mb-1 cursor-pointer`"
+                v-if="canRegeneratePage"
+                @click="openRegenerateModal"
+                :class="`text-xs ${text2} hover:text-violet-400 flex items-center gap-1 mb-1 cursor-pointer transition-colors`"
               >
-                Regenerate
+                <RefreshCw class="w-3 h-3" />
+                Regenerate met AI
               </button>
               <h2 class="text-2xl font-bold">{{ selectedPage.name }}</h2>
             </div>
@@ -1994,125 +2181,175 @@ const closeNewPageModal = () => {
       <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
         <div>
           <h2 :class="`text-xl font-bold ${text1}`">Nieuwe Section</h2>
-          <p :class="`text-sm ${text2} mt-1`">Maak een nieuwe CMS section aan</p>
+          <p :class="`text-sm ${text2} mt-1`">
+            {{ useAIForSection ? 'Genereer met AI' : 'Maak handmatig een nieuwe CMS section' }}
+          </p>
         </div>
-        <button
-          @click="closeNewSectionModal"
-          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-        >
-          <X class="w-5 h-5 text-zinc-400" />
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            @click="toggleAISectionMode"
+            :class="[
+              'px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer',
+              useAIForSection
+                ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30'
+                : 'bg-zinc-800 text-zinc-400 hover:text-zinc-200',
+            ]"
+          >
+            <Sparkles class="w-3.5 h-3.5" />
+            {{ useAIForSection ? 'AI Aan' : 'Gebruik AI' }}
+          </button>
+          <button
+            @click="closeNewSectionModal"
+            class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+          >
+            <X class="w-5 h-5 text-zinc-400" />
+          </button>
+        </div>
       </div>
 
       <!-- Form Content -->
       <div class="p-6 space-y-5 overflow-y-auto">
-        <!-- Section Naam -->
-        <div>
-          <label :class="`block text-sm font-medium mb-2 ${text2}`">
-            Section Naam<span class="text-red-400 ml-1">*</span>
-          </label>
-          <input
-            v-model="newSectionData.name"
-            @input="onSectionNameChange"
-            type="text"
-            placeholder="Bijv. Nieuws, Projecten, Over ons..."
-            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none`"
-          />
-        </div>
+        <!-- AI Mode: Prompt Input -->
+        <template v-if="useAIForSection">
+          <div>
+            <label :class="`block text-sm font-medium mb-2 ${text2}`">
+              Beschrijf de section die je wilt maken
+              <span class="text-red-400 ml-1">*</span>
+            </label>
+            <textarea
+              v-model="sectionPrompt"
+              rows="4"
+              placeholder="Bijv. 'Een portfolio section met case studies en projecten' of 'Een nieuws section voor blog posts met categorieën'"
+              :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none resize-none`"
+            ></textarea>
+            <p class="text-xs text-zinc-500 mt-1">
+              De AI bepaalt automatisch het type, de handle, en maakt optioneel een startpagina aan
+            </p>
+          </div>
 
-        <!-- Handle -->
-        <div>
-          <label :class="`block text-sm font-medium mb-2 ${text2}`">
-            Handle<span class="text-red-400 ml-1">*</span>
-          </label>
-          <input
-            v-model="newSectionData.handle"
-            type="text"
-            placeholder="bijv. news, projects, aboutUs..."
-            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
-          />
-          <p class="text-xs text-zinc-500 mt-1">Technische identifier in camelCase</p>
-        </div>
-
-        <!-- Type -->
-        <div>
-          <label :class="`block text-sm font-medium mb-2 ${text2}`">Type</label>
-          <select
-            v-model="newSectionData.type"
-            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer`"
+          <!-- Progress & Error -->
+          <div v-if="sectionProgress" class="flex items-center gap-2 text-violet-400">
+            <Loader2 class="w-4 h-4 animate-spin" />
+            <span class="text-sm">{{ sectionProgress }}</span>
+          </div>
+          <div
+            v-if="sectionError"
+            class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm"
           >
-            <option value="single">Single (unieke pagina)</option>
-            <option value="channel">Channel (meerdere entries)</option>
-            <option value="structure">Structure (hiërarchisch)</option>
-          </select>
-        </div>
+            {{ sectionError }}
+          </div>
+        </template>
 
-        <!-- Slug -->
-        <div>
-          <label class="block text-sm font-medium mb-2 text-zinc-300">URL Slug</label>
-          <input
-            v-model="newSectionData.slug"
-            type="text"
-            placeholder="bijv. nieuws of nieuws/{slug}"
-            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
-          />
-          <p class="text-xs text-zinc-500 mt-1">
-            Gebruik {slug} voor dynamische delen bij channels
-          </p>
-        </div>
+        <!-- Manual Mode: Regular Form Fields -->
+        <template v-else>
+          <!-- Section Naam -->
+          <div>
+            <label :class="`block text-sm font-medium mb-2 ${text2}`">
+              Section Naam<span class="text-red-400 ml-1">*</span>
+            </label>
+            <input
+              v-model="newSectionData.name"
+              @input="onSectionNameChange"
+              type="text"
+              placeholder="Bijv. Nieuws, Projecten, Over ons..."
+              :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none`"
+            />
+          </div>
 
-        <!-- Template -->
-        <div>
-          <label class="block text-sm font-medium mb-2 text-zinc-300">Template Pad</label>
-          <input
-            v-model="newSectionData.template"
-            type="text"
-            placeholder="_pages/news/entry.twig"
-            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
-          />
-        </div>
+          <!-- Handle -->
+          <div>
+            <label :class="`block text-sm font-medium mb-2 ${text2}`">
+              Handle<span class="text-red-400 ml-1">*</span>
+            </label>
+            <input
+              v-model="newSectionData.handle"
+              type="text"
+              placeholder="bijv. news, projects, aboutUs..."
+              :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
+            />
+            <p class="text-xs text-zinc-500 mt-1">Technische identifier in camelCase</p>
+          </div>
 
-        <!-- Fetches From (voor overview sections) -->
-        <div v-if="newSectionData.type === 'single'">
-          <label class="block text-sm font-medium mb-2 text-zinc-300"
-            >Haalt entries uit (optioneel)</label
-          >
-          <select
-            v-model="newSectionData.fetchesFrom"
-            class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
-          >
-            <option value="">- Geen -</option>
-            <option
-              v-for="section in sections.filter((s) => s.type === 'channel')"
-              :key="section.handle"
-              :value="section.handle"
+          <!-- Type -->
+          <div>
+            <label :class="`block text-sm font-medium mb-2 ${text2}`">Type</label>
+            <select
+              v-model="newSectionData.type"
+              :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer`"
             >
-              {{ section.name }} ({{ section.handle }})
-            </option>
-          </select>
-          <p class="text-xs text-zinc-500 mt-1">
-            Voor overview pagina's die entries uit een channel tonen
-          </p>
-        </div>
+              <option value="single">Single (unieke pagina)</option>
+              <option value="channel">Channel (meerdere entries)</option>
+              <option value="structure">Structure (hiërarchisch)</option>
+            </select>
+          </div>
 
-        <!-- Info -->
-        <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
-          <p class="text-sm text-zinc-400">
-            <span class="font-medium text-zinc-300">Tip:</span>
-            <span v-if="newSectionData.type === 'single'">
-              Single sections zijn voor unieke pagina's zoals Home of Contact.
-            </span>
-            <span v-else-if="newSectionData.type === 'channel'">
-              Channel sections zijn voor collecties zoals nieuws of projecten.
-            </span>
-            <span v-else>
-              Structure sections zijn voor hiërarchische content zoals documentatie.
-            </span>
-          </p>
-        </div>
+          <!-- Slug -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-zinc-300">URL Slug</label>
+            <input
+              v-model="newSectionData.slug"
+              type="text"
+              placeholder="bijv. nieuws of nieuws/{slug}"
+              :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
+            />
+            <p class="text-xs text-zinc-500 mt-1">
+              Gebruik {slug} voor dynamische delen bij channels
+            </p>
+          </div>
+
+          <!-- Template -->
+          <div>
+            <label class="block text-sm font-medium mb-2 text-zinc-300">Template Pad</label>
+            <input
+              v-model="newSectionData.template"
+              type="text"
+              placeholder="_pages/news/entry.twig"
+              :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
+            />
+          </div>
+
+          <!-- Fetches From (voor overview sections) -->
+          <div v-if="newSectionData.type === 'single'">
+            <label class="block text-sm font-medium mb-2 text-zinc-300"
+              >Haalt entries uit (optioneel)</label
+            >
+            <select
+              v-model="newSectionData.fetchesFrom"
+              class="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-lg text-zinc-100 focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer"
+            >
+              <option value="">- Geen -</option>
+              <option
+                v-for="section in sections.filter((s) => s.type === 'channel')"
+                :key="section.handle"
+                :value="section.handle"
+              >
+                {{ section.name }} ({{ section.handle }})
+              </option>
+            </select>
+            <p class="text-xs text-zinc-500 mt-1">
+              Voor overview pagina's die entries uit een channel tonen
+            </p>
+          </div>
+
+          <!-- Info -->
+          <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
+            <p class="text-sm text-zinc-400">
+              <span class="font-medium text-zinc-300">Tip:</span>
+              <span v-if="newSectionData.type === 'single'">
+                Single sections zijn voor unieke pagina's zoals Home of Contact.
+              </span>
+              <span v-else-if="newSectionData.type === 'channel'">
+                Channel sections zijn voor collecties zoals nieuws of projecten.
+              </span>
+              <span v-else>
+                Structure sections zijn voor hiërarchische content zoals documentatie.
+              </span>
+            </p>
+          </div>
+        </template>
       </div>
 
-      <!-- Footer -->
+      <!-- Footer: Conditional based on mode -->
       <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
         <button
           @click="closeNewSectionModal"
@@ -2120,7 +2357,20 @@ const closeNewPageModal = () => {
         >
           Annuleer
         </button>
+        <!-- AI Mode Button -->
         <button
+          v-if="useAIForSection"
+          @click="generateSectionWithAI"
+          :disabled="!sectionPrompt.trim() || isGeneratingSection"
+          class="px-6 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Loader2 v-if="isGeneratingSection" class="w-4 h-4 animate-spin" />
+          <Sparkles v-else class="w-4 h-4" />
+          {{ isGeneratingSection ? 'Genereren...' : 'Genereer Section' }}
+        </button>
+        <!-- Manual Mode Button -->
+        <button
+          v-else
           @click="createSection"
           :disabled="!newSectionData.name.trim() || !newSectionData.handle.trim()"
           class="px-6 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -2205,6 +2455,91 @@ const closeNewPageModal = () => {
         >
           <Plus class="w-4 h-4" />
           Maak Pagina
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Regenerate Page Modal -->
+  <div
+    v-if="showRegenerateModal"
+    class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
+    @click.self="closeRegenerateModal"
+  >
+    <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col">
+      <!-- Header -->
+      <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
+        <div>
+          <h2 :class="`text-xl font-bold ${text1}`">Regenereer pagina</h2>
+          <p :class="`text-sm ${text2} mt-1`">
+            Geef nieuwe instructies om de blokken opnieuw te genereren
+          </p>
+        </div>
+        <button
+          @click="closeRegenerateModal"
+          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+        >
+          <X class="w-5 h-5 text-zinc-400" />
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-5">
+        <!-- Current Page Info -->
+        <div v-if="selectedPage" :class="`${inputBg} border ${divider} rounded-lg p-4`">
+          <p :class="`text-xs ${text2} mb-1`">Huidige pagina</p>
+          <p :class="`font-medium ${text1}`">{{ selectedPage.name }}</p>
+          <p :class="`text-sm ${text2} mt-1`">{{ selectedPage.blocks?.length || 0 }} blokken</p>
+        </div>
+
+        <!-- New Prompt -->
+        <div>
+          <label :class="`block text-sm font-medium mb-2 ${text2}`">
+            Nieuwe instructies
+            <span class="text-red-400 ml-1">*</span>
+          </label>
+          <textarea
+            v-model="regeneratePrompt"
+            rows="4"
+            placeholder="Bijv. 'Maak de pagina korter' of 'Voeg een testimonials sectie toe' of 'Focus meer op de diensten'"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none resize-none`"
+          ></textarea>
+          <p class="text-xs text-zinc-500 mt-1">
+            De AI genereert nieuwe blokken op basis van deze instructies
+          </p>
+        </div>
+
+        <!-- Progress -->
+        <div v-if="regenerateProgress" class="flex items-center gap-2 text-violet-400">
+          <Loader2 class="w-4 h-4 animate-spin" />
+          <span class="text-sm">{{ regenerateProgress }}</span>
+        </div>
+
+        <!-- Error -->
+        <div
+          v-if="regenerateError"
+          class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm"
+        >
+          {{ regenerateError }}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
+        <button
+          @click="closeRegenerateModal"
+          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+        >
+          Annuleer
+        </button>
+        <button
+          @click="regeneratePage"
+          :disabled="!regeneratePrompt.trim() || isRegenerating"
+          class="px-6 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Loader2 v-if="isRegenerating" class="w-4 h-4 animate-spin" />
+          <RefreshCw v-else class="w-4 h-4" />
+          {{ isRegenerating ? 'Genereren...' : 'Regenereer' }}
         </button>
       </div>
     </div>

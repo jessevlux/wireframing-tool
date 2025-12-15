@@ -34,7 +34,7 @@ Wanneer een overview pagina entries moet tonen van een channel:
 1. Maak een **single** section voor de overview (bijv. \`newsOverview\`)
 2. Maak een **channel** section voor de entries (bijv. \`news\`)
 3. Koppel met \`fetchesFrom\` in de overview section
-4. Gebruik \`blockType: "entrySection"\` en \`fetchesFrom\` in Grid/News/Projects blokken
+4. Gebruik \`blockType: "entrySection"\` en \`fetchesFrom\` in Grid/Grid2Col/Grid3Col blokken
 
 **Voorbeeld:**
 \`\`\`json
@@ -98,7 +98,7 @@ Gebruik \`structure\` voor hiërarchische content met parent-child relaties:
 ## Algemene regels
 
 - **Props en booleans altijd expliciet opnemen** (\`true\` of \`false\`).
-- **Index altijd verplicht** bij Grid-cards, Entry Posts, Project Cards en News Cards.
+- **Index altijd verplicht** bij Grid-cards, Entry Posts, Grid2Col Cards en Grid3Col Cards.
 - **Children alleen toevoegen** als booleans dit vereisen.
 - **Footer verplicht** als laatste blok van elke pagina.
 - **Geen lorem ipsum** → gebruik korte, realistische Nederlandse microcopy.
@@ -111,7 +111,7 @@ Dit geldt voor ALLE componenten met varianten (Grid, Media, etc.).
 
 ## Bijzonderheden
 
-- **Projects** en **News**: alleen op hun eigen pagina's en altijd gevolgd door CalltoAction + Footer.
+- **Grid2Col** en **Grid3Col**: alleen op overzichtspagina's en altijd gevolgd door CalltoAction + Footer.
 - **Entry Section blokken**: Gebruik \`blockType: "entrySection"\` en \`fetchesFrom\` om aan te geven welke section.
 - **Detail page (exclusieve pagina-opbouw)**:
   - Een pagina die het blok \`Detail page\` bevat, bestaat **exact** uit: \`Detail page\`, \`CalltoAction\` en \`Footer\`.
@@ -302,9 +302,9 @@ Kolommen heeft ALTIJD exact 2 children in deze volgorde:
 
 ---
 
-## Projects
+## Grid2Col
 
-- Dit blok heeft 2 kolommen van 4 kaarten. Daarboven staat een header, dit is een uitgelicht project. Gebruik dit om bijvoorbeeld projecten, producten, etc. aan te tonen. Bij een beperkt aantal, of als je iets duidelijker wilt aantonen, gebruik dan het Kolommen blok.
+- Dit blok heeft 2 kolommen van 4 kaarten (8 items totaal). Daarboven staat een header met een uitgelicht item. Gebruik dit voor entry overzichten zoals projecten, producten, cases, locaties, etc.
 - **Props**:
   - \`Title\` (string)
   - \`Description\` (string)
@@ -312,36 +312,36 @@ Kolommen heeft ALTIJD exact 2 children in deze volgorde:
   - \`Example category\` (string)
   - \`Example header\` (string)
   - \`Example description\` (string)
-  - \`Has example project\` (bool)
+  - \`Has example item\` (bool)
 - **Optioneel**:
-  - \`fetchesFrom\`: Section handle waaruit project entries worden opgehaald
+  - \`fetchesFrom\`: Section handle waaruit entries worden opgehaald
 
 - **Children**:
-  - Altijd exact 8 Project Cards (index 0–7).
+  - Altijd exact 8 Grid2Col Cards (index 0–7).
 - **Volgorde regel**: altijd gevolgd door CalltoAction + Footer.
 
-### Project Card
+### Grid2Col Card
 
 - **Props**:
   - \`Category\` (string)
-  - \`Project header\` (string)
+  - \`Header\` (string)
   - \`Description\` (string)
 
 ---
 
-## News
+## Grid3Col
 
-- Dit blok is een grid van 3x3. Gebruik dit blok om bijvoorbeeld nieuws, evenementen, etc. aan te tonen. Bij een beperkt aantal, of als je iets duidelijker wilt aantonen, gebruik dan het Kolommen blok.
+- Dit blok is een grid van 3x3 (9 items totaal). Gebruik dit voor entry overzichten zoals nieuws, evenementen, blog posts, vacatures, etc.
 - **Props**:
   - \`Title\` (string)
   - \`Description\` (string)
 - **Optioneel**:
-  - \`fetchesFrom\`: Section handle waaruit news entries worden opgehaald
+  - \`fetchesFrom\`: Section handle waaruit entries worden opgehaald
 - **Children**:
-  - Altijd exact 9 News Cards (index 0–8).
+  - Altijd exact 9 Grid3Col Cards (index 0–8).
 - **Volgorde regel**: altijd gevolgd door CalltoAction + Footer.
 
-### News Card
+### Grid3Col Card
 
 - **Props**:
   - \`Category\` (string)

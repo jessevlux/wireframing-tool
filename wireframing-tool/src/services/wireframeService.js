@@ -143,6 +143,190 @@ export const wireframeService = {
   },
 
   /**
+   * Regenereer een pagina met nieuwe instructies via AI
+   * @param {Object} pageContext - Huidige pagina informatie
+   * @param {string} pageContext.page - Pagina naam
+   * @param {string} pageContext.section - Section handle
+   * @param {string} pageContext.rationale - Pagina rationale
+   * @param {Array} pageContext.currentBlocks - Huidige blokken
+   * @param {string} newPrompt - Nieuwe instructies van gebruiker
+   * @param {Array} projectSections - Beschikbare sections in project
+   * @param {string} language - Taal (Nederlands/English)
+   * @param {Object} callbacks - Callback functies
+   * @returns {Promise<Object>} Geregenereerde pagina
+   */
+  async regeneratePage(
+    pageContext,
+    newPrompt,
+    projectSections,
+    language = 'Nederlands',
+    callbacks = {},
+  ) {
+    const { onProgress, onPageRegenerated } = callbacks
+
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-wireframe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          action: 'regenerate-page',
+          pageContext,
+          newPrompt,
+          projectSections,
+          language,
+          projectName: 'regenerate', // Required by interface
+        }),
+      })
+
+      if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+
+      // Handle SSE streaming
+      const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('text/event-stream')) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let result = null
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          let currentEvent = null
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim()
+            } else if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                if (currentEvent === 'progress' && onProgress) {
+                  onProgress(data.message)
+                } else if (currentEvent === 'page_regenerated' && onPageRegenerated) {
+                  onPageRegenerated(data.page)
+                } else if (currentEvent === 'complete') {
+                  result = data
+                } else if (currentEvent === 'error') {
+                  throw new Error(data.message || 'Unknown error')
+                }
+              } catch (e) {
+                if (e.message && !e.message.includes('JSON')) throw e
+              }
+              currentEvent = null
+            }
+          }
+        }
+
+        if (!result) throw new Error('Stream ended without result')
+        return result
+      }
+
+      // Fallback JSON
+      const data = await response.json()
+      if (data.error) throw new Error(data.message || data.error)
+      return data
+    } catch (err) {
+      console.error('Error regenerating page:', err)
+      throw new Error(`Fout bij regenereren pagina: ${err.message}`)
+    }
+  },
+
+  /**
+   * Genereer een nieuwe section via AI prompt
+   * @param {string} sectionPrompt - Prompt van gebruiker voor section
+   * @param {Array} projectSections - Bestaande sections
+   * @param {string} language - Taal
+   * @param {Object} callbacks - Callback functies
+   * @returns {Promise<Object>} Section en optionele pages
+   */
+  async generateSection(sectionPrompt, projectSections, language = 'Nederlands', callbacks = {}) {
+    const { onProgress, onSectionGenerated } = callbacks
+
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/generate-wireframe`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseAnonKey}`,
+        },
+        body: JSON.stringify({
+          action: 'generate-section',
+          sectionPrompt,
+          projectSections,
+          language,
+          projectName: 'generate-section', // Required by interface
+        }),
+      })
+
+      if (!response.ok && !response.headers.get('content-type')?.includes('text/event-stream')) {
+        const errorText = await response.text()
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+
+      // Handle SSE streaming
+      const contentType = response.headers.get('content-type') || ''
+      if (contentType.includes('text/event-stream')) {
+        const reader = response.body.getReader()
+        const decoder = new TextDecoder()
+        let result = null
+        let buffer = ''
+
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+
+          buffer += decoder.decode(value, { stream: true })
+          const lines = buffer.split('\n')
+          buffer = lines.pop() || ''
+
+          let currentEvent = null
+          for (const line of lines) {
+            if (line.startsWith('event: ')) {
+              currentEvent = line.slice(7).trim()
+            } else if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6))
+                if (currentEvent === 'progress' && onProgress) {
+                  onProgress(data.message)
+                } else if (currentEvent === 'section_generated' && onSectionGenerated) {
+                  onSectionGenerated(data)
+                } else if (currentEvent === 'complete') {
+                  result = data
+                } else if (currentEvent === 'error') {
+                  throw new Error(data.message || 'Unknown error')
+                }
+              } catch (e) {
+                if (e.message && !e.message.includes('JSON')) throw e
+              }
+              currentEvent = null
+            }
+          }
+        }
+
+        if (!result) throw new Error('Stream ended without result')
+        return result
+      }
+
+      // Fallback JSON
+      const data = await response.json()
+      if (data.error) throw new Error(data.message || data.error)
+      return data
+    } catch (err) {
+      console.error('Error generating section:', err)
+      throw new Error(`Fout bij genereren section: ${err.message}`)
+    }
+  },
+
+  /**
    * Valideer wireframe JSON tegen het schema
    * Ondersteunt zowel nieuwe structuur (object met sections/pages) als legacy (array)
    * @param {Object|Array} wireframeJson - Wireframe JSON

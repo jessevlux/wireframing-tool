@@ -96,7 +96,7 @@ Voorbeelden:
 ### Component Selectie
 
 **Voor overzichtspagina's van channels:**
-- Gebruik Grid, News, of Projects component
+- Gebruik Grid2Col, of Grid3Col component
 - Voeg \`blockType: "entrySection"\` en \`fetchesFrom: "channelHandle"\` toe
 - GEEN handmatige cards/children toevoegen - data komt uit CMS
 

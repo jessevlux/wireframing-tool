@@ -94,8 +94,8 @@
         { "$ref": "#/definitions/LogoSlider" },
         { "$ref": "#/definitions/CalltoAction" },
         { "$ref": "#/definitions/Footer" },
-        { "$ref": "#/definitions/Projects" },
-        { "$ref": "#/definitions/News" },
+        { "$ref": "#/definitions/Grid2Col" },
+        { "$ref": "#/definitions/Grid3Col" },
         { "$ref": "#/definitions/Form" },
         { "$ref": "#/definitions/Contactform" },
         { "$ref": "#/definitions/Detailpage" }
@@ -497,12 +497,12 @@
       "additionalProperties": false
     },
 
-    "Projects": {
+    "Grid2Col": {
       "properties": {
-        "component": { "const": "Projects" },
+        "component": { "const": "Grid2Col" },
         "fetchesFrom": {
           "type": "string",
-          "description": "Section handle waaruit project entries worden opgehaald"
+          "description": "Section handle waaruit entries worden opgehaald (2 kolommen layout)"
         },
         "props": {
           "type": "object",
@@ -511,7 +511,7 @@
             "Example category": { "type": "string" },
             "Example header": { "type": "string" },
             "Example description": { "type": "string" },
-            "Has example project": { "type": "boolean" },
+            "Has example item": { "type": "boolean" },
             "Has description": { "type": "boolean" },
             "Description": { "type": "string" }
           },
@@ -520,7 +520,7 @@
         },
         "children": {
           "type": "array",
-          "items": { "$ref": "#/definitions/ProjectCard" },
+          "items": { "$ref": "#/definitions/Grid2ColCard" },
           "minItems": 8,
           "maxItems": 8
         }
@@ -528,29 +528,29 @@
       "additionalProperties": false
     },
 
-    "ProjectCard": {
+    "Grid2ColCard": {
       "properties": {
-        "component": { "const": "Project Card" },
+        "component": { "const": "Grid2Col Card" },
         "props": {
           "type": "object",
           "properties": {
             "Category": { "type": "string" },
-            "Project header": { "type": "string" },
+            "Header": { "type": "string" },
             "Description": { "type": "string" }
           },
-          "required": ["Category", "Project header", "Description"],
+          "required": ["Category", "Header", "Description"],
           "additionalProperties": false
         }
       },
       "additionalProperties": false
     },
 
-    "News": {
+    "Grid3Col": {
       "properties": {
-        "component": { "const": "News" },
+        "component": { "const": "Grid3Col" },
         "fetchesFrom": {
           "type": "string",
-          "description": "Section handle waaruit news entries worden opgehaald"
+          "description": "Section handle waaruit entries worden opgehaald (3 kolommen layout)"
         },
         "props": {
           "type": "object",
@@ -563,7 +563,7 @@
         },
         "children": {
           "type": "array",
-          "items": { "$ref": "#/definitions/NewsCard" },
+          "items": { "$ref": "#/definitions/Grid3ColCard" },
           "minItems": 9,
           "maxItems": 9
         }
@@ -571,9 +571,9 @@
       "additionalProperties": false
     },
 
-    "NewsCard": {
+    "Grid3ColCard": {
       "properties": {
-        "component": { "const": "News Card" },
+        "component": { "const": "Grid3Col Card" },
         "props": {
           "type": "object",
           "properties": {

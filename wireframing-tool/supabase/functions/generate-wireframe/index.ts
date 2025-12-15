@@ -387,15 +387,22 @@ const COMPONENT_NAME_MAP: Record<string, string> = {
   'Text element': 'Text Element',
   AccordionList: 'Accordion list',
   'Accordion List': 'Accordion list',
-  NewsCard: 'News Card',
-  'news card': 'News Card',
+  // Grid2Col (was Projects)
+  grid2col: 'Grid2Col',
+  'Grid2Col Card': 'Grid2Col Card',
+  // Grid3Col (was News)
+  grid3col: 'Grid3Col',
+  'Grid3Col Card': 'Grid3Col Card',
+  // Legacy mappings (oude data)
+  News: 'Grid3Col',
+  Projects: 'Grid2Col',
+  'News Card': 'Grid3Col Card',
+  'Project Card': 'Grid2Col Card',
   hero: 'Hero',
   media: 'Media',
   footer: 'Footer',
   grid: 'Grid',
   form: 'Form',
-  news: 'News',
-  projects: 'Projects',
 }
 
 // Prop name normalization for specific components
@@ -527,7 +534,6 @@ EXACT COMPONENT NAMES (case-sensitive with spaces):
 - "Content Kolommen Block" (not "ContentKolommenBlock")
 - "Text Element" (not "TextElement")
 - "Accordion list" (not "AccordionList")
-- "News Card" (not "NewsCard")
 - "Media" (not "media")
 
 EXACT PROP NAMES (case-sensitive):
@@ -596,6 +602,20 @@ interface ProjectRequest {
   files?: ProjectFile[] // Optional uploaded files for AI context only
   additionalContext?: string
   useDummyData?: boolean // Flag to force dummy data (for demo accounts)
+  // Action-based routing
+  action?: 'generate' | 'regenerate-page' | 'generate-section'
+  // For regenerate-page action
+  pageContext?: {
+    page: string
+    section: string
+    rationale: string
+    currentBlocks?: any[]
+  }
+  newPrompt?: string
+  projectSections?: any[]
+  // For generate-section action
+  sectionPrompt?: string
+  existingPages?: any[]
 }
 
 serve(async (req) => {
@@ -615,17 +635,26 @@ serve(async (req) => {
       files,
       additionalContext,
       useDummyData,
+      action,
+      pageContext,
+      newPrompt,
+      projectSections,
+      sectionPrompt,
+      existingPages,
     }: ProjectRequest = await req.json()
 
-    // Validate input
-    if (!projectName || !language) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: projectName, language' }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        },
-      )
+    // Validate input (only for default generate action)
+    // For regenerate-page and generate-section, we have different required fields
+    if (!action || action === 'generate') {
+      if (!projectName || !language) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required fields: projectName, language' }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          },
+        )
+      }
     }
 
     // Rate limiting check
@@ -703,7 +732,8 @@ serve(async (req) => {
     }
 
     // If useDummyData flag is set (demo account), return dummy data immediately
-    if (useDummyData === true) {
+    // Only for default generate action, not for regenerate-page or generate-section
+    if (useDummyData === true && (!action || action === 'generate')) {
       return returnDummyData()
     }
 
@@ -711,9 +741,18 @@ serve(async (req) => {
     const anthropicApiKey = Deno.env.get('ANTHROPIC_API_KEY')
 
     // If no API key, return dummy data for testing
-    if (!anthropicApiKey) {
+    // Only for default generate action, action-based requests will fail with proper error
+    if (!anthropicApiKey && (!action || action === 'generate')) {
       console.log('No ANTHROPIC_API_KEY - returning dummy data')
       return returnDummyData()
+    }
+
+    // For action-based requests without API key, return error
+    if (!anthropicApiKey) {
+      return new Response(JSON.stringify({ error: 'Anthropic API key niet geconfigureerd' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
     }
 
     // Real Anthropic API call
@@ -721,11 +760,300 @@ serve(async (req) => {
       apiKey: anthropicApiKey,
     })
 
-    // Build the prompt for Claude
-    const hasLargeInput = (description?.length || 0) > 600 || (files && files.length > 0)
     // Use embedded context (bundler-safe)
     const specMd = SPEC_MD
     const instructionsMd = INSTRUCTIONS_MD
+
+    // ===========================================
+    // ACTION: regenerate-page
+    // ===========================================
+    if (action === 'regenerate-page') {
+      if (!pageContext || !newPrompt) {
+        return new Response(
+          JSON.stringify({ error: 'Missing required fields: pageContext, newPrompt' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        )
+      }
+
+      console.log(`Regenerating page: ${pageContext.page}`)
+
+      // Create SSE stream
+      const { readable, writable } = new TransformStream()
+      const writer = writable.getWriter()
+      const encoder = new TextEncoder()
+      const sendEvent = async (event: string, data: any) => {
+        await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+      }
+
+      ;(async () => {
+        try {
+          await sendEvent('progress', {
+            message: `Pagina "${pageContext.page}" opnieuw genereren...`,
+          })
+
+          // Build section context for better AI understanding
+          const sectionContext = projectSections
+            ? projectSections
+                .map(
+                  (s: any) =>
+                    `- ${s.handle}: ${s.type}${s.fetchesFrom ? ` (fetches from ${s.fetchesFrom})` : ''}`,
+                )
+                .join('\n')
+            : ''
+
+          // Determine if this is a detail page (channel section)
+          const isDetailPage = projectSections?.find(
+            (s: any) => s.handle === pageContext.section && s.type === 'channel',
+          )
+
+          // Build prompt that includes user's new instructions AND standard rules
+          const regeneratePrompt = `Regenereer de blokken voor de volgende pagina op basis van NIEUWE INSTRUCTIES van de gebruiker.
+
+**Pagina informatie:**
+- Naam: ${pageContext.page}
+- Section: ${pageContext.section}
+- Type: ${isDetailPage ? 'DETAIL PAGINA (channel)' : 'Normale pagina'}
+- Rationale: ${pageContext.rationale}
+
+**Huidige blokken (ter referentie):**
+${pageContext.currentBlocks ? JSON.stringify(pageContext.currentBlocks.slice(0, 3), null, 2) : 'Geen'}
+
+**Beschikbare sections:**
+${sectionContext}
+
+**NIEUWE INSTRUCTIES VAN DE GEBRUIKER:**
+${newPrompt}
+
+**VASTE REGELS (ALTIJD VOLGEN, ONGEACHT GEBRUIKER INSTRUCTIES):**
+${
+  isDetailPage
+    ? `
+⚠️ DIT IS EEN DETAIL PAGINA - DE STRUCTUUR MAG NIET VERANDERD WORDEN!
+- Detail pagina's hebben een VASTE opbouw: Detailpage component (met Header, Paragraphs, Highlight)
+- Je mag ALLEEN de tekst/content binnen het Detailpage component aanpassen
+- Voeg GEEN nieuwe blokken toe, verwijder GEEN blokken
+- Houd exact: Detailpage met Has News Header of Has Project Header, CalltoAction, Footer
+`
+    : `
+1. EERSTE BLOK = Hero (altijd behouden, mag wel aangepast worden qua content)
+2. LAATSTE BLOK = Footer (altijd behouden, mag wel aangepast worden qua content)
+3. Alleen de blokken TUSSEN Hero en Footer mogen worden toegevoegd/verwijderd/veranderd
+4. Zorg dat er altijd minimaal Hero + 1 andere blok + Footer is
+`
+}
+
+Gebruik de emit_page_blocks tool om de nieuwe blokken te retourneren.`
+
+          const response = await anthropic.messages.create({
+            model: 'claude-opus-4-5-20251101',
+            max_tokens: 16000,
+            temperature: 0.0,
+            system:
+              'Je bent een wireframe generator. Genereer EXACT valide JSON volgens de gegeven voorbeelden. Gebruik PRECIES de prop namen uit de spec.',
+            tools: pageBlocksTool,
+            tool_choice: { type: 'tool', name: 'emit_page_blocks' },
+            messages: [{ role: 'user', content: regeneratePrompt }],
+          })
+
+          let regeneratedPage = null
+          for (const block of response.content) {
+            if (block.type === 'tool_use' && block.name === 'emit_page_blocks') {
+              const pages = block.input.pages
+              if (pages && pages.length > 0) {
+                regeneratedPage = {
+                  ...pages[0],
+                  page: pageContext.page,
+                  section: pageContext.section,
+                  status: 'complete',
+                }
+              }
+            }
+          }
+
+          if (!regeneratedPage) {
+            throw new Error('AI did not return a valid page')
+          }
+
+          // Sanitize the regenerated page
+          if (regeneratedPage.blocks) {
+            regeneratedPage.blocks = regeneratedPage.blocks.map((b: any) => sanitizeComponent(b))
+          }
+
+          await sendEvent('page_regenerated', { page: regeneratedPage })
+          await sendEvent('complete', { success: true, page: regeneratedPage })
+          await writer.close()
+        } catch (error: any) {
+          console.error('Regenerate page error:', error)
+          await sendEvent('error', { message: error.message || 'Unknown error' })
+          await writer.close()
+        }
+      })()
+
+      return new Response(readable, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      })
+    }
+
+    // ===========================================
+    // ACTION: generate-section
+    // ===========================================
+    if (action === 'generate-section') {
+      if (!sectionPrompt) {
+        return new Response(JSON.stringify({ error: 'Missing required field: sectionPrompt' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      console.log(`Generating section from prompt: ${sectionPrompt.substring(0, 50)}...`)
+
+      // Create SSE stream
+      const { readable, writable } = new TransformStream()
+      const writer = writable.getWriter()
+      const encoder = new TextEncoder()
+      const sendEvent = async (event: string, data: any) => {
+        await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
+      }
+
+      // Tool for generating a single section
+      const sectionTool = [
+        {
+          name: 'emit_section',
+          description: "Genereer een nieuwe section met optionele pagina's",
+          input_schema: {
+            type: 'object',
+            properties: {
+              section: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  handle: { type: 'string' },
+                  type: { type: 'string', enum: ['single', 'channel', 'structure'] },
+                  slug: { type: 'string' },
+                  template: { type: 'string' },
+                  entryTypes: { type: 'array', items: { type: 'string' } },
+                  fetchesFrom: { type: 'string' },
+                  categories: { type: 'array', items: { type: 'string' } },
+                },
+                required: ['name', 'handle', 'type', 'slug', 'template'],
+              },
+              pages: {
+                type: 'array',
+                description: "Optionele initiële pagina's voor deze section",
+                items: {
+                  type: 'object',
+                  properties: {
+                    page: { type: 'string' },
+                    section: { type: 'string' },
+                    rationale: { type: 'string' },
+                    blocks: { type: 'array' },
+                  },
+                  required: ['page', 'section', 'rationale', 'blocks'],
+                },
+              },
+            },
+            required: ['section'],
+          },
+        },
+      ]
+
+      ;(async () => {
+        try {
+          await sendEvent('progress', { message: 'Section genereren met AI...' })
+
+          // Build context about existing sections
+          const existingSectionsList = projectSections
+            ? projectSections.map((s: any) => `- ${s.name} (${s.handle}): ${s.type}`).join('\n')
+            : 'Geen bestaande sections'
+
+          const generateSectionPrompt = `Genereer een nieuwe Craft CMS section op basis van de volgende prompt van de gebruiker:
+
+**GEBRUIKER PROMPT:**
+${sectionPrompt}
+
+**TAAL:** ${language || 'Nederlands'}
+
+**BESTAANDE SECTIONS (vermijd duplicaten):**
+${existingSectionsList}
+
+**INSTRUCTIES:**
+1. Bepaal het juiste section type (single/channel/structure)
+2. Genereer een passende naam en handle (camelCase)
+3. Bepaal de slug URL structuur
+4. Genereer template pad
+5. Maak optioneel 1 initiële pagina met blokken die passen bij de section
+
+Voorbeelden van section types:
+- single: Unieke pagina's (Home, Contact, Over ons)
+- channel: Collecties (Nieuws, Blog, Portfolio, Cases)
+- structure: Hiërarchische content (Documentatie, FAQ, Services met sub-services)
+
+Gebruik de emit_section tool om de section te retourneren.`
+
+          const response = await anthropic.messages.create({
+            model: 'claude-opus-4-5-20251101',
+            max_tokens: 16000,
+            temperature: 0.0,
+            system: `Je bent een Craft CMS architect. Genereer logische section structuren voor websites.
+
+${instructionsMd}`,
+            tools: sectionTool,
+            tool_choice: { type: 'tool', name: 'emit_section' },
+            messages: [{ role: 'user', content: generateSectionPrompt }],
+          })
+
+          let result: any = null
+          for (const block of response.content) {
+            if (block.type === 'tool_use' && block.name === 'emit_section') {
+              result = block.input
+            }
+          }
+
+          if (!result || !result.section) {
+            throw new Error('AI did not return a valid section')
+          }
+
+          // Sanitize any pages returned
+          if (result.pages) {
+            result.pages = result.pages.map((page: any) => {
+              if (page.blocks) {
+                page.blocks = page.blocks.map((b: any) => sanitizeComponent(b))
+              }
+              return { ...page, status: 'complete' }
+            })
+          }
+
+          await sendEvent('section_generated', result)
+          await sendEvent('complete', { success: true, ...result })
+          await writer.close()
+        } catch (error: any) {
+          console.error('Generate section error:', error)
+          await sendEvent('error', { message: error.message || 'Unknown error' })
+          await writer.close()
+        }
+      })()
+
+      return new Response(readable, {
+        headers: {
+          ...corsHeaders,
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      })
+    }
+
+    // ===========================================
+    // DEFAULT ACTION: generate (full wireframe)
+    // ===========================================
+
+    // Build the prompt for Claude
+    const hasLargeInput = (description?.length || 0) > 600 || (files && files.length > 0)
 
     const systemPrompt = [
       'Je bent een UX/UI wireframe-architect.',
