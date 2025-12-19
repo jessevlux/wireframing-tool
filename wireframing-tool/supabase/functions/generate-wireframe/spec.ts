@@ -60,38 +60,115 @@ Wanneer een overview pagina entries moet tonen van een channel:
 }
 \`\`\`
 
-### Structure Sections
+### Structure Sections (Multi-Level)
 
-Gebruik \`structure\` voor hiërarchische content met parent-child relaties:
+Gebruik \`structure\` voor hiërarchische content met parent-child relaties.
 
-**Voorbeelden wanneer structure te gebruiken:**
-- Documentatie met sub-pagina's en secties
+**BELANGRIJK: Structures hebben GEEN aparte overview single nodig!**
+- Level 1 entry = de overzichtspagina
+- Level 2+ entries = detail of sub-categorie pagina's
+
+**Wanneer multi-level structure gebruiken:**
+- Diensten/Oplossingen met sub-diensten (bijv. "Maatwerk Software" → "CRM", "ERP")
+- Producten met categorieën en sub-producten
+- Locaties met regio's en vestigingen
 - FAQ met categorieën en vragen
-- Services met hoofd- en sub-services
-- Kennisbank met onderwerpen en artikelen
 
-**Voorbeeld structure section:**
+**Section properties voor structures:**
+- \`maxLevels\`: Maximum diepte (2, 3, of 4)
+- \`levels\`: Array met level configuratie (optioneel, voor documentatie)
+
+**Page properties voor structure entries:**
+- \`level\`: Niveau in hiërarchie (1 = root/overzicht)
+- \`parent\`: Titel van parent entry (null voor level 1)
+
+> **KRITIEK - VERPLICHT VOOR STRUCTURE PAGES:**
+>
+> ELKE page waarvan de \`section\` property verwijst naar een structure MOET \`level\` en \`parent\` hebben!
+> - Level 1: \`"level": 1, "parent": null\`
+> - Level 2: \`"level": 2, "parent": "Titel van level 1 pagina"\`
+> - Level 3: \`"level": 3, "parent": "Titel van level 2 pagina"\`
+>
+> **FOUT** (zal niet importeren):
+> \`{ "page": "Cloud Services", "section": "diensten" }\`
+>
+> **CORRECT**:
+> \`{ "page": "Cloud Services", "section": "diensten", "level": 2, "parent": "Diensten" }\`
+
+**Voorbeeld multi-level structure:**
 \`\`\`json
 {
   "sections": [
     {
-      "name": "Diensten overzicht",
-      "handle": "servicesOverview",
-      "type": "single",
-      "slug": "diensten",
-      "template": "_pages/services/index.twig",
-      "fetchesFrom": "services"
+      "name": "Oplossingen",
+      "handle": "oplossingen",
+      "type": "structure",
+      "maxLevels": 3,
+      "template": "_pages/oplossingen/entry.twig",
+      "entryTypes": ["oplossingen"],
+      "levels": [
+        { "level": 1, "name": "Overzicht" },
+        { "level": 2, "name": "Categorie of Detail" },
+        { "level": 3, "name": "Detail" }
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "page": "Oplossingen",
+      "section": "oplossingen",
+      "level": 1,
+      "parent": null,
+      "rationale": "Level 1 overzichtspagina met Grid die children toont",
+      "blocks": [
+        { "component": "Hero", "props": { "Has Title": true, "Hero Title": "Onze Oplossingen", ... } },
+        { "component": "Grid", "blockType": "entrySection", "fetchesFrom": "oplossingen", "props": { "Title": "Alle oplossingen" } },
+        { "component": "Footer", ... }
+      ]
     },
     {
-      "name": "Diensten",
-      "handle": "services",
-      "type": "structure",
-      "slug": "diensten/{slug}",
-      "template": "_pages/services/entry.twig"
+      "page": "Webshops",
+      "section": "oplossingen",
+      "level": 2,
+      "parent": "Oplossingen",
+      "rationale": "Level 2 detailpagina zonder children",
+      "blocks": [
+        { "component": "Detail page", "props": { "Has Project Header": true, ... } },
+        { "component": "CalltoAction", ... },
+        { "component": "Footer", ... }
+      ]
+    },
+    {
+      "page": "Maatwerk Software",
+      "section": "oplossingen",
+      "level": 2,
+      "parent": "Oplossingen",
+      "rationale": "Level 2 sub-overzicht met eigen children",
+      "blocks": [
+        { "component": "Hero", "props": { "Has Title": true, "Hero Title": "Maatwerk Software", ... } },
+        { "component": "Grid", "blockType": "entrySection", "fetchesFrom": "oplossingen", "props": { "Title": "Maatwerk opties" } },
+        { "component": "Footer", ... }
+      ]
+    },
+    {
+      "page": "CRM Systemen",
+      "section": "oplossingen",
+      "level": 3,
+      "parent": "Maatwerk Software",
+      "rationale": "Level 3 detailpagina onder Maatwerk Software",
+      "blocks": [
+        { "component": "Detail page", "props": { "Has Project Header": true, ... } },
+        { "component": "CalltoAction", ... },
+        { "component": "Footer", ... }
+      ]
     }
   ]
 }
 \`\`\`
+
+**Beslislogica voor page blocks in structures:**
+- Entry ZONDER children (leaf node) → Gebruik \`Detail page\` component
+- Entry MET children (sub-overzicht) → Gebruik \`Hero\` + \`Grid\` met \`fetchesFrom\`
 
 ---
 

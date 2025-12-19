@@ -217,11 +217,14 @@ const createProject = async () => {
                   console.log(
                     `Updating page "${existingPage.name}" with ${newPage.blocks?.length || 0} blocks`,
                   )
-                  // Convert but PRESERVE the original page ID!
+                  // Convert but PRESERVE the original page ID and structure hierarchy (level/parent)!
                   const converted = wireframeService.convertPageToProjectFormat(newPage)
                   return {
                     ...converted,
                     id: existingPage.id, // Keep original ID
+                    // Preserve level/parent from existing page if not in new data
+                    level: converted.level ?? existingPage.level,
+                    parent: converted.parent ?? existingPage.parent,
                   }
                 }
                 return existingPage

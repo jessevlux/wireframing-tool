@@ -388,6 +388,9 @@ export const wireframeService = {
             entryTypes: section.entryTypes || [section.handle],
             fetchesFrom: section.fetchesFrom || undefined,
             categories: section.categories || [],
+            // Multi-level structure support
+            maxLevels: section.maxLevels || undefined,
+            levels: section.levels || undefined,
           })),
           pages: wireframeJson.pages.map((page, index) => ({
             id: `page-${Date.now()}-${index}`,
@@ -395,6 +398,9 @@ export const wireframeService = {
             section: page.section || '',
             rationale: page.rationale || '',
             status: page.status || undefined,
+            // Multi-level structure support
+            level: page.level || undefined,
+            parent: page.parent || undefined,
             blocks: page.blocks.map((block, blockIndex) => ({
               id: `block-${Date.now()}-${index}-${blockIndex}`,
               ...block,
@@ -451,6 +457,9 @@ export const wireframeService = {
       section: page.section || '',
       rationale: page.rationale || '',
       status: page.status || 'complete',
+      // Multi-level structure support
+      level: page.level,
+      parent: page.parent,
       blocks: (page.blocks || []).map((block, blockIndex) => ({
         id: block.id || `block-${Date.now()}-${blockIndex}`,
         ...block,

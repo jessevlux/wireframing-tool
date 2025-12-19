@@ -27,16 +27,22 @@ Analyseer welke content types nodig zijn:
    - Over ons (vaak)
    - Andere unieke pagina's
 
-2. **Channel & Structure sections** - Collecties van entries:
+2. **Channel sections** - Platte collecties (geen hiërarchie):
    - Nieuws/Blog (als er nieuwsberichten zijn)
-   - Projecten/Cases (als er portfolio items zijn)
-   - Producten (als er producten zijn)
    - Team (als er teamleden zijn)
+   - Reviews/Testimonials
+   → Channels hebben een aparte overview single nodig + \`fetchesFrom\`
 
-3. **Overview/Detail koppelingen**:
-   - Als je een channel of structure hebt, maak dan ook een overview single
-   - Bijv: \`newsOverview\` (single) haalt entries op uit \`news\` (channel)
-   - Gebruik \`fetchesFrom\` om de koppeling te maken
+3. **Structure sections** - Hiërarchische collecties (multi-level):
+   - Diensten/Oplossingen (als sub-diensten mogelijk zijn)
+   - Producten met categorieën
+   - Locaties met regio's
+   → Structures hebben GEEN aparte overview single nodig!
+   → Level 1 = overzichtspagina, Level 2+ = detail of sub-categorie
+
+4. **Keuze Channel vs Structure:**
+   - Channel: platte lijst, geen parent-child relaties
+   - Structure: hiërarchie gewenst (bijv. "Maatwerk Software" → "CRM", "ERP")
 
 **Section naming conventies:**
 - Handles in camelCase: \`newsOverview\`, \`projectDetails\`
@@ -52,9 +58,15 @@ Analyseer welke content types nodig zijn:
 - **Elke pagina moet een \`section\` property hebben** die verwijst naar een section handle.
 - Standaardpagina's (404, Legal Pages, etc.) hoeven NIET meegenomen te worden in de sitemap en JSON.
 
-**Per channel/structure section maak je TWEE pagina's:**
+**Per channel section maak je TWEE pagina's:**
 1. **Overzichtspagina** (gekoppeld aan single section met \`fetchesFrom\`)
-2. **Detailpagina** (gekoppeld aan de channel/structure section zelf)
+2. **Detailpagina** (gekoppeld aan de channel section zelf)
+
+**Per structure section maak je MEERDERE pagina's:**
+1. **Level 1 pagina** = overzicht (met \`level: 1\`, \`parent: null\`)
+2. **Level 2+ pagina's** = detail of sub-categorie (met \`level\` en \`parent\`)
+   - Entries ZONDER children → Detail page component
+   - Entries MET children → Hero + Grid met \`fetchesFrom\`
 
 Geef een uitleg met:
 
@@ -85,12 +97,14 @@ Een blok is staticContent ALLEEN wanneer:
 ### Wanneer Detailpage component gebruiken
 
 Een pagina MOET het Detailpage component gebruiken wanneer:
-- De pagina-section type "channel" of "structure" is
-- De pagina één individuele entry toont (niet een overzicht)
+- De pagina-section type "channel" is
+- OF de pagina een structure entry is ZONDER children (leaf node)
 
 Voorbeelden:
-- "Nieuws detail" → gebruikt Detailpage (3 blokken: Detailpage, CTA, Footer)
-- "Project detail" → gebruikt Detailpage
+- "Nieuws detail" (channel) → gebruikt Detailpage
+- "Webshops" (structure level 2, geen children) → gebruikt Detailpage
+- "CRM Systemen" (structure level 3, geen children) → gebruikt Detailpage
+- "Maatwerk Software" (structure level 2, HEEFT children) → gebruikt GEEN Detailpage, maar Hero + Grid
 - "Nieuws overzicht" → gebruikt NIET Detailpage (gebruikt Grid met entrySection)
 
 ### Component Selectie

@@ -1,6 +1,7 @@
 <script setup>
 import { GripVertical, ChevronUp, ChevronDown, Trash2 } from 'lucide-vue-next'
 import { useTheme } from '../composables/useTheme.js'
+import BlockPreview from './BlockPreview.vue'
 
 const { card, border, hover, darkMode } = useTheme()
 
@@ -26,6 +27,14 @@ const props = defineProps({
     default: false,
   },
   isDragOver: {
+    type: Boolean,
+    default: false,
+  },
+  collapsed: {
+    type: Boolean,
+    default: false,
+  },
+  pageSimulation: {
     type: Boolean,
     default: false,
   },
@@ -112,17 +121,20 @@ const getBlockTypeBadgeClass = () => {
     @drop.prevent="emit('drop', block.id, $event)"
     @click="emit('select', block)"
     :class="[
-      'border-2 rounded-xl p-5 cursor-pointer transition-all group relative',
-      isSelected ? 'border-violet-500 bg-violet-500/5' : `${border} ${card} hover:border-zinc-500`,
+      pageSimulation ? 'simulation-block border-0 rounded-none' : 'border-2 rounded-xl',
+      'cursor-pointer transition-all group relative overflow-hidden',
+      isSelected && !pageSimulation ? 'border-violet-500 bg-violet-500/5' : '',
+      !isSelected && !pageSimulation ? `${border} ${card} hover:border-zinc-500` : '',
       isDragOver ? 'drag-indicator' : '',
     ]"
   >
-    <div class="flex items-center gap-4">
-      <div :class="`p-3 rounded-lg align-middle ${hover} cursor-grab active:cursor-grabbing`">
+    <!-- Block Header (hidden in simulation mode) -->
+    <div v-if="!pageSimulation" class="flex items-center gap-4 p-4">
+      <div :class="`p-2 rounded-lg align-middle ${hover} cursor-grab active:cursor-grabbing`">
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">
-        <div class="flex items-center justify-between mb-1">
+        <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
             <h3 class="font-semibold">{{ block.component || block.type }}</h3>
             <span
@@ -167,8 +179,41 @@ const getBlockTypeBadgeClass = () => {
             </button>
           </div>
         </div>
-        <p class="text-sm text-zinc-400">{{ block.content || getBlockDescription() }}</p>
+        <p class="text-sm text-zinc-400 mt-1">{{ block.content || getBlockDescription() }}</p>
       </div>
+    </div>
+
+    <!-- Block Preview -->
+    <Transition
+      enter-active-class="transition-all duration-200 ease-out"
+      leave-active-class="transition-all duration-150 ease-in"
+      enter-from-class="opacity-0 max-h-0"
+      enter-to-class="opacity-100 max-h-[500px]"
+      leave-from-class="opacity-100 max-h-[500px]"
+      leave-to-class="opacity-0 max-h-0"
+    >
+      <div
+        v-if="!collapsed || pageSimulation"
+        :class="pageSimulation ? '' : 'px-4 pb-4'"
+        class="overflow-hidden"
+      >
+        <div :class="pageSimulation ? 'w-full' : 'max-w-md'">
+          <BlockPreview
+            :block="block"
+            :page-simulation="pageSimulation"
+            :is-selected="isSelected"
+            :key="`${block.id}-${JSON.stringify(block.props)}-${JSON.stringify(block.children)}`"
+          />
+        </div>
+      </div>
+    </Transition>
+
+    <!-- Simulation mode hover overlay -->
+    <div
+      v-if="pageSimulation"
+      class="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center gap-2 bg-black/70 rounded-lg px-2 py-1"
+    >
+      <span class="text-xs text-white font-medium">{{ block.component || block.type }}</span>
     </div>
   </div>
 </template>

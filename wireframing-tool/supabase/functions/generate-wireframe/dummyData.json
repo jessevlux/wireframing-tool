@@ -282,7 +282,7 @@
     {
       "page": "Agenda overzicht",
       "section": "agendaOverview",
-      "rationale": "De agenda overzichtspagina toont alle events in een overzichtelijk grid. De Hero introduceert de pagina, gevolgd door een News-component die alle events toont met datum, categorie en beschrijving. Dit creëert urgentie en stimuleert ticketverkoop.",
+      "rationale": "De agenda overzichtspagina toont alle events in een overzichtelijk grid. De Hero introduceert de pagina, gevolgd door een Grid3Col-component die alle events toont met datum, categorie en beschrijving. Dit creëert urgentie en stimuleert ticketverkoop.",
       "blocks": [
         {
           "component": "Hero",

@@ -10,9 +10,17 @@ if (savedTheme !== null) {
   darkMode.value = savedTheme === 'dark'
 }
 
-// Persist to localStorage on change
+// Set initial dark class on HTML element
+if (typeof document !== 'undefined') {
+  document.documentElement.classList.toggle('dark', darkMode.value)
+}
+
+// Persist to localStorage on change AND toggle dark class on HTML element
 watch(darkMode, (value) => {
   localStorage.setItem('wireframe_theme', value ? 'dark' : 'light')
+  if (typeof document !== 'undefined') {
+    document.documentElement.classList.toggle('dark', value)
+  }
 })
 
 export function useTheme() {

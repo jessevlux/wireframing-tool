@@ -18,6 +18,7 @@ import {
   Moon,
   Sparkles,
   RefreshCw,
+  Monitor,
 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
@@ -84,6 +85,12 @@ const sectionError = ref('')
 // Drag and drop state
 const draggedBlockId = ref(null)
 const dragOverBlockId = ref(null)
+
+// Preview mode (shows expanded blocks edge-to-edge)
+const previewMode = ref(false)
+const togglePreviewMode = () => {
+  previewMode.value = !previewMode.value
+}
 
 // Undo/Redo history
 const history = ref([])
@@ -307,10 +314,43 @@ const selectedSection = computed(() => {
   return project.value.sections?.find((s) => s.id === selectedSectionId.value)
 })
 
-// Get pages for selected section
+// Get pages for selected section, sorted by hierarchy (children under their parent)
 const pagesForSection = computed(() => {
   if (!selectedSection.value || !project.value?.pages) return []
-  return project.value.pages.filter((p) => p.section === selectedSection.value.handle)
+  const sectionPages = project.value.pages.filter((p) => p.section === selectedSection.value.handle)
+
+  // Build hierarchical tree: children directly under their parent
+  // Step 1: Find root pages (level 1 or no parent)
+  const rootPages = sectionPages.filter((p) => !p.parent || p.level === 1)
+
+  // Step 2: Recursive function to get page and all its descendants
+  const getPageWithDescendants = (page) => {
+    const result = [page]
+    // Find direct children of this page
+    const children = sectionPages
+      .filter((p) => p.parent === page.name)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+
+    // Recursively add each child and its descendants
+    for (const child of children) {
+      result.push(...getPageWithDescendants(child))
+    }
+    return result
+  }
+
+  // Step 3: Build final sorted list by traversing tree depth-first
+  const sortedPages = []
+  const sortedRoots = rootPages.sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  for (const root of sortedRoots) {
+    sortedPages.push(...getPageWithDescendants(root))
+  }
+
+  // Step 4: Append any orphan pages (have parent but parent not found)
+  const includedNames = new Set(sortedPages.map((p) => p.name))
+  const orphans = sectionPages.filter((p) => !includedNames.has(p.name))
+  sortedPages.push(...orphans)
+
+  return sortedPages
 })
 
 const selectedPage = computed(() => {
@@ -337,6 +377,170 @@ const canRegeneratePage = computed(() => {
 const availableSectionsForEntrySection = computed(() => {
   if (!project.value?.sections) return []
   return project.value.sections.filter((s) => s.type === 'channel' || s.type === 'structure')
+})
+
+// Visible children - filters children based on parent's "Has X" boolean props
+// This is a generic solution that hides children when their corresponding "Has X" is false
+// Also excludes Button Primary/Secondary as they are shown inline in properties panel
+const visibleChildren = computed(() => {
+  if (!selectedBlock.value?.children) return []
+
+  const block = selectedBlock.value
+  const children = block.children
+
+  // Define mapping of child components to their visibility condition prop
+  const childVisibilityMap = {
+    'Text Element': 'Has Text',
+    'Accordion list': 'Has Accordion',
+  }
+
+  // Components to always hide from Children section (shown inline instead)
+  const inlineChildren = ['Button Primary', 'Button Secondary']
+
+  // Filter children based on visibility conditions and exclude inline children
+  return children.filter((child) => {
+    // Hide buttons - they're shown inline in properties
+    if (inlineChildren.includes(child.component)) {
+      return false
+    }
+
+    const visibilityProp = childVisibilityMap[child.component]
+
+    // If this child has a visibility condition, check if it's true
+    if (visibilityProp && block.props) {
+      return block.props[visibilityProp] === true
+    }
+
+    // No condition defined - always show
+    return true
+  })
+})
+
+// Ordered properties - groups related fields together for better UX
+// Returns array of property groups with their fields in logical order
+const orderedProperties = computed(() => {
+  if (!selectedBlock.value?.props) return []
+
+  const block = selectedBlock.value
+  const props = block.props
+  const component = block.component
+
+  // Define property order per component type
+  // Format: { key: propName, type: 'boolean'|'string'|'select', relatedTo?: 'HasPropName' }
+  const propertyOrders = {
+    Hero: [
+      { key: 'Has Title', type: 'boolean' },
+      { key: 'Hero Title', type: 'string', relatedTo: 'Has Title' },
+      { key: 'Has Description', type: 'boolean' },
+      { key: 'Description', type: 'string', relatedTo: 'Has Description' },
+      { key: 'Has Usps', type: 'boolean' },
+      { key: 'Usp 1', type: 'string', relatedTo: 'Has Usps' },
+      { key: 'Usp 2', type: 'string', relatedTo: 'Has Usps' },
+      { key: 'Usp 3', type: 'string', relatedTo: 'Has Usps' },
+      { key: 'Has Button Primary', type: 'boolean', hasInlineButton: 'Button Primary' },
+      { key: 'Has Button Secondary', type: 'boolean', hasInlineButton: 'Button Secondary' },
+    ],
+    CalltoAction: [
+      { key: 'Has Title', type: 'boolean' },
+      { key: 'Title', type: 'string', relatedTo: 'Has Title' },
+      { key: 'Has Description', type: 'boolean' },
+      { key: 'Description', type: 'string', relatedTo: 'Has Description' },
+      { key: 'Has Usps', type: 'boolean' },
+      { key: 'Usp 1', type: 'string', relatedTo: 'Has Usps' },
+      { key: 'Usp 2', type: 'string', relatedTo: 'Has Usps' },
+      { key: 'Usp 3', type: 'string', relatedTo: 'Has Usps' },
+      { key: 'Has Button Primary', type: 'boolean', hasInlineButton: 'Button Primary' },
+      { key: 'Has Button Secondary', type: 'boolean', hasInlineButton: 'Button Secondary' },
+    ],
+    Grid: [
+      { key: 'Property 1', type: 'select' },
+      { key: 'Title', type: 'string' },
+    ],
+    Kolommen: [{ key: 'Property 1', type: 'select' }],
+    Media: [{ key: 'Property 1', type: 'select' }],
+    'Content Kolommen Block': [
+      { key: 'Has Text', type: 'boolean' },
+      { key: 'Has Accordion', type: 'boolean' },
+    ],
+    Footer: [
+      { key: 'Has Column 1', type: 'boolean' },
+      { key: 'Header 1', type: 'string', relatedTo: 'Has Column 1' },
+      { key: 'Link1A', type: 'string', relatedTo: 'Has Column 1' },
+      { key: 'Link1B', type: 'string', relatedTo: 'Has Column 1' },
+      { key: 'Link1C', type: 'string', relatedTo: 'Has Column 1' },
+      { key: 'Has Column 2', type: 'boolean' },
+      { key: 'Header 2', type: 'string', relatedTo: 'Has Column 2' },
+      { key: 'Link2A', type: 'string', relatedTo: 'Has Column 2' },
+      { key: 'Link2B', type: 'string', relatedTo: 'Has Column 2' },
+      { key: 'Link2C', type: 'string', relatedTo: 'Has Column 2' },
+      { key: 'Has Column 3', type: 'boolean' },
+      { key: 'Header 3', type: 'string', relatedTo: 'Has Column 3' },
+      { key: 'Link3A', type: 'string', relatedTo: 'Has Column 3' },
+      { key: 'Link3B', type: 'string', relatedTo: 'Has Column 3' },
+      { key: 'Link3C', type: 'string', relatedTo: 'Has Column 3' },
+      { key: 'Has Column 4', type: 'boolean' },
+      { key: 'Header 4', type: 'string', relatedTo: 'Has Column 4' },
+      { key: 'Link4A', type: 'string', relatedTo: 'Has Column 4' },
+      { key: 'Link4B', type: 'string', relatedTo: 'Has Column 4' },
+      { key: 'Link4C', type: 'string', relatedTo: 'Has Column 4' },
+      { key: 'Has Nieuwsbrief', type: 'boolean' },
+    ],
+    'Text Element': [
+      { key: 'Title of text Block', type: 'string' },
+      { key: 'Has description', type: 'boolean' },
+      { key: 'Description', type: 'string', relatedTo: 'Has description' },
+      { key: 'Has List', type: 'boolean' },
+      { key: 'Usp Text 1', type: 'string', relatedTo: 'Has List' },
+      { key: 'Usp text 2', type: 'string', relatedTo: 'Has List' },
+      { key: 'Usp Text 3', type: 'string', relatedTo: 'Has List' },
+      { key: 'Has Primary Button', type: 'boolean', hasInlineButton: 'Button Primary' },
+      { key: 'Has Second Button', type: 'boolean', hasInlineButton: 'Button Secondary' },
+    ],
+    'Accordion list': [
+      { key: 'Has Title', type: 'boolean' },
+      { key: 'Title', type: 'string', relatedTo: 'Has Title' },
+      { key: 'Text', type: 'string' },
+      { key: 'Text 2', type: 'string' },
+      { key: 'Text 3', type: 'string' },
+      { key: 'Text 4', type: 'string' },
+      { key: 'Text open item', type: 'string' },
+    ],
+  }
+
+  const order = propertyOrders[component]
+  if (!order) {
+    // Fallback: return all props as-is for components without defined order
+    return Object.entries(props).map(([key, value]) => ({
+      key,
+      value,
+      type: typeof value === 'boolean' ? 'boolean' : key === 'Property 1' ? 'select' : 'string',
+      visible: true,
+    }))
+  }
+
+  // Build ordered list with visibility based on relatedTo conditions
+  return order
+    .filter((item) => item.key in props) // Only include props that exist
+    .map((item) => {
+      const visible =
+        !item.relatedTo || // No condition
+        props[item.relatedTo] === true // Condition is met
+
+      // Get inline button child if applicable
+      let inlineButton = null
+      if (item.hasInlineButton && props[item.key] === true) {
+        inlineButton = block.children?.find((c) => c.component === item.hasInlineButton)
+      }
+
+      return {
+        key: item.key,
+        value: props[item.key],
+        type: item.type,
+        visible,
+        relatedTo: item.relatedTo,
+        inlineButton,
+      }
+    })
 })
 
 // Methods
@@ -413,31 +617,91 @@ const getVariantLabel = (componentType, variant) => {
 const selectChild = (child, parentBlock) => {
   // Vind de index van dit child in de parent
   const childIndex = parentBlock.children.findIndex((c) => c === child)
+
+  let rootBlockId
+  let currentPath
+
+  // If we already have selectedChildInfo with a rootBlockId, we're navigating deeper
+  if (selectedChildInfo.value && selectedChildInfo.value.rootBlockId) {
+    // We're already in a nested context - keep the same root, extend the path
+    rootBlockId = selectedChildInfo.value.rootBlockId
+    currentPath = [...(selectedChildInfo.value.childPath || []), childIndex]
+  } else {
+    // This is the first level of child selection - parentBlock is the root
+    rootBlockId = parentBlock.id
+    currentPath = [childIndex]
+  }
+
   selectedBlock.value = child
   selectedChildInfo.value = {
-    parentBlockId: parentBlock.id,
+    parentBlockId: parentBlock.id, // May be undefined for nested children
     childIndex: childIndex,
+    rootBlockId: rootBlockId,
+    childPath: currentPath,
   }
 }
 
 // Helper om parent block te vinden voor het huidige geselecteerde block
 const getParentBlock = (currentBlock) => {
-  // Als we al child info hebben, gebruik die
-  if (selectedChildInfo.value) {
-    return selectedPage.value.blocks.find((b) => b.id === selectedChildInfo.value.parentBlockId)
+  if (!selectedChildInfo.value) {
+    // Het is een top-level block - return het block zelf
+    return selectedPage.value.blocks.find((b) => b.id === currentBlock.id)
   }
-  // Anders zoek het block op basis van ID
-  return selectedPage.value.blocks.find((b) => b.id === currentBlock.id)
+
+  const { rootBlockId, childPath } = selectedChildInfo.value
+
+  // Find root block
+  const rootBlock = selectedPage.value.blocks.find((b) => b.id === rootBlockId)
+  if (!rootBlock) return null
+
+  if (!childPath || childPath.length <= 1) {
+    // At first level of children - parent is the root block
+    return rootBlock
+  }
+
+  // Navigate to parent using all but the last index
+  let parent = rootBlock
+  for (let i = 0; i < childPath.length - 1; i++) {
+    if (!parent.children || !parent.children[childPath[i]]) return null
+    parent = parent.children[childPath[i]]
+  }
+  return parent
 }
 
 // Ga terug naar parent block
 const goBackToParent = () => {
-  if (selectedChildInfo.value) {
-    const parentBlock = selectedPage.value.blocks.find(
-      (b) => b.id === selectedChildInfo.value.parentBlockId,
-    )
-    if (parentBlock) {
-      selectBlock(parentBlock)
+  if (!selectedChildInfo.value) return
+
+  const { rootBlockId, childPath } = selectedChildInfo.value
+
+  if (!childPath || childPath.length === 0) return
+
+  // Find root block
+  const rootBlock = selectedPage.value.blocks.find((b) => b.id === rootBlockId)
+  if (!rootBlock) return
+
+  if (childPath.length === 1) {
+    // We're at the first level of children - go back to root block
+    selectBlock(rootBlock)
+  } else {
+    // Navigate to the parent using all but the last index
+    const parentPath = childPath.slice(0, -1)
+    let parentNode = rootBlock
+    for (let i = 0; i < parentPath.length - 1; i++) {
+      if (!parentNode.children || !parentNode.children[parentPath[i]]) return
+      parentNode = parentNode.children[parentPath[i]]
+    }
+    const parentIndex = parentPath[parentPath.length - 1]
+    const parent = parentNode.children[parentIndex]
+
+    if (parent) {
+      selectedBlock.value = parent
+      selectedChildInfo.value = {
+        parentBlockId: parentNode.id || rootBlockId,
+        childIndex: parentIndex,
+        rootBlockId: rootBlockId,
+        childPath: parentPath,
+      }
     }
   }
 }
@@ -638,6 +902,35 @@ const addBlock = (componentType = 'Hero') => {
         children: [],
       })
     }
+  } else if (componentType === 'Kolommen') {
+    // Kolommen always has Media and Content Kolommen Block children
+    newBlock.children.push({
+      component: 'Media',
+      props: {
+        'Property 1': 'Default',
+      },
+    })
+    newBlock.children.push({
+      component: 'Content Kolommen Block',
+      props: {
+        'Has Text': true,
+        'Has Accordion': false,
+      },
+      children: [
+        {
+          component: 'Text Element',
+          props: {
+            'Title of text Block': 'Titel',
+            'Has description': true,
+            Description: 'Beschrijving tekst...',
+            'Has List': false,
+            'Has Primary Button': false,
+            'Has Second Button': false,
+          },
+          children: [],
+        },
+      ],
+    })
   }
 
   // Add to page
@@ -728,145 +1021,6 @@ const handleDrop = (targetBlockId) => {
   saveProject()
 }
 
-// Bepaal of een property getoond moet worden op basis van conditielogica
-const shouldShowProperty = (propKey, allProps) => {
-  // Alle "Has X" velden altijd tonen
-  if (propKey.startsWith('Has ')) {
-    return true
-  }
-
-  // Property 1 altijd tonen (voor enums)
-  if (propKey === 'Property 1') {
-    return true
-  }
-
-  // Inner Grid Card: Title en Description altijd tonen (geen Has conditie)
-  if (selectedBlock.value?.component === 'Inner Grid Card') {
-    if (propKey === 'Title' || propKey === 'Description') {
-      return true
-    }
-  }
-
-  // Mapping van properties naar hun "Has X" conditie (exact zoals in schema)
-  const conditionalFields = {
-    // Hero & CalltoAction (Has Title, Has Description, Has Usps, Has Button Primary/Secondary)
-    'Hero Title': 'Has Title',
-    Title: 'Has Title', // Voor CalltoAction, Accordion, Projects, etc.
-    Description: 'Has Description', // Voor Hero, CalltoAction
-    'Usp 1': 'Has Usps',
-    'Usp 2': 'Has Usps',
-    'Usp 3': 'Has Usps',
-
-    // Text Element (Has Primary Button, Has Second Button, Has List, Has description - lowercase!)
-    'Title of text Block': undefined, // Altijd tonen (geen conditie in schema)
-    'Usp Text 1': 'Has List',
-    'Usp text 2': 'Has List',
-    'Usp Text 3': 'Has List',
-
-    // Entry Post Inner (Has title - lowercase!, Has description - lowercase!)
-    'Title of this block': 'Has title', // lowercase!
-    'Category Name': 'Has Category',
-    Popular: 'Has Popular',
-
-    // Projects (Has description - lowercase!)
-    'Example category': 'Has example project',
-    'Example header': 'Has example project',
-    'Example description': 'Has example project',
-
-    // Footer (Has Column 1/2/3/4, Has Nieuwsbrief)
-    'Header 1': 'Has Column 1',
-    Link1A: 'Has Column 1',
-    Link1B: 'Has Column 1',
-    Link1C: 'Has Column 1',
-    Link1D: 'Has Column 1',
-    Link1E: 'Has Column 1',
-    Link1F: 'Has Column 1',
-    Link1G: 'Has Column 1',
-
-    'Header 2': 'Has Column 2',
-    Link2A: 'Has Column 2',
-    Link2B: 'Has Column 2',
-    Link2C: 'Has Column 2',
-    Link2D: 'Has Column 2',
-    Link2E: 'Has Column 2',
-    Link2F: 'Has Column 2',
-    Link2G: 'Has Column 2',
-
-    'Header 3': 'Has Column 3',
-    Link3A: 'Has Column 3',
-    Link3B: 'Has Column 3',
-    Link3C: 'Has Column 3',
-    Link3D: 'Has Column 3',
-    Link3E: 'Has Column 3',
-    Link3F: 'Has Column 3',
-    Link3G: 'Has Column 3',
-
-    'Header 4': 'Has Column 4',
-    Link4A: 'Has Column 4',
-    Link4B: 'Has Column 4',
-    Link4C: 'Has Column 4',
-    Link4D: 'Has Column 4',
-    Link4E: 'Has Column 4',
-    Link4F: 'Has Column 4',
-    Link4G: 'Has Column 4',
-
-    // Accordion (Text velden hebben GEEN conditie behalve Has Title voor Title)
-    Text: undefined, // Altijd tonen
-    'Text 2': undefined, // Altijd tonen
-    'Text 3': undefined, // Altijd tonen
-    'Text 4': undefined, // Altijd tonen
-    'Text open item': undefined, // Altijd tonen
-
-    // Buttons (Property 1 en text velden altijd verplicht)
-    'Text primary button': undefined, // Altijd tonen (verplicht in schema)
-    'Text Secondary Button': undefined, // Altijd tonen (verplicht in schema)
-
-    // Contactform (geen properties)
-
-    // Detail page
-    'Paragraph 1': undefined, // Altijd tonen
-    'Paragraph 2': undefined, // Altijd tonen
-    'Highlight Title': 'Has Highlight Paragraph',
-    'Highlight Paragraph': 'Has Highlight Paragraph',
-    'Paragraph 3 Title': undefined, // Altijd tonen
-    'Paragraph 3': undefined, // Altijd tonen
-    'Paragraph 4': undefined, // Altijd tonen
-
-    // Form
-    'Field 1': 'Has Field 1',
-    'Field 2.1': 'Has Field 2',
-    'Field 2.2': 'Has Field 2',
-    'Field 3': 'Has Field 3',
-    'Radio Button 1': 'Has Radio Buttons',
-    'Radio Button 2': 'Has Radio Buttons',
-    'Radio Button 3': 'Has Radio Buttons',
-    'Checkbox 1': 'Has Checkboxes',
-    'Checkbox 2': 'Has Checkboxes',
-    'Checkbox 3': 'Has Checkboxes',
-    'Dropdown title': 'Has Dropdown',
-  }
-
-  // Als het veld expliciet undefined heeft, altijd tonen
-  if (propKey in conditionalFields && conditionalFields[propKey] === undefined) {
-    return true
-  }
-
-  // Als het veld een conditie heeft, check of die "Has X" true is
-  const requiredCondition = conditionalFields[propKey]
-  if (requiredCondition) {
-    return allProps[requiredCondition] === true
-  }
-
-  // Check ook voor "Has description" en "Has title" (lowercase) voor Description velden
-  if (propKey === 'Description') {
-    // Kan "Has Description" (Hero, CalltoAction) of "Has description" (TextElement, Projects, EntryPost) zijn
-    return allProps['Has Description'] === true || allProps['Has description'] === true
-  }
-
-  // Anders altijd tonen (bijv. voor velden zonder conditie)
-  return true
-}
-
 // Update blockType
 const updateBlockType = (value) => {
   if (!selectedBlock.value || !selectedPage.value) return
@@ -900,77 +1054,150 @@ const updateBlockProp = (propKey, value) => {
 
   // Als het een child is (we hebben child info)
   if (selectedChildInfo.value) {
-    const parentBlock = selectedPage.value.blocks.find(
-      (b) => b.id === selectedChildInfo.value.parentBlockId,
-    )
-    if (parentBlock && parentBlock.children) {
-      const child = parentBlock.children[selectedChildInfo.value.childIndex]
-      if (child && child.props) {
-        child.props[propKey] = value
-        selectedBlock.value = { ...child }
+    const { rootBlockId, childPath } = selectedChildInfo.value
 
-        // Handle children for child blocks too
-        handleChildrenForBooleans(child, propKey, value)
+    // Find the root top-level block
+    const rootBlockIndex = selectedPage.value.blocks.findIndex((b) => b.id === rootBlockId)
+    if (rootBlockIndex === -1) return
 
-        saveProject()
-        return
+    const rootBlock = selectedPage.value.blocks[rootBlockIndex]
+
+    // Navigate to the nested child using the path
+    let currentNode = rootBlock
+    for (let i = 0; i < childPath.length - 1; i++) {
+      if (!currentNode.children || !currentNode.children[childPath[i]]) return
+      currentNode = currentNode.children[childPath[i]]
+    }
+
+    // Get the final child
+    const finalIndex = childPath[childPath.length - 1]
+    if (!currentNode.children || !currentNode.children[finalIndex]) return
+
+    const child = currentNode.children[finalIndex]
+    if (child && child.props) {
+      // Update the property
+      child.props[propKey] = value
+
+      // Handle children for child blocks too (e.g., adding/removing buttons)
+      handleChildrenForBooleans(child, propKey, value)
+
+      // FORCE REACTIVITY: Deep clone root block to trigger Vue re-render of preview
+      // Must be deep clone because children are nested multiple levels deep
+      const clonedRootBlock = JSON.parse(JSON.stringify(rootBlock))
+      selectedPage.value.blocks[rootBlockIndex] = clonedRootBlock
+
+      // Navigate to the same child in the CLONED tree to update selectedBlock
+      // This ensures the properties panel shows the updated values
+      let clonedNode = clonedRootBlock
+      for (let i = 0; i < childPath.length - 1; i++) {
+        clonedNode = clonedNode.children[childPath[i]]
       }
+      selectedBlock.value = clonedNode.children[finalIndex]
+
+      saveProject()
+      return
     }
   }
 
   // Anders is het een top-level block
-  const block = selectedPage.value.blocks.find((b) => b.id === selectedBlock.value.id)
-  if (block && block.props) {
-    block.props[propKey] = value
-    selectedBlock.value = { ...block }
+  const blockIndex = selectedPage.value.blocks.findIndex((b) => b.id === selectedBlock.value.id)
+  if (blockIndex !== -1) {
+    const block = selectedPage.value.blocks[blockIndex]
+    if (block.props) {
+      block.props[propKey] = value
 
-    // Handle Grid variant changes - adjust number of cards
-    if (block.component === 'Grid' && propKey === 'Property 1') {
-      const cardCount = value === 'Default' ? 3 : value === 'Variant2' ? 4 : 2
-      const currentCount = block.children?.length || 0
+      // Handle Grid variant changes - adjust number of cards
+      if (block.component === 'Grid' && propKey === 'Property 1') {
+        const cardCount = value === 'Default' ? 3 : value === 'Variant2' ? 4 : 2
+        const currentCount = block.children?.length || 0
 
-      if (!block.children) {
-        block.children = []
-      }
+        if (!block.children) {
+          block.children = []
+        }
 
-      // Add or remove cards to match the variant
-      if (currentCount < cardCount) {
-        // Add cards
-        for (let i = currentCount; i < cardCount; i++) {
-          block.children.push({
-            component: 'Inner Grid Card',
-            index: i,
-            props: {
-              Title: `Card ${i + 1}`,
-              Description: 'Beschrijving',
-              'Has button': false,
-            },
-            children: [],
+        // Add or remove cards to match the variant
+        if (currentCount < cardCount) {
+          // Add cards
+          for (let i = currentCount; i < cardCount; i++) {
+            block.children.push({
+              component: 'Inner Grid Card',
+              index: i,
+              props: {
+                Title: `Card ${i + 1}`,
+                Description: 'Beschrijving',
+                'Has button': false,
+              },
+              children: [],
+            })
+          }
+        } else if (currentCount > cardCount) {
+          // Remove excess cards
+          block.children = block.children.slice(0, cardCount)
+          // Update indices
+          block.children.forEach((child, idx) => {
+            if (child.index !== undefined) {
+              child.index = idx
+            }
           })
         }
-      } else if (currentCount > cardCount) {
-        // Remove excess cards
-        block.children = block.children.slice(0, cardCount)
-        // Update indices
-        block.children.forEach((child, idx) => {
-          if (child.index !== undefined) {
-            child.index = idx
-          }
-        })
       }
+
+      // Automatisch children toevoegen/verwijderen op basis van boolean properties
+      handleChildrenForBooleans(block, propKey, value)
+
+      // FORCE REACTIVITY: Replace block object in array to trigger Vue re-render
+      selectedPage.value.blocks[blockIndex] = { ...block }
+      selectedBlock.value = { ...block }
+
+      saveProject()
     }
-
-    // Automatisch children toevoegen/verwijderen op basis van boolean properties
-    handleChildrenForBooleans(block, propKey, value)
-
-    saveProject()
   }
+}
+
+// Update button text for inline button controls
+const updateButtonText = (buttonComponent, text) => {
+  if (!selectedBlock.value || !selectedPage.value) return
+
+  const blockIndex = selectedPage.value.blocks.findIndex((b) => b.id === selectedBlock.value.id)
+  if (blockIndex === -1) return
+
+  const block = selectedPage.value.blocks[blockIndex]
+  if (!block.children) return
+
+  const buttonChild = block.children.find((c) => c.component === buttonComponent)
+  if (!buttonChild) return
+
+  if (!buttonChild.props) buttonChild.props = {}
+
+  // Update correct prop based on button type
+  if (buttonComponent === 'Button Primary') {
+    buttonChild.props['Text primary button'] = text
+  } else if (buttonComponent === 'Button Secondary') {
+    buttonChild.props['Text Secondary Button'] = text
+  }
+
+  // Force reactivity
+  selectedPage.value.blocks[blockIndex] = { ...block }
+  selectedBlock.value = { ...block }
+  saveProject()
 }
 
 // Automatisch children toevoegen of verwijderen op basis van boolean properties
 const handleChildrenForBooleans = (block, propKey, value) => {
   if (!block.children) {
     block.children = []
+  }
+
+  // Has Usps - dynamisch Usp 1/2/3 properties toevoegen
+  if (propKey === 'Has Usps') {
+    if (value === true) {
+      // Voeg Usp 1/2/3 toe als die er nog niet zijn
+      if (!block.props['Usp 1']) block.props['Usp 1'] = 'USP tekst 1'
+      if (!block.props['Usp 2']) block.props['Usp 2'] = 'USP tekst 2'
+      if (!block.props['Usp 3']) block.props['Usp 3'] = 'USP tekst 3'
+    }
+    // We verwijderen de Usp velden NIET wanneer Has Usps wordt uitgezet
+    // zodat de content bewaard blijft als de gebruiker het weer aanzet
   }
 
   // Button Primary
@@ -1013,9 +1240,19 @@ const handleChildrenForBooleans = (block, propKey, value) => {
     }
   }
 
-  // Content Kolommen Block - Accordion
-  if (propKey === 'Has Accordion' && block.component === 'Content Kolommen Block') {
+  // Content Kolommen Block / Kolommen - Accordion (mutual exclusive with Text)
+  if (
+    propKey === 'Has Accordion' &&
+    (block.component === 'Content Kolommen Block' || block.component === 'Kolommen')
+  ) {
     if (value === true) {
+      // MUTUAL EXCLUSIVITY: Disable Has Text when Has Accordion is enabled
+      // But DON'T remove children - just toggle the prop
+      if (block.props['Has Text'] === true) {
+        block.props['Has Text'] = false
+        // DON'T remove Text Element - preserve the content!
+      }
+
       const hasAccordion = block.children.some((c) => c.component === 'Accordion list')
       if (!hasAccordion) {
         block.children.push({
@@ -1031,14 +1268,23 @@ const handleChildrenForBooleans = (block, propKey, value) => {
           },
         })
       }
-    } else {
-      block.children = block.children.filter((c) => c.component !== 'Accordion list')
     }
+    // DON'T remove Accordion list when toggling off - preserve the content!
   }
 
-  // Content Kolommen Block - Text Element
-  if (propKey === 'Has Text' && block.component === 'Content Kolommen Block') {
+  // Content Kolommen Block / Kolommen - Text Element (mutual exclusive with Accordion)
+  if (
+    propKey === 'Has Text' &&
+    (block.component === 'Content Kolommen Block' || block.component === 'Kolommen')
+  ) {
     if (value === true) {
+      // MUTUAL EXCLUSIVITY: Disable Has Accordion when Has Text is enabled
+      // But DON'T remove children - just toggle the prop
+      if (block.props['Has Accordion'] === true) {
+        block.props['Has Accordion'] = false
+        // DON'T remove Accordion list - preserve the content!
+      }
+
       const hasText = block.children.some((c) => c.component === 'Text Element')
       if (!hasText) {
         block.children.push({
@@ -1054,8 +1300,16 @@ const handleChildrenForBooleans = (block, propKey, value) => {
           children: [],
         })
       }
-    } else {
-      block.children = block.children.filter((c) => c.component !== 'Text Element')
+    }
+    // DON'T remove Text Element when toggling off - preserve the content!
+  }
+
+  // Has List - Text Element
+  if (propKey === 'Has List') {
+    if (value === true) {
+      if (!block.props['Usp Text 1']) block.props['Usp Text 1'] = 'USP tekst 1'
+      if (!block.props['Usp text 2']) block.props['Usp text 2'] = 'USP tekst 2'
+      if (!block.props['Usp Text 3']) block.props['Usp Text 3'] = 'USP tekst 3'
     }
   }
 
@@ -1206,11 +1460,17 @@ const transformToFigmaFormat = () => {
       entryTypes: section.entryTypes || [section.handle],
       ...(section.fetchesFrom ? { fetchesFrom: section.fetchesFrom } : {}),
       ...(section.categories?.length > 0 ? { categories: section.categories } : {}),
+      // Multi-level structure support
+      ...(section.maxLevels ? { maxLevels: section.maxLevels } : {}),
+      ...(section.levels?.length > 0 ? { levels: section.levels } : {}),
     })),
     pages: project.value.pages.map((page) => ({
       page: page.name,
       section: page.section || '',
       rationale: page.rationale || '',
+      // Multi-level structure support
+      ...(page.level ? { level: page.level } : {}),
+      ...(page.parent ? { parent: page.parent } : {}),
       blocks: page.blocks.map((block) => {
         // Kopieer component, props, children en blockType/fetchesFrom
         const blockData = {
@@ -1686,12 +1946,12 @@ const generateSectionWithAI = async () => {
               >
                 <div
                   v-if="selectedSectionId === section.id"
-                  :class="`bg-zinc-50 dark:bg-zinc-950 rounded-b-xl p-4 space-y-4 overflow-hidden border-x border-b ${border}`"
+                  :class="`${card} rounded-b-xl p-4 space-y-4 overflow-hidden border-x border-b ${border}`"
                 >
                   <!-- Section Details -->
                   <div class="space-y-3">
                     <div class="flex items-center justify-between">
-                      <span class="text-sm font-medium text-zinc-400">Section Details</span>
+                      <span :class="`text-sm font-medium ${text2}`">Section Details</span>
                       <button
                         @click.stop="deleteSection(section.handle)"
                         class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all cursor-pointer"
@@ -1702,19 +1962,19 @@ const generateSectionWithAI = async () => {
                     </div>
                     <div :class="`${inputBg} border ${border} rounded-lg p-4 space-y-3`">
                       <div>
-                        <span class="text-xs text-zinc-500 block">Handle</span>
+                        <span :class="`text-xs ${text2} block`">Handle</span>
                         <span :class="`text-sm ${text1}`">{{ section.handle }}</span>
                       </div>
                       <div>
-                        <span class="text-xs text-zinc-500 block">Type</span>
+                        <span :class="`text-xs ${text2} block`">Type</span>
                         <span :class="`text-sm ${text1} capitalize`">{{ section.type }}</span>
                       </div>
                       <div>
-                        <span class="text-xs text-zinc-500 block">Slug</span>
+                        <span :class="`text-xs ${text2} block`">Slug</span>
                         <span :class="`text-sm ${text1}`">{{ section.slug }}</span>
                       </div>
                       <div>
-                        <span class="text-xs text-zinc-500 block">Template</span>
+                        <span :class="`text-xs ${text2} block`">Template</span>
                         <span :class="`text-sm ${text1} font-mono text-xs`">{{
                           section.template
                         }}</span>
@@ -1755,17 +2015,30 @@ const generateSectionWithAI = async () => {
                         v-for="page in pagesForSection"
                         :key="page.id"
                         class="group flex items-center gap-1"
+                        :style="{
+                          paddingLeft: page.level > 1 ? `${(page.level - 1) * 16}px` : '0',
+                        }"
                       >
+                        <!-- Tree indicator for nested pages -->
+                        <span v-if="page.level > 1" :class="`text-xs ${text2} mr-1`">└</span>
                         <button
                           @click="selectPage(page.id)"
                           :class="[
                             'flex-1 text-left px-3 py-2 rounded-lg transition-all cursor-pointer text-sm',
                             selectedPageId === page.id
-                              ? 'bg-zinc-200 dark:bg-zinc-800 font-medium text-zinc-900 dark:text-zinc-100'
+                              ? `${inputBg} font-medium ${text1}`
                               : `${hover} ${text2}`,
                           ]"
                         >
-                          {{ page.name }}
+                          <span class="flex items-center gap-2">
+                            {{ page.name }}
+                            <span
+                              v-if="page.level"
+                              :class="`text-xs px-1.5 py-0.5 rounded ${page.level === 1 ? 'bg-violet-500/20 text-violet-400' : 'bg-zinc-500/20 text-zinc-400'}`"
+                            >
+                              L{{ page.level }}
+                            </span>
+                          </span>
                         </button>
                         <button
                           @click.stop="deletePage(page.id)"
@@ -1850,30 +2123,48 @@ const generateSectionWithAI = async () => {
               <h2 class="text-2xl font-bold">{{ selectedPage.name }}</h2>
             </div>
 
-            <!-- Dropdown menu voor nieuw blok -->
-            <div class="relative">
+            <!-- Toolbar buttons -->
+            <div class="flex items-center gap-2">
+              <!-- Preview Mode Toggle -->
               <button
-                @click="showBlockTypeMenu = !showBlockTypeMenu"
-                class="px-4 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg text-sm font-medium flex items-center gap-2 cursor-pointer"
+                @click="togglePreviewMode"
+                :class="[
+                  'px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-2 cursor-pointer transition-colors',
+                  previewMode
+                    ? 'bg-violet-500 text-white'
+                    : 'bg-zinc-500/10 text-zinc-400 hover:bg-zinc-500/20',
+                ]"
+                :title="previewMode ? 'Terug naar editor' : 'Bekijk pagina preview'"
               >
-                <Plus class="w-4 h-4" />
-                Nieuw blok
+                <Monitor class="w-4 h-4" />
+                <span class="hidden sm:inline">{{ previewMode ? 'Preview' : 'Preview' }}</span>
               </button>
 
-              <!-- Dropdown menu -->
-              <div
-                v-if="showBlockTypeMenu"
-                :class="`absolute right-0 mt-2 w-64 ${card} border ${divider} rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto`"
-              >
+              <!-- Nieuw blok dropdown -->
+              <div class="relative">
                 <button
-                  v-for="component in availableComponents"
-                  :key="component.value"
-                  @click="addBlock(component.value)"
-                  :class="`w-full text-left px-4 py-3 hover:${hover} transition-colors flex items-center gap-3 border-b ${divider} last:border-b-0 cursor-pointer`"
+                  @click="showBlockTypeMenu = !showBlockTypeMenu"
+                  class="px-4 py-2 bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 rounded-lg text-sm font-medium flex items-center gap-2 cursor-pointer"
                 >
-                  <span class="text-2xl">{{ component.icon }}</span>
-                  <span :class="`text-sm font-medium ${text1}`">{{ component.label }}</span>
+                  <Plus class="w-4 h-4" />
+                  Nieuw blok
                 </button>
+
+                <!-- Dropdown menu -->
+                <div
+                  v-if="showBlockTypeMenu"
+                  :class="`absolute right-0 mt-2 w-64 ${card} border ${divider} rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto`"
+                >
+                  <button
+                    v-for="component in availableComponents"
+                    :key="component.value"
+                    @click="addBlock(component.value)"
+                    :class="`w-full text-left px-4 py-3 hover:${hover} transition-colors flex items-center gap-3 border-b ${divider} last:border-b-0 cursor-pointer`"
+                  >
+                    <span class="text-2xl">{{ component.icon }}</span>
+                    <span :class="`text-sm font-medium ${text1}`">{{ component.label }}</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1889,16 +2180,18 @@ const generateSectionWithAI = async () => {
             <p class="text-zinc-500">Geen blokken. Klik op "+ Nieuw blok" om te beginnen.</p>
           </div>
 
-          <div class="space-y-4">
+          <div :class="previewMode ? 'simulation-container' : 'space-y-4'">
             <BlockItem
               v-for="(block, index) in blocks"
-              :key="block.id"
+              :key="`${block.id}-${block.props?.['Property 1'] || 'default'}`"
               :block="block"
               :index="index"
               :is-selected="selectedBlock?.id === block.id"
               :is-drag-over="dragOverBlockId === block.id"
               :is-first="index === 0"
               :is-last="index === blocks.length - 1"
+              :collapsed="!previewMode"
+              :page-simulation="previewMode"
               @select="selectBlock"
               @move-up="moveBlock(block.id, 'up')"
               @move-down="moveBlock(block.id, 'down')"
@@ -2000,38 +2293,41 @@ const generateSectionWithAI = async () => {
                 </div>
               </div>
 
-              <div
-                v-if="selectedBlock.props && Object.keys(selectedBlock.props).length > 0"
-                :class="`border-t ${divider} pt-4`"
-              >
+              <div v-if="orderedProperties.length > 0" :class="`border-t ${divider} pt-4`">
                 <h4 class="text-sm font-medium mb-4">Properties</h4>
 
-                <!-- Loop door alle properties -->
-                <template v-for="(value, key) in selectedBlock.props" :key="key">
-                  <!-- Alleen tonen als het een "Has X" veld is, of als de bijbehorende "Has X" true is -->
-                  <div v-if="shouldShowProperty(key, selectedBlock.props)" class="mb-4">
+                <!-- Loop through ordered properties -->
+                <template v-for="prop in orderedProperties" :key="prop.key">
+                  <!-- Only show if visible (no condition or condition met) -->
+                  <div
+                    v-if="prop.visible"
+                    :class="[
+                      'mb-4',
+                      prop.relatedTo ? 'ml-6 border-l-2 border-violet-500/30 pl-4' : '',
+                    ]"
+                  >
                     <label :class="`block text-xs font-medium mb-2 ${text2}`">
-                      {{ key }}
+                      {{ prop.key }}
                     </label>
 
                     <!-- Boolean property: checkbox -->
-                    <div v-if="typeof value === 'boolean'" class="flex items-center">
+                    <div v-if="prop.type === 'boolean'" class="flex items-center">
                       <input
                         type="checkbox"
-                        :checked="value"
-                        @input="updateBlockProp(key, $event.target.checked)"
+                        :checked="prop.value"
+                        @input="updateBlockProp(prop.key, $event.target.checked)"
                         :class="`w-4 h-4 ${inputBg} border-zinc-700 rounded text-violet-600 focus:ring-2 focus:ring-violet-500`"
                       />
                       <span :class="`ml-2 text-sm ${text2}`">
-                        {{ value ? 'Ja' : 'Nee' }}
+                        {{ prop.value ? 'Ja' : 'Nee' }}
                       </span>
                     </div>
 
                     <!-- Property 1 (variant selector): dropdown -->
                     <select
-                      v-else-if="key === 'Property 1'"
-                      :value="value"
-                      @input="updateBlockProp(key, $event.target.value)"
+                      v-else-if="prop.type === 'select'"
+                      :value="prop.value"
+                      @input="updateBlockProp(prop.key, $event.target.value)"
                       :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer ${text1}`"
                     >
                       <option
@@ -2046,26 +2342,41 @@ const generateSectionWithAI = async () => {
                     <!-- String property: text input -->
                     <input
                       v-else
-                      :value="value"
-                      @input="updateBlockProp(key, $event.target.value)"
+                      :value="prop.value"
+                      @input="updateBlockProp(prop.key, $event.target.value)"
                       :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none ${text1}`"
                     />
+
+                    <!-- Inline Button controls (shown after Has Button Primary/Secondary) -->
+                    <div
+                      v-if="prop.inlineButton"
+                      :class="`mt-3 p-3 ${inputBg} border ${divider} rounded-lg`"
+                    >
+                      <div class="text-xs font-medium text-violet-400 mb-2">
+                        {{ prop.inlineButton.component }}
+                      </div>
+                      <input
+                        :value="
+                          prop.inlineButton.props?.['Text primary button'] ||
+                          prop.inlineButton.props?.['Text Secondary Button'] ||
+                          ''
+                        "
+                        @input="updateButtonText(prop.inlineButton.component, $event.target.value)"
+                        placeholder="Button tekst..."
+                        :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none ${text1}`"
+                      />
+                    </div>
                   </div>
                 </template>
               </div>
 
-              <div
-                v-if="selectedBlock.children && selectedBlock.children.length > 0"
-                :class="`border-t ${divider} pt-4`"
-              >
-                <h4 class="text-sm font-medium mb-4">
-                  Children ({{ selectedBlock.children.length }})
-                </h4>
+              <div v-if="visibleChildren.length > 0" :class="`border-t ${divider} pt-4`">
+                <h4 class="text-sm font-medium mb-4">Children ({{ visibleChildren.length }})</h4>
                 <div class="space-y-2">
                   <button
-                    v-for="(child, idx) in selectedBlock.children"
+                    v-for="(child, idx) in visibleChildren"
                     :key="idx"
-                    @click="selectChild(child, getParentBlock(selectedBlock))"
+                    @click="selectChild(child, selectedBlock)"
                     :class="`w-full text-left p-3 ${inputBg} rounded-lg border ${divider} hover:border-violet-500 hover:bg-violet-500/5 transition-all cursor-pointer`"
                   >
                     <div class="text-xs font-medium text-violet-400">
@@ -2102,7 +2413,7 @@ const generateSectionWithAI = async () => {
   </div>
 
   <!-- Loading state -->
-  <div v-else class="h-screen flex items-center justify-center bg-zinc-950 text-zinc-100">
+  <div v-else :class="`h-screen flex items-center justify-center ${bg} ${text1}`">
     <div class="text-center">
       <div
         class="animate-spin w-8 h-8 border-4 border-violet-600 border-t-transparent rounded-full mx-auto mb-4"
@@ -2117,9 +2428,7 @@ const generateSectionWithAI = async () => {
     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
     @click.self="closeJsonModal"
   >
-    <div
-      class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-4xl max-h-[80vh] flex flex-col"
-    >
+    <div :class="`${card} rounded-xl border ${border} w-full max-w-4xl max-h-[80vh] flex flex-col`">
       <!-- Header -->
       <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
         <div>
@@ -2174,9 +2483,7 @@ const generateSectionWithAI = async () => {
     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
     @click.self="closeNewSectionModal"
   >
-    <div
-      class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col max-h-[90vh]"
-    >
+    <div :class="`${card} rounded-xl border ${border} w-full max-w-2xl flex flex-col max-h-[90vh]`">
       <!-- Header -->
       <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
         <div>
@@ -2267,7 +2574,7 @@ const generateSectionWithAI = async () => {
               placeholder="bijv. news, projects, aboutUs..."
               :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
             />
-            <p class="text-xs text-zinc-500 mt-1">Technische identifier in camelCase</p>
+            <p :class="`text-xs ${text2} mt-1`">Technische identifier in camelCase</p>
           </div>
 
           <!-- Type -->
@@ -2285,21 +2592,21 @@ const generateSectionWithAI = async () => {
 
           <!-- Slug -->
           <div>
-            <label class="block text-sm font-medium mb-2 text-zinc-300">URL Slug</label>
+            <label :class="`block text-sm font-medium mb-2 ${text2}`">URL Slug</label>
             <input
               v-model="newSectionData.slug"
               type="text"
               placeholder="bijv. nieuws of nieuws/{slug}"
               :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none font-mono`"
             />
-            <p class="text-xs text-zinc-500 mt-1">
+            <p :class="`text-xs ${text2} mt-1`">
               Gebruik {slug} voor dynamische delen bij channels
             </p>
           </div>
 
           <!-- Template -->
           <div>
-            <label class="block text-sm font-medium mb-2 text-zinc-300">Template Pad</label>
+            <label :class="`block text-sm font-medium mb-2 ${text2}`">Template Pad</label>
             <input
               v-model="newSectionData.template"
               type="text"
@@ -2332,9 +2639,9 @@ const generateSectionWithAI = async () => {
           </div>
 
           <!-- Info -->
-          <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
-            <p class="text-sm text-zinc-400">
-              <span class="font-medium text-zinc-300">Tip:</span>
+          <div :class="`${inputBg} border ${border} rounded-lg p-4`">
+            <p :class="`text-sm ${text2}`">
+              <span :class="`font-medium ${text1}`">Tip:</span>
               <span v-if="newSectionData.type === 'single'">
                 Single sections zijn voor unieke pagina's zoals Home of Contact.
               </span>
@@ -2350,10 +2657,10 @@ const generateSectionWithAI = async () => {
       </div>
 
       <!-- Footer: Conditional based on mode -->
-      <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
+      <div :class="`flex items-center justify-end gap-3 p-6 border-t ${border}`">
         <button
           @click="closeNewSectionModal"
-          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          :class="`px-6 py-2 ${inputBg} ${hover} ${text2} rounded-lg text-sm font-medium transition-colors cursor-pointer`"
         >
           Annuleer
         </button>
@@ -2432,19 +2739,19 @@ const generateSectionWithAI = async () => {
         </div>
 
         <!-- Info -->
-        <div class="bg-zinc-950 border border-zinc-800 rounded-lg p-4">
-          <p class="text-sm text-zinc-400">
-            <span class="font-medium text-zinc-300">Tip:</span> Je kunt na het aanmaken van de
-            pagina blokken toevoegen om de inhoud te structureren.
+        <div :class="`${inputBg} border ${border} rounded-lg p-4`">
+          <p :class="`text-sm ${text2}`">
+            <span :class="`font-medium ${text1}`">Tip:</span> Je kunt na het aanmaken van de pagina
+            blokken toevoegen om de inhoud te structureren.
           </p>
         </div>
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
+      <div :class="`flex items-center justify-end gap-3 p-6 border-t ${border}`">
         <button
           @click="closeNewPageModal"
-          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          :class="`px-6 py-2 ${inputBg} ${hover} ${text2} rounded-lg text-sm font-medium transition-colors cursor-pointer`"
         >
           Annuleer
         </button>
@@ -2466,7 +2773,7 @@ const generateSectionWithAI = async () => {
     class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
     @click.self="closeRegenerateModal"
   >
-    <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl flex flex-col">
+    <div :class="`${card} rounded-xl border ${border} w-full max-w-2xl flex flex-col`">
       <!-- Header -->
       <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
         <div>
@@ -2525,10 +2832,10 @@ const generateSectionWithAI = async () => {
       </div>
 
       <!-- Footer -->
-      <div class="flex items-center justify-end gap-3 p-6 border-t border-zinc-800">
+      <div :class="`flex items-center justify-end gap-3 p-6 border-t ${border}`">
         <button
           @click="closeRegenerateModal"
-          class="px-6 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg text-sm font-medium transition-colors cursor-pointer"
+          :class="`px-6 py-2 ${inputBg} ${hover} ${text2} rounded-lg text-sm font-medium transition-colors cursor-pointer`"
         >
           Annuleer
         </button>
@@ -2545,3 +2852,14 @@ const generateSectionWithAI = async () => {
     </div>
   </div>
 </template>
+
+<style scoped>
+.simulation-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+</style>

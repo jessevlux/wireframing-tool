@@ -87,6 +87,11 @@ const sitemapTool = [
                   entryTypes: { type: 'array', items: { type: 'string' } },
                   fetchesFrom: { type: 'string' },
                   categories: { type: 'array', items: { type: 'string' } },
+                  maxLevels: {
+                    type: 'integer',
+                    description: 'Maximum hiërarchie diepte voor structure sections (2-4)',
+                  },
+                  levels: { type: 'array', description: 'Level configuratie voor structure' },
                 },
                 required: ['name', 'handle', 'type', 'slug', 'template'],
               },
@@ -100,6 +105,15 @@ const sitemapTool = [
                   page: { type: 'string' },
                   section: { type: 'string' },
                   rationale: { type: 'string' },
+                  level: {
+                    type: 'integer',
+                    description: 'VERPLICHT voor structure pages: hiërarchie niveau (1=root)',
+                  },
+                  parent: {
+                    type: ['string', 'null'],
+                    description:
+                      'VERPLICHT voor structure pages: titel van parent (null voor level 1)',
+                  },
                 },
                 required: ['page', 'section', 'rationale'],
               },
@@ -130,6 +144,8 @@ const pageBlocksTool = [
               page: { type: 'string' },
               section: { type: 'string' },
               rationale: { type: 'string' },
+              level: { type: 'integer', description: 'Structure page hiërarchie niveau' },
+              parent: { type: ['string', 'null'], description: 'Structure page parent titel' },
               blocks: { type: 'array', description: 'Array van component blocks' },
             },
             required: ['page', 'section', 'blocks'],
@@ -231,8 +247,14 @@ BELANGRIJK voor channel sections:
 
 BELANGRIJK voor structure sections:
 - Gebruik structure voor hiërarchische content (parent-child relaties)
-- Voorbeelden: Documentatie met sub-pagina's, FAQ met categorieën, Services met sub-services
-- Maak een overzichtspagina (single) en een voorbeeld detailpagina voor de structure
+- Voorbeelden: Diensten met sub-diensten, Documentatie met sub-pagina's
+- Voor sections met type "structure", geef maxLevels (2-4) aan
+- VERPLICHT: Elke page in een structure section MOET "level" en "parent" hebben:
+  - level: 1 = root/overzicht, 2 = categorie, 3 = detail
+  - parent: null voor level 1, anders de titel van de parent page
+- Voorbeeld: {"page": "Diensten", "section": "diensten", "level": 1, "parent": null}
+- Voorbeeld: {"page": "Cloud Services", "section": "diensten", "level": 2, "parent": "Diensten"}
+- Voorbeeld: {"page": "AWS Migratie", "section": "diensten", "level": 3, "parent": "Cloud Services"}
 
 Gebruik de emit_sitemap tool om de sitemap te retourneren.`
 
@@ -1152,6 +1174,8 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           page: p.page,
           section: p.section,
           rationale: p.rationale,
+          level: p.level, // Preserve structure level
+          parent: p.parent, // Preserve structure parent
           blocks: [],
           status: 'pending', // Will be updated when generated
         }))
@@ -1193,11 +1217,17 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
               specMd,
             )
 
-            // Mark pages as complete and add to allPages
-            const completedPages = pagesWithBlocks.map((p: any) => ({
-              ...p,
-              status: 'complete',
-            }))
+            // Mark pages as complete and merge with original batch data to preserve level/parent
+            const completedPages = pagesWithBlocks.map((p: any, idx: number) => {
+              // Find the original page from the batch to get level/parent
+              const originalPage = batch.find((bp: any) => bp.page === p.page) || batch[idx]
+              return {
+                ...p,
+                level: originalPage?.level ?? p.level, // Preserve structure level
+                parent: originalPage?.parent ?? p.parent, // Preserve structure parent
+                status: 'complete',
+              }
+            })
             allPages.push(...completedPages)
 
             // Send pages_generated event for live updates

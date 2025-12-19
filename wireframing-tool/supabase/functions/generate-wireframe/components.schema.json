@@ -56,6 +56,23 @@
           "type": "array",
           "items": { "type": "string" },
           "description": "Categorieën voor deze section (voor planning/documentatie)"
+        },
+        "maxLevels": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4,
+          "description": "Maximum hiërarchie diepte voor structure sections (2-4)"
+        },
+        "levels": {
+          "type": "array",
+          "description": "Optionele level configuratie voor documentatie",
+          "items": {
+            "type": "object",
+            "properties": {
+              "level": { "type": "integer" },
+              "name": { "type": "string" }
+            }
+          }
         }
       },
       "additionalProperties": false
@@ -75,6 +92,16 @@
         "rationale": {
           "type": "string",
           "description": "Uitleg over waarom deze pagina zo is opgebouwd (2-4 zinnen)"
+        },
+        "level": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4,
+          "description": "VERPLICHT voor structure pages: hiërarchie niveau (1=root/overzicht)"
+        },
+        "parent": {
+          "type": ["string", "null"],
+          "description": "VERPLICHT voor structure pages: titel van parent entry (null voor level 1)"
         },
         "blocks": {
           "type": "array",
