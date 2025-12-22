@@ -246,8 +246,8 @@ Kolommen heeft ALTIJD exact 2 children in deze volgorde:
 - **Props**:
   - \`Property 1\`:
     - "Default" (1 image)
-    - "Variant2" (2 horizontale images)
-    - "Variant3" (1 horizontaal + 2 squares)
+    - "Variant2" (2 images)
+    - "Variant3" (3 images)
 
 ---
 

@@ -759,15 +759,88 @@ const kolommenAccordion = computed(() => {
 
     <!-- Detail page -->
     <div v-else-if="componentType === 'Detailpage'" class="preview-detailpage">
+      <!-- Header image with tag -->
       <div class="detail-header">
         <div v-if="hasProp('Has News Header') || hasProp('Has Project Header')" class="detail-tag">
           {{ hasProp('Has Project Header') ? 'Project' : 'Nieuws' }}
         </div>
       </div>
+
+      <!-- Title and meta -->
       <h2 class="detail-title">Detail Pagina Titel</h2>
       <p class="detail-meta">15 december 2025 • 5 min leestijd</p>
-      <p class="detail-content">Lorem ipsum dolor sit amet, consectetur adipiscing elit...</p>
-      <p class="detail-content">Sed do eiusmod tempor incididunt ut labore et dolore.</p>
+
+      <!-- Paragraph 1 -->
+      <div v-if="getText('Paragraph 1')" class="detail-paragraph">
+        <p class="detail-content">{{ truncate(getText('Paragraph 1'), 200) }}</p>
+      </div>
+
+      <!-- Paragraph 2 -->
+      <div v-if="getText('Paragraph 2')" class="detail-paragraph">
+        <p class="detail-content">{{ truncate(getText('Paragraph 2'), 200) }}</p>
+      </div>
+
+      <!-- Highlight Paragraph (with different styling) -->
+      <div v-if="hasProp('Has Highlight Paragraph')" class="detail-highlight">
+        <h3 v-if="getText('Highlight Title')" class="highlight-title">
+          {{ truncate(getText('Highlight Title'), 50) }}
+        </h3>
+        <p v-if="getText('Highlight Paragraph')" class="highlight-content">
+          {{ truncate(getText('Highlight Paragraph'), 150) }}
+        </p>
+      </div>
+
+      <!-- Paragraph 3 (with optional title) -->
+      <div v-if="getText('Paragraph 3')" class="detail-paragraph">
+        <h3 v-if="getText('Paragraph 3 Title')" class="paragraph-title">
+          {{ truncate(getText('Paragraph 3 Title'), 50) }}
+        </h3>
+        <p class="detail-content">{{ truncate(getText('Paragraph 3'), 200) }}</p>
+      </div>
+
+      <!-- Paragraph 4 -->
+      <div v-if="getText('Paragraph 4')" class="detail-paragraph">
+        <p class="detail-content">{{ truncate(getText('Paragraph 4'), 200) }}</p>
+      </div>
+
+      <!-- Inline image placeholder between content -->
+      <div class="detail-inline-media">
+        <svg
+          class="media-icon-sm"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.5"
+        >
+          <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+          <circle cx="8.5" cy="8.5" r="1.5" />
+          <polyline points="21 15 16 10 5 21" />
+        </svg>
+      </div>
+
+      <!-- More Projects section -->
+      <div v-if="hasProp('Has More Projects')" class="detail-related">
+        <h4 class="related-title">Meer projecten</h4>
+        <div class="related-grid">
+          <div v-for="i in 3" :key="'project-' + i" class="related-card">
+            <div class="related-media"></div>
+            <span class="related-label">Project {{ i }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- More News section -->
+      <div v-if="hasProp('Has More News')" class="detail-related">
+        <h4 class="related-title">Meer nieuws</h4>
+        <div class="related-grid">
+          <div v-for="i in 3" :key="'news-' + i" class="related-card">
+            <div class="related-media"></div>
+            <span class="related-label">Nieuws {{ i }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CTA Box -->
       <div
         v-if="block.children?.find((c) => c.component === 'CalltoAction')"
         class="detail-cta-box"
@@ -1626,6 +1699,91 @@ const kolommenAccordion = computed(() => {
   color: var(--preview-text-secondary);
   margin: 0 0 6px 0;
   line-height: 1.5;
+}
+
+.detail-paragraph {
+  margin-bottom: 16px;
+}
+
+.paragraph-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--preview-text);
+  margin: 0 0 8px 0;
+}
+
+.detail-highlight {
+  margin: 20px 0;
+  padding: 16px;
+  background: var(--preview-card);
+  border-left: 3px solid var(--preview-button);
+  border-radius: 0 8px 8px 0;
+}
+
+.highlight-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--preview-text);
+  margin: 0 0 8px 0;
+}
+
+.highlight-content {
+  font-size: 10px;
+  color: var(--preview-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.detail-inline-media {
+  margin: 20px 0;
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: var(--preview-media);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.detail-related {
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--preview-border);
+}
+
+.related-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--preview-text);
+  margin: 0 0 12px 0;
+}
+
+.related-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.related-card {
+  background: var(--preview-card);
+  border: 1px solid var(--preview-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.related-media {
+  width: 100%;
+  aspect-ratio: 16/10;
+  background: var(--preview-media);
+}
+
+.related-label {
+  display: block;
+  padding: 8px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--preview-text);
 }
 
 .detail-cta-box {

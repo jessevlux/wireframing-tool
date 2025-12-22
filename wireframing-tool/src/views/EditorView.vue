@@ -513,6 +513,44 @@ const orderedProperties = computed(() => {
       { key: 'Text 4', type: 'string' },
       { key: 'Text open item', type: 'string' },
     ],
+    'Inner Grid Card': [
+      { key: 'Title', type: 'string' },
+      { key: 'Description', type: 'string' },
+      { key: 'Has button', type: 'boolean', hasInlineButton: 'Button Primary' },
+    ],
+    'Entry Post Inner': [
+      { key: 'Has title', type: 'boolean' },
+      { key: 'Title of this block', type: 'string', relatedTo: 'Has title' },
+      { key: 'Has description', type: 'boolean' },
+      { key: 'Description', type: 'string', relatedTo: 'Has description' },
+      { key: 'Has Category', type: 'boolean' },
+      { key: 'Category Name', type: 'string', relatedTo: 'Has Category' },
+      { key: 'Has Popular', type: 'boolean' },
+      { key: 'Popular', type: 'string', relatedTo: 'Has Popular' },
+    ],
+    'Grid2Col Card': [
+      { key: 'Category', type: 'string' },
+      { key: 'Header', type: 'string' },
+      { key: 'Description', type: 'string' },
+    ],
+    'Grid3Col Card': [
+      { key: 'Title', type: 'string' },
+      { key: 'description', type: 'string' },
+    ],
+    Detailpage: [
+      { key: 'Has Project Header', type: 'boolean' },
+      { key: 'Has News Header', type: 'boolean' },
+      { key: 'Paragraph 1', type: 'string' },
+      { key: 'Paragraph 2', type: 'string' },
+      { key: 'Has Highlight Paragraph', type: 'boolean' },
+      { key: 'Highlight Title', type: 'string', relatedTo: 'Has Highlight Paragraph' },
+      { key: 'Highlight Paragraph', type: 'string', relatedTo: 'Has Highlight Paragraph' },
+      { key: 'Paragraph 3 Title', type: 'string' },
+      { key: 'Paragraph 3', type: 'string' },
+      { key: 'Paragraph 4', type: 'string' },
+      { key: 'Has More Projects', type: 'boolean' },
+      { key: 'Has More News', type: 'boolean' },
+    ],
   }
 
   const order = propertyOrders[component]
@@ -604,8 +642,8 @@ const getVariantLabel = (componentType, variant) => {
     },
     Media: {
       Default: 'Default (1 image)',
-      Variant2: 'Variant2 (2 horizontale images)',
-      Variant3: 'Variant3 (1 horizontaal + 2 squares)',
+      Variant2: 'Variant2 (2 images)',
+      Variant3: 'Variant3 (3 images)',
     },
     Grid: {
       Default: 'Default (3 kaarten)',
@@ -2402,13 +2440,55 @@ const generateSectionWithAI = async () => {
                 <!-- Loop through ordered properties -->
                 <template v-for="prop in orderedProperties" :key="prop.key">
                   <!-- Only show if visible (no condition or condition met) -->
+                  <!-- Related properties get wrapped in a dark box -->
                   <div
-                    v-if="prop.visible"
-                    :class="[
-                      'mb-4',
-                      prop.relatedTo ? 'ml-6 border-l-2 border-violet-500/30 pl-4' : '',
-                    ]"
+                    v-if="prop.visible && prop.relatedTo"
+                    :class="`mb-4 p-3 ${inputBg} border ${divider} rounded-lg`"
                   >
+                    <label :class="`block text-xs font-medium mb-2 text-violet-400`">
+                      {{ prop.key }}
+                    </label>
+
+                    <!-- Boolean property: checkbox -->
+                    <div v-if="prop.type === 'boolean'" class="flex items-center">
+                      <input
+                        type="checkbox"
+                        :checked="prop.value"
+                        @input="updateBlockProp(prop.key, $event.target.checked)"
+                        :class="`w-4 h-4 ${inputBg} border-zinc-700 rounded text-violet-600 focus:ring-2 focus:ring-violet-500`"
+                      />
+                      <span :class="`ml-2 text-sm ${text2}`">
+                        {{ prop.value ? 'Ja' : 'Nee' }}
+                      </span>
+                    </div>
+
+                    <!-- Property 1 (variant selector): dropdown -->
+                    <select
+                      v-else-if="prop.type === 'select'"
+                      :value="prop.value"
+                      @input="updateBlockProp(prop.key, $event.target.value)"
+                      :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none cursor-pointer ${text1}`"
+                    >
+                      <option
+                        v-for="variant in getVariantOptions(selectedBlock.component)"
+                        :key="variant"
+                        :value="variant"
+                      >
+                        {{ getVariantLabel(selectedBlock.component, variant) }}
+                      </option>
+                    </select>
+
+                    <!-- String property: text input -->
+                    <input
+                      v-else
+                      :value="prop.value"
+                      @input="updateBlockProp(prop.key, $event.target.value)"
+                      :class="`w-full px-3 py-2 ${inputBg} border ${divider} rounded-lg text-sm focus:ring-2 focus:ring-violet-500 outline-none ${text1}`"
+                    />
+                  </div>
+
+                  <!-- Non-related properties (regular styling) -->
+                  <div v-else-if="prop.visible" class="mb-4">
                     <label :class="`block text-xs font-medium mb-2 ${text2}`">
                       {{ prop.key }}
                     </label>
