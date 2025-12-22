@@ -179,6 +179,61 @@ const wireframeTools = [
   },
 ]
 
+// Retry helper with exponential backoff for 529 (overloaded) errors
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>,
+  options: {
+    maxRetries?: number
+    initialDelayMs?: number
+    maxDelayMs?: number
+    retryableStatuses?: number[]
+    onRetry?: (attempt: number, delay: number) => Promise<void>
+  } = {},
+): Promise<T> {
+  const {
+    maxRetries = 3,
+    initialDelayMs = 2000,
+    maxDelayMs = 30000,
+    retryableStatuses = [529, 503, 502],
+    onRetry,
+  } = options
+
+  let lastError: any
+
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (error: any) {
+      lastError = error
+
+      // Check if this is a retryable error
+      const isRetryable =
+        retryableStatuses.includes(error.status) || error.headers?.['x-should-retry'] === 'true'
+
+      if (!isRetryable || attempt === maxRetries) {
+        throw error
+      }
+
+      // Exponential backoff with jitter
+      const delay = Math.min(
+        initialDelayMs * Math.pow(2, attempt) + Math.random() * 1000,
+        maxDelayMs,
+      )
+
+      console.log(`Retry ${attempt + 1}/${maxRetries} after ${Math.round(delay)}ms...`)
+
+      // Call onRetry callback if provided (for progress updates)
+      if (onRetry) {
+        await onRetry(attempt + 1, delay)
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, delay))
+    }
+  }
+
+  throw lastError
+}
+
 // Auto-repair function: attempt to fix validation errors
 async function attemptAutoRepair(
   anthropic: any,
@@ -350,12 +405,16 @@ async function generatePageBlocks(
 
 3. COMPONENT STRUCTUUR IS EXACT:
    - Kolommen: ALTIJD exact 2 children [Media, Content Kolommen Block]
-   - entrySection: GEEN children (data komt uit CMS)
+   - entrySection: MOET children hebben voor preview (dummy data)
    - Niet meer, niet minder, niet anders
 
 4. ENTRYSECTION VOOR DYNAMISCHE CONTENT:
-   Als content uit een channel komt → blockType: "entrySection" + fetchesFrom
-   GEEN handmatige cards bij entrySection
+   - Als content uit een channel/structure komt → blockType: "entrySection" + fetchesFrom
+   - BELANGRIJK: Genereer ALTIJD 3-4 'dummy' Inner Grid Cards als children
+   - Deze dummy cards moeten representatief zijn voor de content (bijv. "Project A", "Nieuwsbericht 1")
+   - Dit zorgt ervoor dat de preview er goed uitziet, ook zonder CMS data
+   - ZONDER children toont de editor een lege grid, DUS ALTIJD TOEVOEGEN!
+   - LET OP: Het toevoegen van children maakt het GEEN staticContent! Blijf blockType: "entrySection" gebruiken!
 `
 
   const blocksPrompt = `FASE 2: Genereer de blokken voor deze pagina's: ${pageNames}
@@ -1209,12 +1268,17 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           )
 
           try {
-            const pagesWithBlocks = await generatePageBlocks(
-              anthropic,
-              systemPrompt,
-              sitemap,
-              batch,
-              specMd,
+            const pagesWithBlocks = await retryWithBackoff(
+              () => generatePageBlocks(anthropic, systemPrompt, sitemap, batch, specMd),
+              {
+                maxRetries: 3,
+                initialDelayMs: 2000,
+                onRetry: async (attempt, delay) => {
+                  await sendEvent('progress', {
+                    message: `Batch ${batchNum} opnieuw proberen (poging ${attempt}/3, wacht ${Math.round(delay / 1000)}s)...`,
+                  })
+                },
+              },
             )
 
             // Mark pages as complete and merge with original batch data to preserve level/parent
@@ -1238,13 +1302,19 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
               percentage,
             })
           } catch (batchError: any) {
-            console.error(`Batch ${batchNum} failed:`, batchError)
+            console.error(`Batch ${batchNum} failed after all retries:`, batchError)
+
+            // Send progress event to inform user about the failure
+            await sendEvent('progress', {
+              message: `Batch ${batchNum} gefaald na 3 pogingen: ${batchError.message?.substring(0, 50)}...`,
+            })
+
             // Continue with other batches, but mark this one as failed
             const failedPages = batch.map((page: any) => ({
               ...page,
               blocks: [],
               status: 'error',
-              error: batchError.message,
+              error: `Failed after 3 retries: ${batchError.message}`,
             }))
             allPages.push(...failedPages)
 

@@ -112,7 +112,7 @@ Voorbeelden:
 **Voor overzichtspagina's van channels:**
 - Gebruik Grid2Col, of Grid3Col component
 - Voeg \`blockType: "entrySection"\` en \`fetchesFrom: "channelHandle"\` toe
-- GEEN handmatige cards/children toevoegen - data komt uit CMS
+- BELANGRIJK: Voeg ALTIJD 3-4 dummy cards/children toe voor preview doeleinden (zodat de grid niet leeg is in de editor)
 
 **Voor detailpagina's van channels en structures:**
 - Gebruik ALLEEN: Detailpage, CalltoAction, Footer
@@ -203,7 +203,24 @@ De JSON structuur:
           "component": "Grid",
           "blockType": "entrySection",
           "fetchesFrom": "news",
-          "props": { "Title": "Laatste nieuws", ... }
+          "props": { "Title": "Laatste nieuws", ... },
+          "children": [
+            {
+              "component": "Inner Grid Card",
+              "props": { "Title": "Nieuwsbericht 1", "Description": "Preview tekst...", "Has button": true },
+              "children": [{ "component": "Button Primary", "props": { "Text primary button": "Lees meer" } }]
+            },
+            {
+              "component": "Inner Grid Card",
+              "props": { "Title": "Nieuwsbericht 2", "Description": "Preview tekst...", "Has button": true },
+              "children": [{ "component": "Button Primary", "props": { "Text primary button": "Lees meer" } }]
+            },
+            {
+              "component": "Inner Grid Card",
+              "props": { "Title": "Nieuwsbericht 3", "Description": "Preview tekst...", "Has button": true },
+              "children": [{ "component": "Button Primary", "props": { "Text primary button": "Lees meer" } }]
+            }
+          ]
         },
         { "component": "Footer", ... }
       ]

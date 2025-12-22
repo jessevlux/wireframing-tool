@@ -2288,7 +2288,7 @@ const generateSectionWithAI = async () => {
                     </option>
                   </select>
                   <p class="text-xs text-zinc-500 mt-1">
-                    Selecteer een channel section om entries uit op te halen
+                    Selecteer een section om entries uit op te halen
                   </p>
                 </div>
               </div>

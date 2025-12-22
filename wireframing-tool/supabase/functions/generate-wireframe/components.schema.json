@@ -320,7 +320,7 @@
         "blockType": {
           "type": "string",
           "enum": ["staticContent", "entrySection"],
-          "description": "Type blok: staticContent (handmatige cards) of entrySection (haalt entries op)"
+          "description": "Type blok: staticContent (handmatige cards) of entrySection (haalt entries op + dummy children)"
         },
         "fetchesFrom": {
           "type": "string",
