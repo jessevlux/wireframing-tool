@@ -75,6 +75,14 @@ const isRegenerating = ref(false)
 const regenerateProgress = ref('')
 const regenerateError = ref('')
 
+// Regenerate structure state
+const showStructureRegenerateModal = ref(false)
+const structureRegeneratePrompt = ref('')
+const isRegeneratingStructure = ref(false)
+const structureRegenerateProgress = ref('')
+const structureRegenerateError = ref('')
+const structureToRegenerate = ref(null)
+
 // AI Section generation state (AI mode is default)
 const useAIForSection = ref(true)
 const sectionPrompt = ref('')
@@ -362,12 +370,12 @@ const blocks = computed(() => {
   return selectedPage.value?.blocks || []
 })
 
-// Check if selected page is from a channel or structure section (no regenerate allowed)
+// Check if selected page is from a channel section (no regenerate allowed for channels)
 const canRegeneratePage = computed(() => {
   if (!selectedPage.value || !project.value?.sections) return true
   const pageSection = project.value.sections.find((s) => s.handle === selectedPage.value.section)
-  // Hide regenerate for channel and structure sections
-  if (pageSection && (pageSection.type === 'channel' || pageSection.type === 'structure')) {
+  // Hide regenerate only for channel sections - structures and singles can regenerate
+  if (pageSection && pageSection.type === 'channel') {
     return false
   }
   return true
@@ -1693,6 +1701,91 @@ const regeneratePage = async () => {
   }
 }
 
+// Structure regenerate functions
+const openStructureRegenerateModal = (section) => {
+  structureToRegenerate.value = section
+  structureRegeneratePrompt.value = ''
+  structureRegenerateError.value = ''
+  structureRegenerateProgress.value = ''
+  showStructureRegenerateModal.value = true
+}
+
+const closeStructureRegenerateModal = () => {
+  showStructureRegenerateModal.value = false
+  structureToRegenerate.value = null
+  structureRegeneratePrompt.value = ''
+  structureRegenerateError.value = ''
+  structureRegenerateProgress.value = ''
+}
+
+const regenerateStructure = async () => {
+  if (!structureToRegenerate.value || !structureRegeneratePrompt.value.trim()) return
+
+  isRegeneratingStructure.value = true
+  structureRegenerateError.value = ''
+  structureRegenerateProgress.value = 'Bezig met regenereren van structure...'
+
+  try {
+    const section = structureToRegenerate.value
+    const pagesInStructure = project.value.pages.filter((p) => p.section === section.handle)
+
+    // Regenerate each page in the structure
+    for (let i = 0; i < pagesInStructure.length; i++) {
+      const page = pagesInStructure[i]
+      structureRegenerateProgress.value = `Regenereren pagina ${i + 1}/${pagesInStructure.length}: ${page.name}...`
+
+      const pageContext = {
+        page: page.name,
+        section: page.section || '',
+        rationale: page.rationale || '',
+        currentBlocks: page.blocks || [],
+      }
+
+      const result = await wireframeService.regeneratePage(
+        pageContext,
+        structureRegeneratePrompt.value,
+        project.value.sections || [],
+        'Nederlands',
+        {
+          onProgress: (message) => {
+            structureRegenerateProgress.value = `Pagina ${i + 1}/${pagesInStructure.length}: ${message}`
+          },
+          onPageRegenerated: (regeneratedPage) => {
+            console.log('Page regenerated:', regeneratedPage)
+          },
+        },
+      )
+
+      if (result.success && result.page) {
+        // Update page blocks with regenerated content
+        const pageIndex = project.value.pages.findIndex((p) => p.id === page.id)
+        if (pageIndex !== -1) {
+          // Give each block a new ID
+          const newBlocks = (result.page.blocks || []).map((block, idx) => ({
+            id: `block-${Date.now()}-${idx}`,
+            ...block,
+          }))
+          project.value.pages[pageIndex].blocks = newBlocks
+          if (result.page.rationale) {
+            project.value.pages[pageIndex].rationale = result.page.rationale
+          }
+        }
+      }
+    }
+
+    await saveProject()
+    structureRegenerateProgress.value = "Alle pagina's zijn geregenereerd!"
+    setTimeout(() => {
+      closeStructureRegenerateModal()
+    }, 1500)
+  } catch (err) {
+    console.error('Error regenerating structure:', err)
+    structureRegenerateError.value = err.message || 'Er is een fout opgetreden'
+  } finally {
+    isRegeneratingStructure.value = false
+  }
+}
+
 // AI Section generation functions
 const toggleAISectionMode = () => {
   useAIForSection.value = !useAIForSection.value
@@ -1952,13 +2045,23 @@ const generateSectionWithAI = async () => {
                   <div class="space-y-3">
                     <div class="flex items-center justify-between">
                       <span :class="`text-sm font-medium ${text2}`">Section Details</span>
-                      <button
-                        @click.stop="deleteSection(section.handle)"
-                        class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all cursor-pointer"
-                        title="Verwijder section"
-                      >
-                        <Trash2 class="w-3.5 h-3.5" />
-                      </button>
+                      <div class="flex items-center gap-1">
+                        <button
+                          v-if="section.type === 'structure'"
+                          @click.stop="openStructureRegenerateModal(section)"
+                          class="p-1.5 rounded hover:bg-violet-500/20 text-zinc-600 hover:text-violet-400 transition-all cursor-pointer"
+                          title="Regenereer alle pagina's in deze structure"
+                        >
+                          <RefreshCw class="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          @click.stop="deleteSection(section.handle)"
+                          class="p-1.5 rounded hover:bg-red-500/20 text-zinc-600 hover:text-red-400 transition-all cursor-pointer"
+                          title="Verwijder section"
+                        >
+                          <Trash2 class="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
                     <div :class="`${inputBg} border ${border} rounded-lg p-4 space-y-3`">
                       <div>
@@ -2847,6 +2950,96 @@ const generateSectionWithAI = async () => {
           <Loader2 v-if="isRegenerating" class="w-4 h-4 animate-spin" />
           <RefreshCw v-else class="w-4 h-4" />
           {{ isRegenerating ? 'Genereren...' : 'Regenereer' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Structure Regenerate Modal -->
+  <div
+    v-if="showStructureRegenerateModal"
+    class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    @click.self="closeStructureRegenerateModal"
+  >
+    <div :class="`w-full max-w-lg ${card} border ${divider} rounded-2xl shadow-2xl`" @click.stop>
+      <!-- Header -->
+      <div :class="`flex items-center justify-between p-6 border-b ${divider}`">
+        <div>
+          <h2 :class="`text-xl font-bold ${text1}`">Regenereer structure</h2>
+          <p :class="`text-sm ${text2} mt-1`">
+            Regenereer alle pagina's in deze structure met nieuwe instructies
+          </p>
+        </div>
+        <button
+          @click="closeStructureRegenerateModal"
+          class="p-2 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+        >
+          <X class="w-5 h-5 text-zinc-400" />
+        </button>
+      </div>
+
+      <!-- Content -->
+      <div class="p-6 space-y-5">
+        <!-- Structure Info -->
+        <div v-if="structureToRegenerate" :class="`${inputBg} border ${divider} rounded-lg p-4`">
+          <p :class="`text-xs ${text2} mb-1`">Structure</p>
+          <p :class="`font-medium ${text1}`">{{ structureToRegenerate.name }}</p>
+          <p :class="`text-sm ${text2} mt-1`">
+            {{
+              project?.pages?.filter((p) => p.section === structureToRegenerate.handle).length || 0
+            }}
+            pagina's worden geregenereerd
+          </p>
+        </div>
+
+        <!-- New Prompt -->
+        <div>
+          <label :class="`block text-sm font-medium mb-2 ${text2}`">
+            Nieuwe instructies
+            <span class="text-red-400 ml-1">*</span>
+          </label>
+          <textarea
+            v-model="structureRegeneratePrompt"
+            rows="4"
+            placeholder="Bijv. 'Maak alle pagina's korter' of 'Focus meer op de producten' of 'Voeg meer call-to-actions toe'"
+            :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none resize-none`"
+          ></textarea>
+          <p class="text-xs text-zinc-500 mt-1">
+            De AI genereert nieuwe blokken voor elke pagina op basis van deze instructies
+          </p>
+        </div>
+
+        <!-- Progress -->
+        <div v-if="structureRegenerateProgress" class="flex items-center gap-2 text-violet-400">
+          <Loader2 class="w-4 h-4 animate-spin" />
+          <span class="text-sm">{{ structureRegenerateProgress }}</span>
+        </div>
+
+        <!-- Error -->
+        <div
+          v-if="structureRegenerateError"
+          class="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-lg text-sm"
+        >
+          {{ structureRegenerateError }}
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div :class="`flex items-center justify-end gap-3 p-6 border-t ${border}`">
+        <button
+          @click="closeStructureRegenerateModal"
+          :class="`px-6 py-2 ${inputBg} ${hover} ${text2} rounded-lg text-sm font-medium transition-colors cursor-pointer`"
+        >
+          Annuleer
+        </button>
+        <button
+          @click="regenerateStructure"
+          :disabled="!structureRegeneratePrompt.trim() || isRegeneratingStructure"
+          class="px-6 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium shadow-lg flex items-center gap-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        >
+          <Loader2 v-if="isRegeneratingStructure" class="w-4 h-4 animate-spin" />
+          <RefreshCw v-else class="w-4 h-4" />
+          {{ isRegeneratingStructure ? 'Genereren...' : 'Regenereer alles' }}
         </button>
       </div>
     </div>
