@@ -1281,15 +1281,100 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
               },
             )
 
+            // IMPORTANT: Validate that all batch pages were returned by the AI
+            // Also check for pages returned with empty blocks (which is also a failure)
+            const returnedPageNames = new Set(pagesWithBlocks.map((p: any) => p.page))
+            const missingPages = batch.filter((bp: any) => !returnedPageNames.has(bp.page))
+
+            // Also find pages that were returned but have empty blocks
+            const emptyBlockPages = pagesWithBlocks.filter(
+              (p: any) =>
+                batch.some((bp: any) => bp.page === p.page) && (!p.blocks || p.blocks.length === 0),
+            )
+
+            // Combine missing and empty block pages for retry
+            const pagesToRetry = [
+              ...missingPages,
+              ...emptyBlockPages
+                .map((p: any) => batch.find((bp: any) => bp.page === p.page)!)
+                .filter(Boolean),
+            ]
+
+            // Remove empty block pages from pagesWithBlocks so they can be replaced after retry
+            if (emptyBlockPages.length > 0) {
+              const emptyPageNames = new Set(emptyBlockPages.map((p: any) => p.page))
+              const originalLength = pagesWithBlocks.length
+              pagesWithBlocks.splice(
+                0,
+                pagesWithBlocks.length,
+                ...pagesWithBlocks.filter((p: any) => !emptyPageNames.has(p.page)),
+              )
+              console.log(
+                `Removed ${originalLength - pagesWithBlocks.length} pages with empty blocks for retry`,
+              )
+            }
+
+            // Retry missing and empty-block pages individually (smaller batch = higher success rate)
+            if (pagesToRetry.length > 0) {
+              const retryNames = pagesToRetry.map((p: any) => p.page).join(', ')
+              console.warn(
+                `Retrying ${pagesToRetry.length} pages (missing or empty blocks) in batch ${batchNum}: ${retryNames}`,
+              )
+
+              await sendEvent('progress', {
+                message: `${pagesToRetry.length} pagina's opnieuw genereren (ontbrekend of leeg)...`,
+              })
+
+              // Retry each page individually
+              for (const pageToRetry of pagesToRetry) {
+                try {
+                  console.log(`Retrying page individually: ${pageToRetry.page}`)
+                  const retryResult = await retryWithBackoff(
+                    () =>
+                      generatePageBlocks(anthropic, systemPrompt, sitemap, [pageToRetry], specMd),
+                    {
+                      maxRetries: 2,
+                      initialDelayMs: 1000,
+                    },
+                  )
+
+                  if (retryResult && retryResult.length > 0 && retryResult[0].blocks?.length > 0) {
+                    console.log(`Successfully regenerated page: ${pageToRetry.page}`)
+                    pagesWithBlocks.push(retryResult[0])
+                  } else {
+                    console.warn(`Retry returned empty blocks for: ${pageToRetry.page}`)
+                    pagesWithBlocks.push({
+                      ...pageToRetry,
+                      blocks: [],
+                      status: 'error',
+                      error: 'Retry also returned empty blocks',
+                    })
+                  }
+                } catch (retryError: any) {
+                  console.error(`Retry failed for ${pageToRetry.page}:`, retryError.message)
+                  pagesWithBlocks.push({
+                    ...pageToRetry,
+                    blocks: [],
+                    status: 'error',
+                    error: `Retry failed: ${retryError.message}`,
+                  })
+                }
+              }
+            }
+
             // Mark pages as complete and merge with original batch data to preserve level/parent
             const completedPages = pagesWithBlocks.map((p: any, idx: number) => {
               // Find the original page from the batch to get level/parent
               const originalPage = batch.find((bp: any) => bp.page === p.page) || batch[idx]
+              // Preserve existing status/error if page was added as missing
+              const existingStatus = p.status || 'complete'
+              const existingError = p.error
               return {
                 ...p,
                 level: originalPage?.level ?? p.level, // Preserve structure level
                 parent: originalPage?.parent ?? p.parent, // Preserve structure parent
-                status: 'complete',
+                status: existingStatus,
+                ...(existingError && { error: existingError }),
               }
             })
             allPages.push(...completedPages)

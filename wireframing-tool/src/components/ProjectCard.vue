@@ -33,12 +33,29 @@ const hover = computed(() => (props.darkMode ? 'hover:bg-zinc-800' : 'hover:bg-g
 
 const getStatusColor = (status) => {
   switch (status) {
-    case 'Complete':
+    case 'done':
       return 'bg-emerald-500/10 text-emerald-400'
-    case 'In Progress':
-      return 'bg-violet-500/10 text-violet-400'
-    default:
+    case 'design':
+      return 'bg-blue-500/10 text-blue-400'
+    case 'dev':
       return 'bg-amber-500/10 text-amber-400'
+    case 'draft':
+    default:
+      return 'bg-zinc-500/10 text-zinc-400'
+  }
+}
+
+const getStatusLabel = (status) => {
+  switch (status) {
+    case 'done':
+      return 'Done'
+    case 'design':
+      return 'Design'
+    case 'dev':
+      return 'Dev'
+    case 'draft':
+    default:
+      return 'Draft'
   }
 }
 </script>
@@ -76,7 +93,7 @@ const getStatusColor = (status) => {
 
     <div class="flex items-center justify-between">
       <span :class="`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`">
-        {{ project.status }}
+        {{ getStatusLabel(project.status) }}
       </span>
       <ChevronRight :class="`w-5 h-5 ${text2} group-hover:text-violet-400`" />
     </div>

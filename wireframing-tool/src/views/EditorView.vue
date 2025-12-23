@@ -758,6 +758,13 @@ const closeProperties = () => {
   selectedChildInfo.value = null
 }
 
+// Update project status
+const updateProjectStatus = (status) => {
+  if (!project.value) return
+  project.value.status = status
+  saveProject()
+}
+
 // Verwijder een pagina
 const deletePage = (pageId) => {
   if (!confirm('Weet je zeker dat je deze pagina wilt verwijderen?')) return
@@ -1444,6 +1451,7 @@ const saveProject = async () => {
     await projectService.updateProject(project.value.id, {
       sections: project.value.sections || [],
       pages: project.value.pages,
+      status: project.value.status || 'draft',
       updated_at: new Date().toISOString(),
     })
   } catch (err) {
@@ -1926,6 +1934,26 @@ const generateSectionWithAI = async () => {
           </button>
           <div :class="`h-6 w-px ${dividerBg}`" />
           <h1 class="text-lg font-semibold">{{ project.name }}</h1>
+          <!-- Status Dropdown -->
+          <select
+            :value="project.status || 'draft'"
+            @change="updateProjectStatus($event.target.value)"
+            :class="[
+              'status-dropdown px-3 py-1 rounded-full text-xs font-medium cursor-pointer transition-colors',
+              project.status === 'design'
+                ? 'bg-blue-500/10 text-blue-400'
+                : project.status === 'dev'
+                  ? 'bg-amber-500/10 text-amber-400'
+                  : project.status === 'done'
+                    ? 'bg-emerald-500/10 text-emerald-400'
+                    : 'bg-zinc-500/10 text-zinc-400',
+            ]"
+          >
+            <option value="draft">Draft</option>
+            <option value="design">Design</option>
+            <option value="dev">Dev</option>
+            <option value="done">Done</option>
+          </select>
         </div>
 
         <div class="flex items-center gap-3">
@@ -3119,7 +3147,7 @@ const generateSectionWithAI = async () => {
         >
           <Loader2 v-if="isRegeneratingStructure" class="w-4 h-4 animate-spin" />
           <RefreshCw v-else class="w-4 h-4" />
-          {{ isRegeneratingStructure ? 'Genereren...' : 'Regenereer alles' }}
+          {{ isRegeneratingStructure ? 'Genereren...' : 'Regenerate alles' }}
         </button>
       </div>
     </div>
@@ -3134,5 +3162,16 @@ const generateSectionWithAI = async () => {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Custom status dropdown styling */
+.status-dropdown {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px !important;
 }
 </style>
