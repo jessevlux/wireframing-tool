@@ -24,6 +24,7 @@ import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
 import BlockItem from '../components/BlockItem.vue'
 import { useTheme } from '../composables/useTheme.js'
+import draggable from 'vuedraggable'
 
 const router = useRouter()
 const route = useRoute()
@@ -90,9 +91,8 @@ const isGeneratingSection = ref(false)
 const sectionProgress = ref('')
 const sectionError = ref('')
 
-// Drag and drop state
-const draggedBlockId = ref(null)
-const dragOverBlockId = ref(null)
+// Drag and drop state (now handled by vuedraggable)
+const isDragging = ref(false)
 
 // Preview mode (shows expanded blocks edge-to-edge)
 const previewMode = ref(false)
@@ -1024,51 +1024,13 @@ const moveBlock = (blockId, direction) => {
   }
 }
 
-// Drag and drop handlers
-const handleDragStart = (blockId, event) => {
-  draggedBlockId.value = blockId
-  event.dataTransfer.effectAllowed = 'move'
-  event.dataTransfer.setData('text/plain', blockId)
-  // Add visual feedback
-  event.target.style.opacity = '0.5'
+// Drag and drop handlers (vuedraggable)
+const onDragStart = () => {
+  isDragging.value = true
 }
 
-const handleDragEnd = (event) => {
-  draggedBlockId.value = null
-  dragOverBlockId.value = null
-  // Reset visual feedback
-  event.target.style.opacity = '1'
-}
-
-const handleDragOver = (blockId) => {
-  if (draggedBlockId.value && draggedBlockId.value !== blockId) {
-    dragOverBlockId.value = blockId
-  }
-}
-
-const handleDrop = (targetBlockId) => {
-  if (!selectedPage.value || !draggedBlockId.value || draggedBlockId.value === targetBlockId) {
-    dragOverBlockId.value = null
-    return
-  }
-
-  const fromIndex = selectedPage.value.blocks.findIndex((b) => b.id === draggedBlockId.value)
-  const toIndex = selectedPage.value.blocks.findIndex((b) => b.id === targetBlockId)
-
-  if (fromIndex === -1 || toIndex === -1) {
-    dragOverBlockId.value = null
-    return
-  }
-
-  // Reorder blocks
-  const blocks = [...selectedPage.value.blocks]
-  const [movedBlock] = blocks.splice(fromIndex, 1)
-  blocks.splice(toIndex, 0, movedBlock)
-
-  selectedPage.value.blocks = blocks
-  dragOverBlockId.value = null
-
-  // Save with history
+const onDragEnd = () => {
+  isDragging.value = false
   saveProject()
 }
 
@@ -2347,28 +2309,35 @@ const generateSectionWithAI = async () => {
             <p class="text-zinc-500">Geen blokken. Klik op "+ Nieuw blok" om te beginnen.</p>
           </div>
 
-          <div :class="previewMode ? 'simulation-container' : 'space-y-4'">
-            <BlockItem
-              v-for="(block, index) in blocks"
-              :key="`${block.id}-${block.props?.['Property 1'] || 'default'}`"
-              :block="block"
-              :index="index"
-              :is-selected="selectedBlock?.id === block.id"
-              :is-drag-over="dragOverBlockId === block.id"
-              :is-first="index === 0"
-              :is-last="index === blocks.length - 1"
-              :collapsed="!previewMode"
-              :page-simulation="previewMode"
-              @select="selectBlock"
-              @move-up="moveBlock(block.id, 'up')"
-              @move-down="moveBlock(block.id, 'down')"
-              @delete="deleteBlock(block.id)"
-              @drag-start="handleDragStart"
-              @drag-end="handleDragEnd"
-              @drag-over="handleDragOver"
-              @drop="handleDrop"
-            />
-          </div>
+          <draggable
+            v-model="selectedPage.blocks"
+            item-key="id"
+            handle=".drag-handle"
+            ghost-class="ghost-block"
+            chosen-class="chosen-block"
+            drag-class="dragging-block"
+            animation="200"
+            :class="previewMode ? 'simulation-container' : 'space-y-4'"
+            @start="onDragStart"
+            @end="onDragEnd"
+          >
+            <template #item="{ element: block, index }">
+              <BlockItem
+                :key="`${block.id}-${block.props?.['Property 1'] || 'default'}`"
+                :block="block"
+                :index="index"
+                :is-selected="selectedBlock?.id === block.id"
+                :is-first="index === 0"
+                :is-last="index === blocks.length - 1"
+                :collapsed="!previewMode"
+                :page-simulation="previewMode"
+                @select="selectBlock"
+                @move-up="moveBlock(block.id, 'up')"
+                @move-down="moveBlock(block.id, 'down')"
+                @delete="deleteBlock(block.id)"
+              />
+            </template>
+          </draggable>
         </div>
       </div>
 

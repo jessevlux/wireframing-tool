@@ -26,10 +26,6 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
-  isDragOver: {
-    type: Boolean,
-    default: false,
-  },
   collapsed: {
     type: Boolean,
     default: false,
@@ -40,16 +36,7 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits([
-  'select',
-  'moveUp',
-  'moveDown',
-  'delete',
-  'dragStart',
-  'dragEnd',
-  'dragOver',
-  'drop',
-])
+const emit = defineEmits(['select', 'moveUp', 'moveDown', 'delete'])
 
 // Helper om een korte beschrijving te maken van de block
 const getBlockDescription = () => {
@@ -114,23 +101,19 @@ const getBlockTypeBadgeClass = () => {
 
 <template>
   <div
-    draggable="true"
-    @dragstart="emit('dragStart', block.id, $event)"
-    @dragend="emit('dragEnd', $event)"
-    @dragover.prevent="emit('dragOver', block.id, $event)"
-    @drop.prevent="emit('drop', block.id, $event)"
     @click="emit('select', block)"
     :class="[
       pageSimulation ? 'simulation-block border-0 rounded-none' : 'border-2 rounded-xl',
       'cursor-pointer transition-all group relative overflow-hidden',
       isSelected && !pageSimulation ? 'border-violet-500 bg-violet-500/5' : '',
       !isSelected && !pageSimulation ? `${border} ${card} hover:border-zinc-500` : '',
-      isDragOver ? 'drag-indicator' : '',
     ]"
   >
     <!-- Block Header (hidden in simulation mode) -->
     <div v-if="!pageSimulation" class="flex items-center gap-4 p-4">
-      <div :class="`p-2 rounded-lg align-middle ${hover} cursor-grab active:cursor-grabbing`">
+      <div
+        :class="`drag-handle p-2 rounded-lg align-middle ${hover} cursor-grab active:cursor-grabbing`"
+      >
         <GripVertical class="w-5 h-5 text-zinc-400" />
       </div>
       <div class="flex-1">
@@ -217,17 +200,3 @@ const getBlockTypeBadgeClass = () => {
     </div>
   </div>
 </template>
-
-<style scoped>
-.drag-indicator::before {
-  content: '';
-  position: absolute;
-  top: -6px;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #a855f7, #d946ef);
-  border-radius: 2px;
-  box-shadow: 0 0 8px rgba(168, 85, 247, 0.5);
-}
-</style>

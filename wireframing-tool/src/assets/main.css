@@ -58,3 +58,29 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 html.dark * {
   scrollbar-color: #3f3f46 #18181b;
 }
+
+/* Vuedraggable - Drag and Drop Styles */
+.ghost-block {
+  opacity: 0.4;
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(217, 70, 239, 0.1)) !important;
+  border: 2px dashed #a855f7 !important;
+  border-radius: 0.75rem;
+}
+
+.chosen-block {
+  box-shadow: 0 10px 40px rgba(168, 85, 247, 0.3);
+}
+
+.dragging-block {
+  opacity: 0.95;
+  transform: rotate(1deg) scale(1.02);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(168, 85, 247, 0.4);
+  z-index: 9999;
+}
+
+/* Smooth transition for blocks reordering */
+.sortable-drag {
+  opacity: 0 !important;
+}
