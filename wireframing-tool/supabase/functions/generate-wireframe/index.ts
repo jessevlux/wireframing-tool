@@ -179,6 +179,48 @@ const wireframeTools = [
   },
 ]
 
+// Tool for generating a single section
+const sectionTool = [
+  {
+    name: 'emit_section',
+    description: "Genereer een nieuwe section met optionele pagina's",
+    input_schema: {
+      type: 'object',
+      properties: {
+        section: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            handle: { type: 'string' },
+            type: { type: 'string', enum: ['single', 'channel', 'structure'] },
+            slug: { type: 'string' },
+            template: { type: 'string' },
+            entryTypes: { type: 'array', items: { type: 'string' } },
+            fetchesFrom: { type: 'string' },
+            categories: { type: 'array', items: { type: 'string' } },
+          },
+          required: ['name', 'handle', 'type', 'slug', 'template'],
+        },
+        pages: {
+          type: 'array',
+          description: "Optionele initiële pagina's voor deze section",
+          items: {
+            type: 'object',
+            properties: {
+              page: { type: 'string' },
+              section: { type: 'string' },
+              rationale: { type: 'string' },
+              blocks: { type: 'array' },
+            },
+            required: ['page', 'section', 'rationale', 'blocks'],
+          },
+        },
+      },
+      required: ['section'],
+    },
+  },
+]
+
 // Retry helper with exponential backoff for 529 (overloaded) errors
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
@@ -234,47 +276,6 @@ async function retryWithBackoff<T>(
   throw lastError
 }
 
-// Auto-repair function: attempt to fix validation errors
-async function attemptAutoRepair(
-  anthropic: any,
-  invalidJson: any,
-  errors: any[],
-  systemPrompt: string,
-): Promise<any> {
-  const repairPrompt = `The wireframe JSON you generated has validation errors. Please fix them and return ONLY the corrected JSON using the emit_wireframe tool.
-
-**Validation Errors:**
-${JSON.stringify(errors, null, 2)}
-
-**Current JSON:**
-${JSON.stringify(invalidJson, null, 2)}
-
-Fix these errors and emit the corrected wireframe using the emit_wireframe tool.`
-
-  const repairMessage = await anthropic.messages.create({
-    model: 'claude-opus-4-5-20251101',
-    max_tokens: 64000, // Increased to handle large wireframe responses
-    temperature: 0.1,
-    system: systemPrompt,
-    tools: wireframeTools,
-    messages: [
-      {
-        role: 'user',
-        content: repairPrompt,
-      },
-    ],
-  })
-
-  // Extract repaired JSON from tool call
-  for (const content of repairMessage.content) {
-    if (content.type === 'tool_use' && content.name === 'emit_wireframe') {
-      return content.input.wireframe
-    }
-  }
-
-  throw new Error('Auto-repair did not return a valid wireframe')
-}
-
 // Phase 1: Generate sitemap (sections + page names without blocks)
 async function generateSitemap(
   anthropic: any,
@@ -283,7 +284,7 @@ async function generateSitemap(
   userContext: string,
 ): Promise<{ sections: any[]; pages: { page: string; section: string; rationale: string }[] }> {
   // Extract numPages from userContext if present
-  const numPagesMatch = userContext.match(/EXACT (\d+) sections/)
+  const numPagesMatch = userContext.match(/EXACT (\d+) pagina/)
   const numPages = numPagesMatch ? parseInt(numPagesMatch[1], 10) : null
 
   const sitemapPrompt = `${userContext}
@@ -341,7 +342,6 @@ async function generatePageBlocks(
   systemPrompt: string,
   sitemap: { sections: any[]; pages: any[] },
   pageBatch: { page: string; section: string; rationale: string }[],
-  specMd: string,
 ): Promise<any[]> {
   const pageNames = pageBatch.map((p) => p.page).join(', ')
 
@@ -365,10 +365,10 @@ async function generatePageBlocks(
 3. Grid staticContent (variant bepaalt aantal cards - Default=3):
 {"component":"Grid","props":{"Property 1":"Default","Title":"Onze diensten"},"children":[{"component":"Inner Grid Card","index":0,"props":{"Title":"Card 1","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]},{"component":"Inner Grid Card","index":1,"props":{"Title":"Card 2","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]},{"component":"Inner Grid Card","index":2,"props":{"Title":"Card 3","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]}]}
 
-4. Grid entrySection (GEEN children - data komt uit CMS):
-{"component":"Grid","blockType":"entrySection","fetchesFrom":"news","props":{"Property 1":"Default","Title":"Laatste nieuws"}}
+4. Grid entrySection (MET dummy children voor preview):
+{"component":"Grid","blockType":"entrySection","fetchesFrom":"news","props":{"Property 1":"Default","Title":"Laatste nieuws"},"children":[{"component":"Inner Grid Card","index":0,"props":{"Title":"Nieuwsbericht 1","Description":"Preview tekst","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]},{"component":"Inner Grid Card","index":1,"props":{"Title":"Nieuwsbericht 2","Description":"Preview tekst","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]},{"component":"Inner Grid Card","index":2,"props":{"Title":"Nieuwsbericht 3","Description":"Preview tekst","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]}]}
 
-5. Detailpage (ALLEEN voor channel pagina's - EXACT 3 blokken totaal):
+5. Detailpage (voor channel entries EN structure leaf nodes - EXACT 3 blokken totaal):
 {"component":"Detailpage","props":{"Has Project Header":false,"Has News Header":true,"Paragraph 1":"Intro tekst","Paragraph 2":"Meer details","Has Highlight Paragraph":true,"Highlight Title":"Uitgelicht","Highlight Paragraph":"Belangrijke info","Paragraph 3 Title":"Vervolg","Paragraph 3":"Meer content","Paragraph 4":"Afsluitende tekst","Has More Projects":false,"Has More News":true}}
 
 6. CalltoAction:
@@ -394,6 +394,8 @@ async function generatePageBlocks(
 
 1. SECTION TYPE BEPAALT BLOKKEN:
    - "channel" section → ALLEEN: Detailpage, CalltoAction, Footer (niets anders!)
+   - "structure" section ZONDER children (leaf node) → ALLEEN: Detailpage, CalltoAction, Footer
+   - "structure" section MET children → Hero + Grid met entrySection
    - "single" section met fetchesFrom → gebruik entrySection blokken
    - "single" section zonder fetchesFrom → normale blokken
 
@@ -484,6 +486,11 @@ const COMPONENT_NAME_MAP: Record<string, string> = {
   footer: 'Footer',
   grid: 'Grid',
   form: 'Form',
+  // Detailpage spelling fixes
+  'Detail page': 'Detailpage',
+  'Detail Page': 'Detailpage',
+  Detailpage: 'Detailpage',
+  detailpage: 'Detailpage',
 }
 
 // Prop name normalization for specific components
@@ -1001,48 +1008,6 @@ Gebruik de emit_page_blocks tool om de nieuwe blokken te retourneren.`
         await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
       }
 
-      // Tool for generating a single section
-      const sectionTool = [
-        {
-          name: 'emit_section',
-          description: "Genereer een nieuwe section met optionele pagina's",
-          input_schema: {
-            type: 'object',
-            properties: {
-              section: {
-                type: 'object',
-                properties: {
-                  name: { type: 'string' },
-                  handle: { type: 'string' },
-                  type: { type: 'string', enum: ['single', 'channel', 'structure'] },
-                  slug: { type: 'string' },
-                  template: { type: 'string' },
-                  entryTypes: { type: 'array', items: { type: 'string' } },
-                  fetchesFrom: { type: 'string' },
-                  categories: { type: 'array', items: { type: 'string' } },
-                },
-                required: ['name', 'handle', 'type', 'slug', 'template'],
-              },
-              pages: {
-                type: 'array',
-                description: "Optionele initiële pagina's voor deze section",
-                items: {
-                  type: 'object',
-                  properties: {
-                    page: { type: 'string' },
-                    section: { type: 'string' },
-                    rationale: { type: 'string' },
-                    blocks: { type: 'array' },
-                  },
-                  required: ['page', 'section', 'rationale', 'blocks'],
-                },
-              },
-            },
-            required: ['section'],
-          },
-        },
-      ]
-
       ;(async () => {
         try {
           await sendEvent('progress', { message: 'Section genereren met AI...' })
@@ -1269,7 +1234,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
 
           try {
             const pagesWithBlocks = await retryWithBackoff(
-              () => generatePageBlocks(anthropic, systemPrompt, sitemap, batch, specMd),
+              () => generatePageBlocks(anthropic, systemPrompt, sitemap, batch),
               {
                 maxRetries: 3,
                 initialDelayMs: 2000,
@@ -1330,8 +1295,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
                 try {
                   console.log(`Retrying page individually: ${pageToRetry.page}`)
                   const retryResult = await retryWithBackoff(
-                    () =>
-                      generatePageBlocks(anthropic, systemPrompt, sitemap, [pageToRetry], specMd),
+                    () => generatePageBlocks(anthropic, systemPrompt, sitemap, [pageToRetry]),
                     {
                       maxRetries: 2,
                       initialDelayMs: 1000,

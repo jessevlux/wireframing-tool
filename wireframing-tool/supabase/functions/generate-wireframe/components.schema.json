@@ -283,7 +283,7 @@
             "Title of text Block": { "type": "string" },
             "Description": { "type": "string" },
             "Usp Text 1": { "type": "string" },
-            "Usp text 2": { "type": "string" },
+            "Usp Text 2": { "type": "string" },
             "Usp Text 3": { "type": "string" }
           },
           "required": ["Has Primary Button", "Has Second Button", "Has List", "Has description"],
