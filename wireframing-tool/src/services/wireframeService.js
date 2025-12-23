@@ -77,7 +77,6 @@ export const wireframeService = {
             } else if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6))
-                console.log('SSE Event:', currentEvent, data)
 
                 if (currentEvent === 'progress' && onProgress) {
                   onProgress(data.message)
@@ -124,7 +123,6 @@ export const wireframeService = {
       // For dummy/legacy data, trigger onSitemapReady with the wireframe data
       // so the frontend can create the project properly
       if (data.wireframeJson && onSitemapReady) {
-        console.log('JSON response - triggering onSitemapReady with wireframe data')
         onSitemapReady({
           sections: data.wireframeJson.sections || [],
           pages: (data.wireframeJson.pages || []).map((p, idx) => ({

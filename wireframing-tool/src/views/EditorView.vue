@@ -220,7 +220,6 @@ onMounted(async () => {
 
     // Start polling if project is still generating
     if (project.value?.status === 'generating') {
-      console.log('Project is generating, starting polling...')
       startPolling()
     }
   } catch (err) {
@@ -292,7 +291,6 @@ const startPolling = () => {
         // Stop polling if generation is complete
         if (updated.status !== 'generating') {
           stopPolling()
-          console.log('Generation complete, polling stopped')
         }
       }
     } catch (err) {

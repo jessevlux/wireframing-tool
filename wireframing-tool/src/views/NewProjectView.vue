@@ -5,7 +5,7 @@ import { X, Zap, Upload, Trash2, ChevronDown, Sun, Moon } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
 import { isDemoAccount } from '../utils/auth.js'
-import { compressFilesForAI, getTotalSize } from '../utils/fileCompression.js'
+import { compressFilesForAI } from '../utils/fileCompression.js'
 import { useTheme } from '../composables/useTheme.js'
 
 const router = useRouter()
@@ -84,11 +84,6 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
 }
 
-// Computed: total original file size
-const totalFileSize = computed(() => {
-  return uploadedFiles.value.reduce((sum, f) => sum + f.size, 0)
-})
-
 // Create project and save to Supabase
 const createProject = async () => {
   if (!formData.value.projectName.trim()) {
@@ -103,32 +98,20 @@ const createProject = async () => {
     let filesForAI = []
     if (uploadedFiles.value.length > 0) {
       loadingStep.value = 'Bestanden comprimeren...'
-      console.log('Compressing files for AI context...')
-
-      const originalSize = totalFileSize.value
       filesForAI = await compressFilesForAI(uploadedFiles.value, (status) => {
         loadingStep.value = status
       })
-
-      const compressedSize = getTotalSize(filesForAI)
-      const savedPercent = Math.round((1 - compressedSize / originalSize) * 100)
-      console.log(
-        `Files compressed: ${formatFileSize(originalSize)} → ${formatFileSize(compressedSize)} (${savedPercent}% bespaard)`,
-      )
-      console.log(`${filesForAI.length} file(s)/pages prepared for AI`)
     }
 
     // 2. Check if user is demo account (to avoid unnecessary API calls)
     const isDemo = await isDemoAccount()
     if (isDemo) {
-      console.log('Demo account detected - using dummy data to avoid API calls')
       loadingStep.value = 'Demo data wordt geladen...'
     } else {
       loadingStep.value = 'AI genereert wireframe...'
     }
 
-    console.log('Genereren wireframe via Edge Function...')
-    // Build payload; include numPages only if user opts out of AI deciding
+    // Build payload
     const payload = {
       projectName: formData.value.projectName,
       companyName: formData.value.companyName,
@@ -155,7 +138,6 @@ const createProject = async () => {
       },
       onSitemapReady: async (sitemapData) => {
         // Sitemap is ready - create project and redirect immediately!
-        console.log('Sitemap ready, creating project and redirecting...')
         loadingStep.value = 'Sitemap gereed, project aanmaken...'
 
         try {
@@ -190,7 +172,6 @@ const createProject = async () => {
 
           const savedProject = await projectService.createProject(newProject)
           savedProjectId = savedProject.id
-          console.log('Project created with status generating:', savedProject.id)
 
           // Store generation state for EditorView to continue listening
           sessionStorage.setItem('generating_project_id', savedProject.id)
@@ -205,7 +186,6 @@ const createProject = async () => {
       onPagesGenerated: async (pagesData) => {
         // Pages generated - update project in database
         if (savedProjectId) {
-          console.log(`Pages generated: ${pagesData.pages.map((p) => p.page).join(', ')}`)
           try {
             // Get current project
             const currentProject = await projectService.getProject(savedProjectId)
@@ -214,9 +194,6 @@ const createProject = async () => {
               const updatedPages = currentProject.pages.map((existingPage) => {
                 const newPage = pagesData.pages.find((p) => p.page === existingPage.name)
                 if (newPage) {
-                  console.log(
-                    `Updating page "${existingPage.name}" with ${newPage.blocks?.length || 0} blocks`,
-                  )
                   // Convert but PRESERVE the original page ID and structure hierarchy (level/parent)!
                   const converted = wireframeService.convertPageToProjectFormat(newPage)
                   return {
@@ -237,7 +214,6 @@ const createProject = async () => {
                 pages: updatedPages,
                 status: isComplete ? 'Draft' : 'generating',
               })
-              console.log(`Database updated, isComplete: ${isComplete}`)
             }
           } catch (err) {
             console.error('Error updating pages:', err)
@@ -265,7 +241,6 @@ const createProject = async () => {
       }
 
       const savedProject = await projectService.createProject(newProject)
-      console.log('Project succesvol aangemaakt:', savedProject)
 
       loadingStep.value = 'Editor openen...'
       router.push(`/editor/${savedProject.id}`)
