@@ -355,7 +355,7 @@ Gebruik de emit_sitemap tool om de sitemap te retourneren.`
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 8000,
+    max_tokens: 16000,
     temperature: 0.0,
     system: systemPrompt,
     tools: sitemapTool,
@@ -471,7 +471,7 @@ Genereer voor elke pagina een blocks array. Check EERST het section type, pas da
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 32000,
+    max_tokens: 64000,
     temperature: 0.0,
     system:
       'Je bent een wireframe generator. Genereer EXACT valide JSON volgens de gegeven voorbeelden. Gebruik PRECIES de prop namen uit de voorbeelden.',
@@ -687,7 +687,7 @@ Return the fixed page using emit_page_blocks tool.`
 
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-5-20250929',
-    max_tokens: 16000,
+    max_tokens: 32000,
     temperature: 0.0,
     system:
       'You are a JSON validation specialist. Fix schema validation errors precisely. Pay close attention to exact string matching for component names and property names.',
@@ -1211,35 +1211,8 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
       await writer.write(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
     }
 
-    // Heartbeat to keep SSE connection alive during long operations
-    let heartbeatInterval: ReturnType<typeof setInterval> | null = null
-    const startHeartbeat = () => {
-      const startTime = Date.now()
-      heartbeatInterval = setInterval(async () => {
-        try {
-          const elapsed = Math.round((Date.now() - startTime) / 1000)
-          await writer.write(
-            encoder.encode(
-              `event: heartbeat\ndata: ${JSON.stringify({ elapsed, alive: true })}\n\n`,
-            ),
-          )
-        } catch {
-          // Ignore write errors if stream is already closed
-        }
-      }, 8000) // Every 8 seconds
-    }
-    const stopHeartbeat = () => {
-      if (heartbeatInterval) {
-        clearInterval(heartbeatInterval)
-        heartbeatInterval = null
-      }
-    }
-
     // Start async processing with split calls
     ;(async () => {
-      // Start heartbeat immediately to keep connection alive
-      startHeartbeat()
-
       try {
         await sendEvent('progress', { message: 'Sitemap structuur genereren...' })
 
@@ -1276,30 +1249,26 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           message: `Sitemap gereed: ${sitemap.pages.length} pagina's gevonden`,
         })
 
-        // Phase 2: Generate blocks in batches - CONTROLLED PARALLEL EXECUTION
-        const BATCH_SIZE = 6 // Larger batches = fewer API calls = faster completion
-        const MAX_CONCURRENT = 4 // Higher concurrency while still avoiding rate limits
+        // Phase 2: Generate blocks in batches - SEQUENTIAL for best quality
+        const BATCH_SIZE = 4
         const totalBatches = Math.ceil(sitemap.pages.length / BATCH_SIZE)
+        const allPages: any[] = []
 
         await sendEvent('progress', {
-          message: `${totalBatches} batches genereren (max ${MAX_CONCURRENT} tegelijk)...`,
+          message: `${totalBatches} batches sequentieel genereren voor ${sitemap.pages.length} pagina's...`,
         })
 
-        // Prepare all batches
-        const batches: { batch: any[]; batchNum: number; pageNames: string }[] = []
         for (let i = 0; i < sitemap.pages.length; i += BATCH_SIZE) {
           const batch = sitemap.pages.slice(i, i + BATCH_SIZE)
           const batchNum = Math.floor(i / BATCH_SIZE) + 1
           const pageNames = batch.map((p: any) => p.page).join(', ')
-          batches.push({ batch, batchNum, pageNames })
-        }
 
-        // Process batch function
-        const processBatch = async (
-          batchInfo: (typeof batches)[0],
-        ): Promise<{ batchNum: number; pages: any[]; success: boolean }> => {
-          const { batch, batchNum, pageNames } = batchInfo
-          console.log(`Phase 2: Processing batch ${batchNum}/${totalBatches}: ${pageNames}`)
+          console.log(
+            `Phase 2: Generating blocks for batch ${batchNum}/${totalBatches}: ${pageNames}`,
+          )
+          await sendEvent('progress', {
+            message: `Batch ${batchNum}/${totalBatches}: ${pageNames}`,
+          })
 
           try {
             const pagesWithBlocks = await retryWithBackoff(
@@ -1314,7 +1283,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
               },
             )
 
-            // Validate that all batch pages were returned with blocks
+            // Validate and retry missing/empty pages
             const returnedPageNames = new Set(pagesWithBlocks.map((p: any) => p.page))
             const missingPages = batch.filter((bp: any) => !returnedPageNames.has(bp.page))
             const emptyBlockPages = pagesWithBlocks.filter(
@@ -1329,13 +1298,6 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
                 .filter(Boolean),
             ]
 
-            // Log if we have missing/empty pages
-            if (pagesToRetry.length > 0) {
-              console.log(
-                `Batch ${batchNum}: Found ${pagesToRetry.length} pages needing retry: ${pagesToRetry.map((p: any) => p.page).join(', ')}`,
-              )
-            }
-
             if (emptyBlockPages.length > 0) {
               const emptyPageNames = new Set(emptyBlockPages.map((p: any) => p.page))
               pagesWithBlocks.splice(
@@ -1345,113 +1307,53 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
               )
             }
 
-            // Retry missing/empty pages individually with delay between retries
+            // Retry missing/empty pages individually
             for (const pageToRetry of pagesToRetry) {
               try {
-                console.log(`Batch ${batchNum}: Retrying page "${pageToRetry.page}" individually`)
-                // Small delay before individual retry to avoid rate limiting
+                console.log(`Retrying page "${pageToRetry.page}" individually`)
                 await new Promise((resolve) => setTimeout(resolve, 1000))
-
                 const retryResult = await retryWithBackoff(
                   () => generatePageBlocks(anthropic, systemPrompt, sitemap, [pageToRetry]),
                   { maxRetries: 3, initialDelayMs: 2000 },
                 )
-                if (retryResult && retryResult.length > 0 && retryResult[0].blocks?.length > 0) {
-                  console.log(
-                    `Batch ${batchNum}: Successfully retried "${pageToRetry.page}" with ${retryResult[0].blocks.length} blocks`,
-                  )
+                if (retryResult?.[0]?.blocks?.length > 0) {
                   pagesWithBlocks.push(retryResult[0])
                 } else {
-                  console.warn(
-                    `Batch ${batchNum}: Retry still returned empty blocks for "${pageToRetry.page}"`,
-                  )
-                  pagesWithBlocks.push({
-                    ...pageToRetry,
-                    blocks: [],
-                    status: 'error',
-                    error: 'Empty blocks after retry',
-                  })
+                  pagesWithBlocks.push({ ...pageToRetry, blocks: [], status: 'error' })
                 }
-              } catch (retryError: any) {
-                console.error(
-                  `Batch ${batchNum}: Retry failed for "${pageToRetry.page}": ${retryError.message}`,
-                )
-                pagesWithBlocks.push({
-                  ...pageToRetry,
-                  blocks: [],
-                  status: 'error',
-                  error: retryError.message,
-                })
+              } catch {
+                pagesWithBlocks.push({ ...pageToRetry, blocks: [], status: 'error' })
               }
             }
 
-            // Mark pages as complete
-            const completedPages = pagesWithBlocks.map((p: any, idx: number) => {
-              const originalPage = batch.find((bp: any) => bp.page === p.page) || batch[idx]
+            // Mark pages as complete and add to allPages
+            const completedPages = pagesWithBlocks.map((p: any) => {
+              const originalPage = batch.find((bp: any) => bp.page === p.page)
               return {
                 ...p,
                 level: originalPage?.level ?? p.level,
                 parent: originalPage?.parent ?? p.parent,
                 status: p.status || 'complete',
-                ...(p.error && { error: p.error }),
               }
             })
 
-            console.log(
-              `Batch ${batchNum} completed: ${completedPages.length} pages (${completedPages.filter((p: any) => p.blocks?.length > 0).length} with blocks)`,
-            )
-            return { batchNum, pages: completedPages, success: true }
-          } catch (batchError: any) {
-            console.error(`Batch ${batchNum} failed completely:`, batchError.message)
-            const failedPages = batch.map((page: any) => ({
-              ...page,
-              blocks: [],
-              status: 'error',
-              error: `Failed: ${batchError.message}`,
-            }))
-            return { batchNum, pages: failedPages, success: false }
-          }
-        }
+            allPages.push(...completedPages)
 
-        // Process batches with concurrency limit
-        const allResults: { batchNum: number; pages: any[]; success: boolean }[] = []
-        const queue = [...batches]
-        const inProgress: Promise<void>[] = []
-
-        while (queue.length > 0 || inProgress.length > 0) {
-          // Start new batches up to the concurrent limit
-          while (queue.length > 0 && inProgress.length < MAX_CONCURRENT) {
-            const batchInfo = queue.shift()!
-            const promise = processBatch(batchInfo).then((result) => {
-              allResults.push(result)
-              const idx = inProgress.indexOf(promise)
-              if (idx > -1) inProgress.splice(idx, 1)
-
-              // Send progress event
-              const percentage = Math.round((allResults.length / totalBatches) * 100)
-              sendEvent('pages_generated', {
-                pages: result.pages,
-                batchNum: result.batchNum,
-                totalBatches,
-                percentage,
-              })
+            console.log(`Batch ${batchNum} completed: ${completedPages.length} pages`)
+            await sendEvent('pages_generated', {
+              pages: completedPages,
+              batchNum,
+              totalBatches,
+              percentage: Math.round((batchNum / totalBatches) * 100),
             })
-            inProgress.push(promise)
-          }
-
-          // Wait for at least one to complete before checking again
-          if (inProgress.length > 0) {
-            await Promise.race(inProgress)
+          } catch (batchError: any) {
+            console.error(`Batch ${batchNum} failed:`, batchError.message)
+            const failedPages = batch.map((p: any) => ({ ...p, blocks: [], status: 'error' }))
+            allPages.push(...failedPages)
           }
         }
 
-        // Sort results by batch number for consistent ordering
-        allResults.sort((a, b) => a.batchNum - b.batchNum)
-        const allPages = allResults.flatMap((r) => r.pages)
-
-        console.log(
-          `All ${totalBatches} batches complete: ${allPages.length} total pages (${allPages.filter((p: any) => p.blocks?.length > 0).length} with blocks)`,
-        )
+        console.log(`All ${totalBatches} batches complete: ${allPages.length} total pages`)
         await sendEvent('progress', {
           message: `Alle ${allPages.length} pagina's gegenereerd, valideren...`,
         })
@@ -1484,8 +1386,8 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           console.log(`Validation found ${validate.errors.length} errors`)
           console.log('First 3 errors:', JSON.stringify(validate.errors.slice(0, 3), null, 2))
 
-          // Repair loop DISABLED to avoid timeout - user can regenerate individual pages
-          const MAX_REPAIR_ATTEMPTS = 0 // Set to 2 to re-enable repairs
+          // Repair loop - attempts to fix validation errors via AI
+          const MAX_REPAIR_ATTEMPTS = 2
           for (let attempt = 1; attempt <= MAX_REPAIR_ATTEMPTS; attempt++) {
             // Re-validate to get current errors
             const currentValid = validate(wireframeJson)
@@ -1576,7 +1478,6 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
           },
         })
 
-        stopHeartbeat()
         await writer.close()
       } catch (error: any) {
         console.error('Split call error:', error)
@@ -1599,7 +1500,6 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
         }
 
         try {
-          stopHeartbeat()
           await writer.close()
         } catch {
           // Ignore close errors

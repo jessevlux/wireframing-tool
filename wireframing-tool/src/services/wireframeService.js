@@ -81,10 +81,7 @@ export const wireframeService = {
                 if (currentEvent === 'progress' && onProgress) {
                   onProgress(data.message)
                 } else if (currentEvent === 'heartbeat') {
-                  // Keep connection alive, optionally update UI
-                  if (onProgress) {
-                    onProgress(`Genereren... (${data.elapsed}s)`)
-                  }
+                  // Heartbeat events are ignored - no UI update needed
                 } else if (currentEvent === 'sitemap_ready' && onSitemapReady) {
                   // Sitemap is ready - frontend can create project and redirect
                   onSitemapReady(data)

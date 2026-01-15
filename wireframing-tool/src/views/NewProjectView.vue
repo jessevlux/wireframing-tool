@@ -108,7 +108,7 @@ const createProject = async () => {
     if (isDemo) {
       loadingStep.value = 'Demo data wordt geladen...'
     } else {
-      loadingStep.value = 'AI genereert wireframe...'
+      loadingStep.value = 'Sitemap genereren...'
     }
 
     // Build payload
@@ -459,8 +459,6 @@ const createProject = async () => {
             <p class="text-zinc-400 mb-6">
               {{ loadingStep || 'Voorbereiden...' }}
             </p>
-            <!-- Info Text -->
-            <p class="text-xs text-zinc-500 mt-4">Dit kan even duren...</p>
           </div>
         </div>
       </div>
