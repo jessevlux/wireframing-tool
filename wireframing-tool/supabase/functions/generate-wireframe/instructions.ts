@@ -75,8 +75,8 @@ Je bent een UX/UI wireframe-architect. Genereer wireframes in JSON volgens het s
 - Section type is "structure" EN entry heeft GEEN children (leaf node) → Detailpage gebruiken
 
 **WANNEER NIET:**
-- Overview pagina's (single of structure level 1)
-- Structure entries MET children (die krijgen Hero + Grid)
+- Overview pagina's (single met fetchesFrom of structure level 1)
+- Structure level 2+ met children (Hero + Grid structuur)
 
 **Detailpage structuur (EXACT 3 blokken):**
 1. \`Detailpage\`
@@ -121,6 +121,25 @@ Maak een rationele keuze gebaseerd op:
 - Aantal items (weinig → Kolommen, veel → Grid)
 - Belang van visuele presentatie per item
 - Of items gelijkwaardig zijn (Grid) of individuele aandacht verdienen (Kolommen)
+
+---
+
+## Pagina Structuur
+
+**Denk per pagina na over het doel:**
+Elke pagina heeft een eigen verhaal. Overweeg bij het kiezen van blokken:
+- Wat is het primaire doel van deze pagina?
+- Welke content verdient extra aandacht?
+- Hoe kan de structuur de gebruiker het beste begeleiden?
+
+**Blokken moeten waarde toevoegen:**
+Voeg alleen componenten toe die het verhaal van de pagina versterken.
+Een kortere, doelgerichte pagina is beter dan een lange met opvulling.
+
+**Richtlijnen:**
+- Homepage: Meerdere secties die samen de propositie bouwen
+- Overzichtspagina's: Intro-content helpt context te geven vóór het overzicht
+- Detailpagina's: Detailpage component + CTA + Footer
 
 ---
 

@@ -354,7 +354,7 @@ Gebruik de emit_sitemap tool om de sitemap te retourneren.`
   content[content.length - 1] = { type: 'text', text: sitemapPrompt }
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 16000,
     temperature: 0.0,
     system: systemPrompt,
@@ -431,8 +431,9 @@ async function generatePageBlocks(
 1. SECTION TYPE BEPAALT BLOKKEN:
    - "channel" section → ALLEEN: Detailpage, CalltoAction, Footer (niets anders!)
    - "structure" section ZONDER children (leaf node) → ALLEEN: Detailpage, CalltoAction, Footer
-   - "structure" section MET children → Hero + Grid met entrySection
-   - "single" section met fetchesFrom → gebruik entrySection blokken
+   - "structure" section level 1 (root/overzicht) → Zie regel 5 (overzichtspagina's)
+   - "structure" section level 2+ MET children → Hero + Grid met entrySection
+   - "single" section met fetchesFrom → Zie regel 5 (overzichtspagina's)
    - "single" section zonder fetchesFrom → normale blokken
 
 2. VARIANT BEPAALT CHILDREN:
@@ -453,6 +454,18 @@ async function generatePageBlocks(
    - Dit zorgt ervoor dat de preview er goed uitziet, ook zonder CMS data
    - ZONDER children toont de editor een lege grid, DUS ALTIJD TOEVOEGEN!
    - LET OP: Het toevoegen van children maakt het GEEN staticContent! Blijf blockType: "entrySection" gebruiken!
+
+5. OVERZICHTSPAGINA'S (singles met fetchesFrom OF structure level 1):
+   Deze pagina's tonen een collectie entries. Bouw een verhaal op vóór het overzicht:
+   - Begin ALTIJD met Hero
+   - Overweeg EXTRA context-blokken vóór de Grid:
+     * Kolommen: intro-tekst over het onderwerp (bijv. "Waarom onze diensten?")
+     * MediaSlider: sfeerbeelden of highlights
+     * LogoSlider: partners of certificeringen
+     * Een tweede Kolommen blok met featured item of USPs
+   - Dan pas de Grid met entrySection
+   - Eindig met CalltoAction en Footer
+   - DOEL: context en waarde toevoegen, niet alleen een grid met items tonen
 `
 
   const blocksPrompt = `FASE 2: Genereer de blokken voor deze pagina's: ${pageNames}
@@ -464,15 +477,21 @@ ${decisionRules}
 
 ${componentExamples}
 
+**BELANGRIJK - Pagina structuur:**
+Denk per pagina na over het doel. Elke pagina heeft een eigen verhaal.
+- Wat maakt deze pagina uniek?
+- Welke content verdient extra aandacht?
+- Voeg alleen blokken toe die waarde toevoegen, geen opvulling.
+
 **Pagina's om te verwerken:**
 ${JSON.stringify(pageBatch, null, 2)}
 
 Genereer voor elke pagina een blocks array. Check EERST het section type, pas dan de beslisregels toe.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 64000,
-    temperature: 0.0,
+    temperature: 0.2,
     system:
       'Je bent een wireframe generator. Genereer EXACT valide JSON volgens de gegeven voorbeelden. Gebruik PRECIES de prop namen uit de voorbeelden.',
     tools: pageBlocksTool,
@@ -686,7 +705,7 @@ Add any missing required properties.
 Return the fixed page using emit_page_blocks tool.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-sonnet-4-5-20250929',
+    model: 'claude-opus-4-5-20251101',
     max_tokens: 32000,
     temperature: 0.0,
     system:
@@ -969,7 +988,7 @@ ${
 Gebruik de emit_page_blocks tool om de nieuwe blokken te retourneren.`
 
           const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-5-20250929',
+            model: 'claude-opus-4-5-20251101',
             max_tokens: 16000,
             temperature: 0.0,
             system:
@@ -1078,7 +1097,7 @@ Voorbeelden van section types:
 Gebruik de emit_section tool om de section te retourneren.`
 
           const response = await anthropic.messages.create({
-            model: 'claude-sonnet-4-5-20250929',
+            model: 'claude-opus-4-5-20251101',
             max_tokens: 16000,
             temperature: 0.0,
             system: `Je bent een Craft CMS architect. Genereer logische section structuren voor websites.
@@ -1250,7 +1269,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
         })
 
         // Phase 2: Generate blocks in batches - SEQUENTIAL for best quality
-        const BATCH_SIZE = 4
+        const BATCH_SIZE = 3
         const totalBatches = Math.ceil(sitemap.pages.length / BATCH_SIZE)
         const allPages: any[] = []
 
