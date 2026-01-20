@@ -19,6 +19,7 @@ import {
   Sparkles,
   RefreshCw,
   Monitor,
+  Info,
 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
@@ -2241,7 +2242,21 @@ const generateSectionWithAI = async () => {
                 <RefreshCw class="w-3 h-3" />
                 Regenerate met AI
               </button>
-              <h2 class="text-2xl font-bold">{{ selectedPage.name }}</h2>
+              <h2 class="text-2xl font-bold flex items-center gap-2">
+                {{ selectedPage.name }}
+                <span v-if="selectedPage.rationale" class="relative group cursor-help">
+                  <Info class="w-5 h-5 text-zinc-500 hover:text-violet-400 transition-colors" />
+                  <div
+                    class="absolute left-0 top-full mt-2 w-80 p-3 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none"
+                  >
+                    <p
+                      class="text-sm font-normal text-zinc-300 leading-relaxed whitespace-pre-wrap text-left"
+                    >
+                      {{ selectedPage.rationale }}
+                    </p>
+                  </div>
+                </span>
+              </h2>
             </div>
 
             <!-- Toolbar buttons -->
