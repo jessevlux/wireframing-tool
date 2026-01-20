@@ -68,20 +68,21 @@ Je bent een UX/UI wireframe-architect. Genereer wireframes in JSON volgens het s
 
 ## Beslisregels voor Blokken
 
-### Detailpage Component
+### Detailpagina Opbouw
 
-**WANNEER VERPLICHT:**
-- Section type is "channel" → ALTIJD Detailpage gebruiken
-- Section type is "structure" EN entry heeft GEEN children (leaf node) → Detailpage gebruiken
+**Detailpagina's zijn pagina's die specifieke content tonen:**
+- Channel entries (nieuws, project, vacature, etc.)
+- Structure leaf nodes (entries zonder children)
 
-**WANNEER NIET:**
-- Overview pagina's (single met fetchesFrom of structure level 1)
-- Structure level 2+ met children (Hero + Grid structuur)
+**STRUCTUUR (ALTIJD):**
+1. Begin met \`Hero\`
+2. Variabele content (AI kiest passende blokken, bijv. LongFormContent, Kolommen, MediaGroot)
+3. Eindig met \`CalltoAction\`
+4. Eindig met \`Footer\`
 
-**Detailpage structuur (EXACT 3 blokken):**
-1. \`Detailpage\`
-2. \`CalltoAction\`
-3. \`Footer\`
+**LongFormContent gebruiken wanneer:**
+- Lange teksten met meerdere paragrafen nodig zijn
+- Artikelen, case studies, gedetailleerde beschrijvingen
 
 ### Entry Section (dynamische content)
 
@@ -139,7 +140,7 @@ Een kortere, doelgerichte pagina is beter dan een lange met opvulling.
 **Richtlijnen:**
 - Homepage: Meerdere secties die samen de propositie bouwen
 - Overzichtspagina's: Intro-content helpt context te geven vóór het overzicht
-- Detailpagina's: Detailpage component + CTA + Footer
+- Detailpagina's: Hero + variabele content + CalltoAction + Footer
 
 ---
 

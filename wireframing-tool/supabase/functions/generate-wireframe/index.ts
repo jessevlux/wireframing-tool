@@ -404,8 +404,8 @@ async function generatePageBlocks(
 4. Grid entrySection (MET dummy children voor preview):
 {"component":"Grid","blockType":"entrySection","fetchesFrom":"news","props":{"Property 1":"Default","Title":"Laatste nieuws"},"children":[{"component":"Inner Grid Card","index":0,"props":{"Title":"Nieuwsbericht 1","Description":"Preview tekst","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]},{"component":"Inner Grid Card","index":1,"props":{"Title":"Nieuwsbericht 2","Description":"Preview tekst","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]},{"component":"Inner Grid Card","index":2,"props":{"Title":"Nieuwsbericht 3","Description":"Preview tekst","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]}]}
 
-5. Detailpage (voor channel entries EN structure leaf nodes - EXACT 3 blokken totaal):
-{"component":"Detailpage","props":{"Has Project Header":false,"Has News Header":true,"Paragraph 1":"Intro tekst","Paragraph 2":"Meer details","Has Highlight Paragraph":true,"Highlight Title":"Uitgelicht","Highlight Paragraph":"Belangrijke info","Paragraph 3 Title":"Vervolg","Paragraph 3":"Meer content","Paragraph 4":"Afsluitende tekst","Has More Projects":false,"Has More News":true}}
+5. LongFormContent (voor lange tekstuele content):
+{"component":"LongFormContent","props":{"Paragraph 1":"Intro tekst","Paragraph 2":"Meer details","Has Highlight Paragraph":true,"Highlight Title":"Uitgelicht","Highlight Paragraph":"Belangrijke info","Paragraph 3 Title":"Vervolg","Paragraph 3":"Meer content","Paragraph 4":"Afsluitende tekst"}}
 
 6. CalltoAction:
 {"component":"CalltoAction","props":{"Has Title":true,"Title":"CTA Titel","Has Description":true,"Description":"CTA tekst","Has Usps":false,"Has Button Primary":true,"Has Button Secondary":false},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Neem contact op"}}]}
@@ -422,6 +422,9 @@ async function generatePageBlocks(
 10. MediaSlider:
 {"component":"MediaSlider","props":{"Title":"Galerij"}}
 
+11. Reviews (klantbeoordelingen):
+{"component":"Reviews","props":{}}
+
 **KRITIEK: Gebruik EXACT deze prop namen (hoofdlettergevoelig!). Geen extra props toevoegen.**`
 
   // Generic decision rules
@@ -429,8 +432,8 @@ async function generatePageBlocks(
 **BESLISREGELS (VERPLICHT VOLGEN):**
 
 1. SECTION TYPE BEPAALT BLOKKEN:
-   - "channel" section → ALLEEN: Detailpage, CalltoAction, Footer (niets anders!)
-   - "structure" section ZONDER children (leaf node) → ALLEEN: Detailpage, CalltoAction, Footer
+   - "channel" section → Detailpagina opbouw: Hero, variabele content (incl. optioneel LongFormContent), CalltoAction, Footer
+   - "structure" section ZONDER children (leaf node) → Detailpagina opbouw: Hero, variabele content, CalltoAction, Footer
    - "structure" section level 1 (root/overzicht) → Zie regel 5 (overzichtspagina's)
    - "structure" section level 2+ MET children → Hero + Grid met entrySection
    - "single" section met fetchesFrom → Zie regel 5 (overzichtspagina's)
@@ -541,11 +544,16 @@ const COMPONENT_NAME_MAP: Record<string, string> = {
   footer: 'Footer',
   grid: 'Grid',
   form: 'Form',
-  // Detailpage spelling fixes
-  'Detail page': 'Detailpage',
-  'Detail Page': 'Detailpage',
-  Detailpage: 'Detailpage',
-  detailpage: 'Detailpage',
+  // Detailpage -> LongFormContent backwards compatibility
+  'Detail page': 'LongFormContent',
+  'Detail Page': 'LongFormContent',
+  Detailpage: 'LongFormContent',
+  detailpage: 'LongFormContent',
+  'Long Form Content': 'LongFormContent',
+  LongformContent: 'LongFormContent',
+  longformcontent: 'LongFormContent',
+  // Reviews
+  reviews: 'Reviews',
 }
 
 // Prop name normalization for specific components

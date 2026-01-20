@@ -258,35 +258,31 @@ Vooraf geconfigureerd contactformulier.
 
 ---
 
-## Detailpage
+## LongFormContent
 
-Volledig pagina-component voor detailpagina's. Gebruik voor:
-- Channel entries (nieuws, project, vacature, etc.)
-- Structure leaf nodes (entries zonder children)
+Long-form contentblok voor uitgebreide tekstuele content met paragrafen en highlights.
+Geschikt voor detailpagina's, artikelen, case studies, en andere content-rijke pagina's.
 
 **WANNEER GEBRUIKEN:**
-- Section type is "channel" → ALTIJD Detailpage
-- Section type is "structure" EN de entry heeft GEEN onderliggende children → Detailpage
-
-**PAGINA STRUCTUUR (exact 3 blokken):**
-1. \`Detailpage\`
-2. \`CalltoAction\`
-3. \`Footer\`
-
-Geen andere blokken toegestaan op deze pagina's.
+- Voor lange-vorm content die meerdere paragrafen nodig heeft
+- Artikelen, blog posts, case studies, projectbeschrijvingen
+- De AI kiest zelf of dit component passend is op basis van de content
 
 **Props:**
-- \`Has Project Header\` (bool) - voor projecten/cases/portfolio
-- \`Has News Header\` (bool) - voor nieuws/blog
-- (Exact één van beide moet \`true\` zijn)
 - \`Paragraph 1\` (string)
 - \`Paragraph 2\` (string)
 - \`Has Highlight Paragraph\` (bool) → \`Highlight Title\`, \`Highlight Paragraph\`
 - \`Paragraph 3 Title\` (string)
 - \`Paragraph 3\` (string)
 - \`Paragraph 4\` (string)
-- \`Has More Projects\` (bool) - matcht met Project Header
-- \`Has More News\` (bool) - matcht met News Header
+
+---
+
+## Reviews
+
+Google Reviews sectie met klantbeoordelingen.
+
+**Props:** Geen
 
 ---
 

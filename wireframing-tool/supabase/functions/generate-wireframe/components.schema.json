@@ -125,7 +125,8 @@
         { "$ref": "#/definitions/Grid3Col" },
         { "$ref": "#/definitions/Form" },
         { "$ref": "#/definitions/Contactform" },
-        { "$ref": "#/definitions/Detailpage" }
+        { "$ref": "#/definitions/LongFormContent" },
+        { "$ref": "#/definitions/Reviews" }
       ]
     },
 
@@ -704,14 +705,12 @@
       "additionalProperties": false
     },
 
-    "Detailpage": {
+    "LongFormContent": {
       "properties": {
-        "component": { "const": "Detailpage" },
+        "component": { "const": "LongFormContent" },
         "props": {
           "type": "object",
           "properties": {
-            "Has Project Header": { "type": "boolean" },
-            "Has News Header": { "type": "boolean" },
             "Paragraph 1": { "type": "string" },
             "Paragraph 2": { "type": "string" },
             "Has Highlight Paragraph": { "type": "boolean" },
@@ -719,17 +718,20 @@
             "Highlight Paragraph": { "type": "string" },
             "Paragraph 3 Title": { "type": "string" },
             "Paragraph 3": { "type": "string" },
-            "Paragraph 4": { "type": "string" },
-            "Has More Projects": { "type": "boolean" },
-            "Has More News": { "type": "boolean" }
+            "Paragraph 4": { "type": "string" }
           },
-          "required": [
-            "Has Project Header",
-            "Has News Header",
-            "Has Highlight Paragraph",
-            "Has More Projects",
-            "Has More News"
-          ],
+          "required": ["Has Highlight Paragraph"],
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "Reviews": {
+      "properties": {
+        "component": { "const": "Reviews" },
+        "props": {
+          "type": "object",
           "additionalProperties": false
         }
       },

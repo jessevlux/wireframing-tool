@@ -535,9 +535,7 @@ const orderedProperties = computed(() => {
       { key: 'Title', type: 'string' },
       { key: 'description', type: 'string' },
     ],
-    Detailpage: [
-      { key: 'Has Project Header', type: 'boolean' },
-      { key: 'Has News Header', type: 'boolean' },
+    LongFormContent: [
       { key: 'Paragraph 1', type: 'string' },
       { key: 'Paragraph 2', type: 'string' },
       { key: 'Has Highlight Paragraph', type: 'boolean' },
@@ -546,9 +544,8 @@ const orderedProperties = computed(() => {
       { key: 'Paragraph 3 Title', type: 'string' },
       { key: 'Paragraph 3', type: 'string' },
       { key: 'Paragraph 4', type: 'string' },
-      { key: 'Has More Projects', type: 'boolean' },
-      { key: 'Has More News', type: 'boolean' },
     ],
+    Reviews: [],
   }
 
   const order = propertyOrders[component]
@@ -811,7 +808,6 @@ const deleteSection = (sectionHandle) => {
 const availableComponents = [
   { value: 'CalltoAction', label: 'Call to Action', icon: '📢' },
   { value: 'Contactform', label: 'Contactform', icon: '✉️' },
-  { value: 'Detailpage', label: 'Detail page', icon: '📄' },
   { value: 'EntryPostSlider', label: 'Entry Post Slider', icon: '📰' },
   { value: 'Footer', label: 'Footer', icon: '📄' },
   { value: 'Form', label: 'Form', icon: '📝' },
@@ -819,10 +815,12 @@ const availableComponents = [
   { value: 'Hero', label: 'Hero', icon: '🎯' },
   { value: 'Kolommen', label: 'Kolommen', icon: '📋' },
   { value: 'LogoSlider', label: 'Logo Slider', icon: '🏢' },
+  { value: 'LongFormContent', label: 'Long Form Content', icon: '📄' },
   { value: 'MediaGroot', label: 'Media Groot', icon: '🖼️' },
   { value: 'MediaSlider', label: 'Media Slider', icon: '🎠' },
   { value: 'News', label: 'News', icon: '📰' },
   { value: 'Projects', label: 'Projects', icon: '💼' },
+  { value: 'Reviews', label: 'Reviews', icon: '⭐' },
 ]
 
 // Genereer default props voor een component type
@@ -838,13 +836,17 @@ const getDefaultPropsForComponent = (componentType) => {
       'Has Button Secondary': false,
     },
     Contactform: {},
-    Detailpage: {
-      'Has Project Header': false,
-      'Has News Header': true,
+    LongFormContent: {
+      'Paragraph 1': 'Intro tekst over het onderwerp...',
+      'Paragraph 2': 'Aanvullende details en context...',
       'Has Highlight Paragraph': false,
-      'Has More Projects': false,
-      'Has More News': false,
+      'Highlight Title': 'Uitgelicht',
+      'Highlight Paragraph': 'Belangrijke quote of samenvatting...',
+      'Paragraph 3 Title': 'Vervolg sectie',
+      'Paragraph 3': 'Meer inhoud en uitleg...',
+      'Paragraph 4': 'Afsluitende tekst...',
     },
+    Reviews: {},
     EntryPostSlider: {
       Title: 'Slider titel',
     },
@@ -914,29 +916,19 @@ const addBlock = (componentType = 'Hero') => {
   }
 
   // Add default children for specific components
-  if (componentType === 'Detailpage') {
-    // Detailpage always has a CalltoAction as child
-    newBlock.children.push({
-      component: 'CalltoAction',
-      props: {
-        'Has Title': true,
-        Title: 'Neem contact op',
-        'Has Description': true,
-        Description: 'Beschrijving',
-        'Has Usps': false,
-        'Has Button Primary': true,
-        'Has Button Secondary': false,
-      },
-      children: [
-        {
-          component: 'Button Primary',
-          props: {
-            'Property 1': 'Default',
-            'Text primary button': 'Contact',
-          },
+  if (componentType === 'LongFormContent') {
+    // LongFormContent has no default children
+  } else if (componentType === 'Reviews') {
+    // Reviews with button
+    if (newBlock.props['Has Button Primary']) {
+      newBlock.children.push({
+        component: 'Button Primary',
+        props: {
+          'Property 1': 'Default',
+          'Text primary button': 'Bekijk alle reviews',
         },
-      ],
-    })
+      })
+    }
   } else if (componentType === 'Grid') {
     // Grid gets default cards based on variant (Default = 3 cards)
     const variant = newBlock.props['Property 1'] || 'Default'

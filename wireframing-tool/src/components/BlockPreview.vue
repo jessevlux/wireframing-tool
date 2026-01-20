@@ -757,31 +757,23 @@ const kolommenAccordion = computed(() => {
       </div>
     </div>
 
-    <!-- Detail page -->
-    <div v-else-if="componentType === 'Detailpage'" class="preview-detailpage">
-      <!-- Header image with tag -->
-      <div class="detail-header">
-        <div v-if="hasProp('Has News Header') || hasProp('Has Project Header')" class="detail-tag">
-          {{ hasProp('Has Project Header') ? 'Project' : 'Nieuws' }}
-        </div>
-      </div>
-
-      <!-- Title and meta -->
-      <h2 class="detail-title">Detail Pagina Titel</h2>
-      <p class="detail-meta">15 december 2025 • 5 min leestijd</p>
-
+    <!-- Long Form Content -->
+    <div
+      v-else-if="componentType === 'LongFormContent' || componentType === 'Detailpage'"
+      class="preview-longformcontent"
+    >
       <!-- Paragraph 1 -->
-      <div v-if="getText('Paragraph 1')" class="detail-paragraph">
-        <p class="detail-content">{{ truncate(getText('Paragraph 1'), 200) }}</p>
+      <div v-if="getText('Paragraph 1')" class="longform-paragraph">
+        <p class="longform-content">{{ truncate(getText('Paragraph 1'), 200) }}</p>
       </div>
 
       <!-- Paragraph 2 -->
-      <div v-if="getText('Paragraph 2')" class="detail-paragraph">
-        <p class="detail-content">{{ truncate(getText('Paragraph 2'), 200) }}</p>
+      <div v-if="getText('Paragraph 2')" class="longform-paragraph">
+        <p class="longform-content">{{ truncate(getText('Paragraph 2'), 200) }}</p>
       </div>
 
       <!-- Highlight Paragraph (with different styling) -->
-      <div v-if="hasProp('Has Highlight Paragraph')" class="detail-highlight">
+      <div v-if="hasProp('Has Highlight Paragraph')" class="longform-highlight">
         <h3 v-if="getText('Highlight Title')" class="highlight-title">
           {{ truncate(getText('Highlight Title'), 50) }}
         </h3>
@@ -791,20 +783,20 @@ const kolommenAccordion = computed(() => {
       </div>
 
       <!-- Paragraph 3 (with optional title) -->
-      <div v-if="getText('Paragraph 3')" class="detail-paragraph">
+      <div v-if="getText('Paragraph 3')" class="longform-paragraph">
         <h3 v-if="getText('Paragraph 3 Title')" class="paragraph-title">
           {{ truncate(getText('Paragraph 3 Title'), 50) }}
         </h3>
-        <p class="detail-content">{{ truncate(getText('Paragraph 3'), 200) }}</p>
+        <p class="longform-content">{{ truncate(getText('Paragraph 3'), 200) }}</p>
       </div>
 
       <!-- Paragraph 4 -->
-      <div v-if="getText('Paragraph 4')" class="detail-paragraph">
-        <p class="detail-content">{{ truncate(getText('Paragraph 4'), 200) }}</p>
+      <div v-if="getText('Paragraph 4')" class="longform-paragraph">
+        <p class="longform-content">{{ truncate(getText('Paragraph 4'), 200) }}</p>
       </div>
 
       <!-- Inline image placeholder between content -->
-      <div class="detail-inline-media">
+      <div class="longform-inline-media">
         <svg
           class="media-icon-sm"
           viewBox="0 0 24 24"
@@ -817,44 +809,35 @@ const kolommenAccordion = computed(() => {
           <polyline points="21 15 16 10 5 21" />
         </svg>
       </div>
+    </div>
 
-      <!-- More Projects section -->
-      <div v-if="hasProp('Has More Projects')" class="detail-related">
-        <h4 class="related-title">Meer projecten</h4>
-        <div class="related-grid">
-          <div v-for="i in 3" :key="'project-' + i" class="related-card">
-            <div class="related-media"></div>
-            <span class="related-label">Project {{ i }}</span>
+    <!-- Reviews -->
+    <div v-else-if="componentType === 'Reviews'" class="preview-reviews">
+      <!-- Header with title and rating -->
+      <div class="reviews-header">
+        <h3 class="reviews-title">Meer dan 4.000 tevreden<br />klanten gingen je voor</h3>
+        <div class="reviews-rating">
+          <div class="reviews-stars">
+            <span v-for="i in 5" :key="i" class="star">●</span>
           </div>
         </div>
       </div>
 
-      <!-- More News section -->
-      <div v-if="hasProp('Has More News')" class="detail-related">
-        <h4 class="related-title">Meer nieuws</h4>
-        <div class="related-grid">
-          <div v-for="i in 3" :key="'news-' + i" class="related-card">
-            <div class="related-media"></div>
-            <span class="related-label">Nieuws {{ i }}</span>
+      <!-- Review Cards -->
+      <div class="reviews-cards">
+        <div v-for="i in 3" :key="i" class="review-card">
+          <div class="review-header">
+            <div class="reviewer-avatar"></div>
+            <div class="reviewer-info">
+              <span class="reviewer-name">Naam Achternaam</span>
+              <span class="reviewer-date">2 weken geleden</span>
+            </div>
           </div>
+          <p class="review-text">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+            incididunt ut labore et dolore magna aliqua.
+          </p>
         </div>
-      </div>
-
-      <!-- CTA Box -->
-      <div
-        v-if="block.children?.find((c) => c.component === 'CalltoAction')"
-        class="detail-cta-box"
-      >
-        <h4>
-          {{
-            truncate(
-              block.children?.find((c) => c.component === 'CalltoAction')?.props?.Title ||
-                'Contact',
-              20,
-            )
-          }}
-        </h4>
-        <button class="btn btn-primary btn-sm">Neem contact op</button>
       </div>
     </div>
 
@@ -1654,54 +1637,20 @@ const kolommenAccordion = computed(() => {
   margin: 0;
 }
 
-/* ===== DETAIL PAGE ===== */
-.preview-detailpage {
+/* ===== LONG FORM CONTENT ===== */
+.preview-longformcontent {
   padding: 16px 24px;
   background: var(--preview-bg);
 }
 
-.detail-header {
-  width: 100%;
-  aspect-ratio: 4/1;
-  background: var(--preview-media);
-  border-radius: 8px;
-  margin-bottom: 16px;
-  position: relative;
-}
-
-.detail-tag {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  padding: 4px 12px;
-  background: var(--preview-button);
-  color: var(--preview-button-text);
-  border-radius: 4px;
-  font-size: 9px;
-  font-weight: 500;
-}
-
-.detail-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--preview-text);
-  margin: 0 0 6px 0;
-}
-
-.detail-meta {
-  font-size: 10px;
-  color: var(--preview-text-muted);
-  margin: 0 0 12px 0;
-}
-
-.detail-content {
+.longform-content {
   font-size: 10px;
   color: var(--preview-text-secondary);
   margin: 0 0 6px 0;
   line-height: 1.5;
 }
 
-.detail-paragraph {
+.longform-paragraph {
   margin-bottom: 16px;
 }
 
@@ -1712,7 +1661,7 @@ const kolommenAccordion = computed(() => {
   margin: 0 0 8px 0;
 }
 
-.detail-highlight {
+.longform-highlight {
   margin: 20px 0;
   padding: 16px;
   background: var(--preview-card);
@@ -1735,7 +1684,7 @@ const kolommenAccordion = computed(() => {
   font-style: italic;
 }
 
-.detail-inline-media {
+.longform-inline-media {
   margin: 20px 0;
   width: 100%;
   aspect-ratio: 16/9;
@@ -1746,61 +1695,138 @@ const kolommenAccordion = computed(() => {
   justify-content: center;
 }
 
-.detail-related {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--preview-border);
+/* ===== REVIEWS ===== */
+.preview-reviews {
+  padding: 24px;
+  background: var(--preview-bg);
 }
 
-.related-title {
-  font-size: 12px;
+.reviews-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.reviews-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--preview-text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.reviews-rating {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.reviews-stars {
+  display: flex;
+  gap: 2px;
+}
+
+.reviews-stars .star {
+  font-size: 16px;
+  color: var(--preview-text-muted);
+  opacity: 0.4;
+}
+
+.reviews-score {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.score-badge {
+  width: 16px;
+  height: 16px;
+  background: var(--preview-card);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
   font-weight: 600;
   color: var(--preview-text);
-  margin: 0 0 12px 0;
 }
 
-.related-grid {
+.score-text {
+  font-size: 9px;
+  color: var(--preview-text-secondary);
+}
+
+.reviews-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  margin-bottom: 16px;
 }
 
-.related-card {
+.review-card {
   background: var(--preview-card);
   border: 1px solid var(--preview-border);
-  border-radius: 6px;
-  overflow: hidden;
+  border-radius: 8px;
+  padding: 12px;
 }
 
-.related-media {
-  width: 100%;
-  aspect-ratio: 16/10;
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.reviewer-avatar {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
   background: var(--preview-media);
 }
 
-.related-label {
-  display: block;
-  padding: 8px;
+.reviewer-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.reviewer-name {
   font-size: 9px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--preview-text);
 }
 
-.detail-cta-box {
-  margin-top: 16px;
-  padding: 16px;
+.reviewer-date {
+  font-size: 8px;
+  color: var(--preview-text-muted);
+}
+
+.review-badge {
+  width: 14px;
+  height: 14px;
   background: var(--preview-card);
   border: 1px solid var(--preview-border);
-  border-radius: 6px;
+  border-radius: 2px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  color: var(--preview-text);
 }
 
-.detail-cta-box h4 {
+.review-text {
+  font-size: 8px;
+  color: var(--preview-text-secondary);
+  line-height: 1.4;
   margin: 0;
-  font-size: 11px;
-  color: var(--preview-text);
+}
+
+.reviews-buttons {
+  margin-top: 12px;
 }
 
 /* ===== NEWS ===== */
