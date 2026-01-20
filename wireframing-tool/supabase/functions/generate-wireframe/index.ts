@@ -1381,6 +1381,60 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
         }
 
         console.log(`All ${totalBatches} batches complete: ${allPages.length} total pages`)
+
+        // === EXTRA RETRY ROUND: Retry all pages with empty blocks ===
+        const pagesWithEmptyBlocks = allPages.filter((p: any) => !p.blocks || p.blocks.length === 0)
+        if (pagesWithEmptyBlocks.length > 0) {
+          console.log(`Extra retry round: ${pagesWithEmptyBlocks.length} pages with empty blocks`)
+          await sendEvent('progress', {
+            message: `${pagesWithEmptyBlocks.length} lege pagina's gevonden, extra retry...`,
+          })
+
+          for (const emptyPage of pagesWithEmptyBlocks) {
+            const originalPage = sitemap.pages.find((sp: any) => sp.page === emptyPage.page)
+            if (!originalPage) continue
+
+            try {
+              console.log(`Extra retry for "${emptyPage.page}"`)
+              await new Promise((resolve) => setTimeout(resolve, 1500))
+
+              const retryResult = await retryWithBackoff(
+                () => generatePageBlocks(anthropic, systemPrompt, sitemap, [originalPage]),
+                { maxRetries: 2, initialDelayMs: 3000 },
+              )
+
+              if (retryResult?.[0]?.blocks?.length > 0) {
+                // Replace the empty page in allPages
+                const pageIndex = allPages.findIndex((p: any) => p.page === emptyPage.page)
+                if (pageIndex !== -1) {
+                  allPages[pageIndex] = {
+                    ...retryResult[0],
+                    level: originalPage.level,
+                    parent: originalPage.parent,
+                    status: 'complete',
+                  }
+                  console.log(
+                    `Extra retry SUCCESS for "${emptyPage.page}": ${retryResult[0].blocks.length} blocks`,
+                  )
+
+                  // Send update to frontend
+                  await sendEvent('pages_generated', {
+                    pages: [allPages[pageIndex]],
+                    batchNum: totalBatches + 1,
+                    totalBatches: totalBatches + 1,
+                    percentage: 100,
+                  })
+                }
+              }
+            } catch (err: any) {
+              console.error(
+                `Extra retry failed for "${emptyPage.page}":`,
+                err?.message?.substring(0, 50),
+              )
+            }
+          }
+        }
+
         await sendEvent('progress', {
           message: `Alle ${allPages.length} pagina's gegenereerd, valideren...`,
         })
