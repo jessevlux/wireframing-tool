@@ -395,8 +395,11 @@ async function generatePageBlocks(
 1. Hero:
 {"component":"Hero","props":{"Has Title":true,"Hero Title":"Titel","Has Description":true,"Description":"Tekst","Has Usps":false,"Has Button Primary":true,"Has Button Secondary":false},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Knop"}}]}
 
-2. Kolommen (EXACT 2 children: Media + Content Kolommen Block):
+2. Kolommen (EXACT 2 children: Media + Content Kolommen Block met EXACT 1 child):
 {"component":"Kolommen","props":{"Property 1":"Default"},"children":[{"component":"Media","props":{"Property 1":"Default"}},{"component":"Content Kolommen Block","props":{"Has Accordion":false,"Has Text":true},"children":[{"component":"Text Element","props":{"Has Primary Button":true,"Has Second Button":false,"Has List":false,"Has description":true,"Title of text Block":"Titel","Description":"Tekst"},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Lees meer"}}]}]}]}
+
+2b. Kolommen met Accordion (ÓF Text Element, NOOIT beide):
+{"component":"Kolommen","props":{"Property 1":"Variant2"},"children":[{"component":"Media","props":{"Property 1":"Default"}},{"component":"Content Kolommen Block","props":{"Has Accordion":true,"Has Text":false},"children":[{"component":"Accordion list","props":{"Has Title":true,"Title":"Veelgestelde vragen","Text":"Vraag 1","Text 2":"Vraag 2","Text 3":"Vraag 3","Text open item":"Dit is het antwoord"}}]}]}
 
 3. Grid staticContent (variant bepaalt aantal cards - Default=3):
 {"component":"Grid","props":{"Property 1":"Default","Title":"Onze diensten"},"children":[{"component":"Inner Grid Card","index":0,"props":{"Title":"Card 1","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]},{"component":"Inner Grid Card","index":1,"props":{"Title":"Card 2","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]},{"component":"Inner Grid Card","index":2,"props":{"Title":"Card 3","Description":"Beschrijving","Has button":true},"children":[{"component":"Button Primary","props":{"Property 1":"Default","Text primary button":"Meer info"}}]}]}
@@ -447,6 +450,9 @@ async function generatePageBlocks(
 
 3. COMPONENT STRUCTUUR IS EXACT:
    - Kolommen: ALTIJD exact 2 children [Media, Content Kolommen Block]
+   - Content Kolommen Block: EXACT 1 child (Accordion list OF Text Element, NOOIT beide!)
+     * Als Has Accordion=true → alleen Accordion list als child
+     * Als Has Text=true → alleen Text Element als child
    - entrySection: MOET children hebben voor preview (dummy data)
    - Niet meer, niet minder, niet anders
 

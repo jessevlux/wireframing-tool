@@ -2993,7 +2993,7 @@ const generateSectionWithAI = async () => {
           <textarea
             v-model="regeneratePrompt"
             rows="4"
-            placeholder="Bijv. 'Maak de pagina korter' of 'Voeg een testimonials sectie toe' of 'Focus meer op de diensten'"
+            placeholder="Bijv. 'Maak de pagina korter' of 'Voeg een review-blok toe' of 'Focus meer op de diensten'"
             :class="`w-full px-4 py-3 ${inputBg} border ${divider} rounded-lg ${text1} placeholder-zinc-600 focus:ring-2 focus:ring-violet-500 outline-none resize-none`"
           ></textarea>
           <p class="text-xs text-zinc-500 mt-1">
