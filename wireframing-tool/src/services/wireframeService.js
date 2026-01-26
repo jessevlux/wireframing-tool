@@ -10,6 +10,40 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
  */
 export const wireframeService = {
   /**
+   * Haal website content op via Jina Reader API
+   * @param {string} url - Website URL om te scrapen
+   * @returns {Promise<string>} Markdown formatted content
+   */
+  async fetchWebsiteContent(url) {
+    try {
+      // Jina Reader API: returns website as clean markdown
+      const jinaUrl = `https://r.jina.ai/${encodeURIComponent(url)}`
+      const response = await fetch(jinaUrl, {
+        headers: {
+          Accept: 'text/markdown',
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`Kon website niet ophalen: ${response.status}`)
+      }
+
+      const content = await response.text()
+
+      // Truncate if too long (Claude has context limits)
+      const maxLength = 15000 // ~3750 tokens
+      if (content.length > maxLength) {
+        return content.substring(0, maxLength) + '\n\n[Content afgekapt vanwege lengte...]'
+      }
+
+      return content
+    } catch (err) {
+      console.error('Error fetching website content:', err)
+      throw new Error(`Fout bij ophalen website content: ${err.message}`)
+    }
+  },
+
+  /**
    * Genereer een wireframe sitemap via Anthropic AI (met streaming)
    * @param {Object} projectData - Project data
    * @param {string} projectData.projectName - Projectnaam

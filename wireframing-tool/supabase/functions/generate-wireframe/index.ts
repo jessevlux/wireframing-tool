@@ -354,7 +354,7 @@ Gebruik de emit_sitemap tool om de sitemap te retourneren.`
   content[content.length - 1] = { type: 'text', text: sitemapPrompt }
 
   const response = await anthropic.messages.create({
-    model: 'claude-opus-4-5-20251101',
+    model: 'claude-sonnet-4-5-20250929',
     max_tokens: 16000,
     temperature: 0.0,
     system: systemPrompt,
@@ -498,7 +498,7 @@ ${JSON.stringify(pageBatch, null, 2)}
 Genereer voor elke pagina een blocks array. Check EERST het section type, pas dan de beslisregels toe.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-opus-4-5-20251101',
+    model: 'claude-sonnet-4-5-20250929',
     max_tokens: 64000,
     temperature: 0.2,
     system:
@@ -719,7 +719,7 @@ Add any missing required properties.
 Return the fixed page using emit_page_blocks tool.`
 
   const response = await anthropic.messages.create({
-    model: 'claude-opus-4-5-20251101',
+    model: 'claude-sonnet-4-5-20250929',
     max_tokens: 32000,
     temperature: 0.0,
     system:
@@ -1002,7 +1002,7 @@ ${
 Gebruik de emit_page_blocks tool om de nieuwe blokken te retourneren.`
 
           const response = await anthropic.messages.create({
-            model: 'claude-opus-4-5-20251101',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 16000,
             temperature: 0.0,
             system:
@@ -1111,7 +1111,7 @@ Voorbeelden van section types:
 Gebruik de emit_section tool om de section te retourneren.`
 
           const response = await anthropic.messages.create({
-            model: 'claude-opus-4-5-20251101',
+            model: 'claude-sonnet-4-5-20250929',
             max_tokens: 16000,
             temperature: 0.0,
             system: `Je bent een Craft CMS architect. Genereer logische section structuren voor websites.
@@ -1283,7 +1283,7 @@ KRITIEK: Je MOET de tool 'emit_wireframe' gebruiken. GEEN tekstuele output, ALLE
         })
 
         // Phase 2: Generate blocks in batches - SEQUENTIAL for best quality
-        const BATCH_SIZE = 3
+        const BATCH_SIZE = 4
         const totalBatches = Math.ceil(sitemap.pages.length / BATCH_SIZE)
         const allPages: any[] = []
 

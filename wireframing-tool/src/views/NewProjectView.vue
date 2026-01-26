@@ -1,7 +1,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { X, Zap, Upload, Trash2, ChevronDown, Sun, Moon } from 'lucide-vue-next'
+import { X, Zap, Upload, Trash2, ChevronDown, Sun, Moon, Link, Loader2 } from 'lucide-vue-next'
 import { projectService } from '../services/projectService.js'
 import { wireframeService } from '../services/wireframeService.js'
 import { isDemoAccount } from '../utils/auth.js'
@@ -15,10 +15,42 @@ const formData = ref({
   projectName: '',
   companyName: '',
   description: '',
+  websiteUrl: '',
   language: 'Nederlands',
   autoNumPages: true, // when true, AI decides; when false, user provides numPages
   numPages: 5,
 })
+
+const sourceContent = ref('')
+const isFetchingContent = ref(false)
+const contentFetched = ref(false)
+
+// Fetch website content
+const handleFetchContent = async () => {
+  if (!formData.value.websiteUrl.trim()) {
+    alert('Vul eerst een URL in')
+    return
+  }
+
+  // Basic URL validation
+  try {
+    new URL(formData.value.websiteUrl)
+  } catch {
+    alert('Vul een geldige URL in (bijv. https://example.com)')
+    return
+  }
+
+  isFetchingContent.value = true
+  try {
+    const content = await wireframeService.fetchWebsiteContent(formData.value.websiteUrl)
+    sourceContent.value = content
+    contentFetched.value = true
+  } catch (err) {
+    alert(err.message)
+  } finally {
+    isFetchingContent.value = false
+  }
+}
 
 // Select-mode for number of pages (maps to autoNumPages boolean)
 const numPagesMode = computed({
@@ -119,6 +151,7 @@ const createProject = async () => {
       language: formData.value.language,
       files: filesForAI,
       useDummyData: isDemo,
+      sourceContent: sourceContent.value || undefined,
     }
 
     if (!formData.value.autoNumPages && Number.isFinite(formData.value.numPages)) {
@@ -181,6 +214,9 @@ const createProject = async () => {
           router.push(`/editor/${savedProject.id}`)
         } catch (err) {
           console.error('Error creating project from sitemap:', err)
+          isCreating.value = false
+          loadingStep.value = ''
+          alert(`Fout bij aanmaken project: ${err.message || err}`)
         }
       },
       onPagesGenerated: async (pagesData) => {
@@ -301,6 +337,47 @@ const createProject = async () => {
               placeholder="TechShop BV"
               :class="`w-full px-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
             />
+          </div>
+
+          <!-- Website URL -->
+          <div>
+            <label class="block text-sm font-medium mb-2">
+              Website URL (optioneel)
+              <span :class="`text-xs ${text2} ml-2`">Content wordt als bron gebruikt</span>
+            </label>
+            <div class="flex gap-3">
+              <div class="flex-1 relative">
+                <Link :class="`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 ${text2}`" />
+                <input
+                  v-model="formData.websiteUrl"
+                  type="url"
+                  placeholder="https://example.com"
+                  :class="`w-full pl-11 pr-4 py-3 ${inputBg} ${text2} border ${border} rounded-xl focus:ring-2 focus:ring-violet-500 outline-none`"
+                />
+              </div>
+              <button
+                type="button"
+                @click="handleFetchContent"
+                :disabled="isFetchingContent || !formData.websiteUrl.trim()"
+                :class="[
+                  'px-4 py-3 rounded-xl font-medium flex items-center gap-2 cursor-pointer transition-colors',
+                  contentFetched
+                    ? 'bg-emerald-600 text-white'
+                    : 'bg-violet-600 text-white hover:bg-violet-700',
+                  (isFetchingContent || !formData.websiteUrl.trim()) &&
+                    'opacity-50 cursor-not-allowed',
+                ]"
+              >
+                <Loader2 v-if="isFetchingContent" class="w-4 h-4 animate-spin" />
+                <template v-else>
+                  {{ contentFetched ? '✓ Geladen' : 'Content ophalen' }}
+                </template>
+              </button>
+            </div>
+            <p v-if="contentFetched" :class="`text-xs ${text2} mt-2`">
+              {{ sourceContent.length }} karakters opgehaald - wordt gebruikt als bron voor
+              wireframes
+            </p>
           </div>
 
           <!-- Description (Expandable height) -->
